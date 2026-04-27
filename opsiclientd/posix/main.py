@@ -14,8 +14,7 @@ import time
 from signal import SIGHUP, SIGINT, SIGTERM
 from types import FrameType
 
-from opsicommon.logging import LOG_NONE, get_logger, log_context, logging_config
-from opsicommon.logging import init_logging as oc_init_logging
+from opsi.logging import LOG_NONE, get_logger, log_context, logging_config
 
 from opsiclientd import DEFAULT_STDERR_LOG_FORMAT, init_logging, parser
 from opsiclientd.Config import Config
@@ -87,12 +86,12 @@ def main() -> None:
 		Config().set("global", "config_file", options.config_file)
 
 	if options.action == "setup":
-		oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+		logging_config(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
 		setup(full=True, options=options)
 		return
 
 	if options.action == "download-from-depot":
-		oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+		logging_config(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
 		from opsiclientd.OpsiService import download_from_depot
 
 		Config().readConfigFile()

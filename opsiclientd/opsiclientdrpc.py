@@ -15,9 +15,9 @@ from typing import NoReturn
 
 # Do not remove this import, it's needed by using this module from CLI
 from opsi_legacy import System  # noqa
-from opsicommon import __version__ as opsicommon_version
-from opsicommon.client.opsiservice import RPC_TIMEOUTS, ServiceClient
-from opsicommon.logging import LOG_DEBUG, LOG_NONE, get_logger, init_logging, log_context, secret_filter
+from opsi import __version__ as python_opsi_version
+from opsi.opsi.service.client import set_rpc_timeout, ServiceClient
+from opsi.logging import LOG_DEBUG, LOG_NONE, get_logger, logging_config, log_context, secret_filter
 
 from opsiclientd import DEFAULT_FILE_LOG_FORMAT, __version__
 
@@ -54,7 +54,7 @@ class ArgumentParser(argparse.ArgumentParser):
 def main() -> None:
 	with log_context({"instance": os.path.basename(sys.argv[0])}):
 		parser = ArgumentParser()
-		parser.add_argument("--version", action="version", version=f"{__version__} [python-opsi-common={opsicommon_version}]")
+		parser.add_argument("--version", action="version", version=f"{__version__} [python-opsi={python_opsi_version}]")
 		parser.add_argument(
 			"--log-level",
 			default=LOG_NONE,
@@ -107,9 +107,9 @@ def main() -> None:
 				log_file = sys.argv[4]
 				rpc = sys.argv[5]
 
-		init_logging(log_file=log_file, file_level=log_level, stderr_level=LOG_NONE, file_format=DEFAULT_FILE_LOG_FORMAT)
+		logging_config(log_file=log_file, file_level=log_level, stderr_level=LOG_NONE, file_format=DEFAULT_FILE_LOG_FORMAT)
 
-		logger.info("opsiclientdrpc version=%s [python-opsi-common=%s]", __version__, opsicommon_version)
+		logger.info("opsiclientdrpc version=%s [python-opsi=%s]", __version__, python_opsi_version)
 		logger.debug(
 			"log_file=%s, log_level=%s, address=%s, username=%s, password=%s, rpc=%s", log_file, log_level, address, username, password, rpc
 		)
@@ -120,7 +120,7 @@ def main() -> None:
 			)
 			service_client.connect()
 			method = rpc.split("(", 1)[0]
-			RPC_TIMEOUTS[method] = timeout
+			set_rpc_timeout(method, timeout)
 			logger.notice(f"Executing: {rpc}")
 			result = eval(f"service_client.{rpc}")
 			print(result)

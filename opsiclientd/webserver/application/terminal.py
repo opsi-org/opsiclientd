@@ -10,9 +10,9 @@ from typing import Callable
 
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
-from opsicommon.logging import get_logger
-from opsicommon.messagebus.terminal import start_pty
-from opsicommon.system.info import is_windows
+from opsi.logging import get_logger
+from opsi.opsi.messagebus._terminal import start_pty
+from opsi.system.info import is_windows
 from starlette.endpoints import WebSocketEndpoint
 from starlette.status import HTTP_401_UNAUTHORIZED
 from starlette.types import Receive, Scope, Send

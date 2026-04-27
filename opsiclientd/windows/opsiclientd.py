@@ -31,8 +31,8 @@ import win32net
 import win32netcon
 import win32security
 from opsi_legacy import System
-from opsicommon.logging import get_logger, secret_filter
-from opsicommon.types import forceBool
+from opsi.logging import get_logger, secret_filter
+from opsi.opsi.service.model.type import to_bool
 
 from opsiclientd import config
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
@@ -112,7 +112,7 @@ class OpsiclientdNT(Opsiclientd):
 			self.clearRebootRequest()
 			return False
 
-		return forceBool(rebootRequested)
+		return to_bool(rebootRequested)
 
 	def isShutdownRequested(self) -> bool:
 		try:
@@ -122,7 +122,7 @@ class OpsiclientdNT(Opsiclientd):
 			shutdownRequested = 0
 
 		logger.notice("Shutdown request in Registry: %s", shutdownRequested)
-		return forceBool(shutdownRequested)
+		return to_bool(shutdownRequested)
 
 	def isWindowsRebootPending(self) -> bool:
 		if sys.platform != "win32":

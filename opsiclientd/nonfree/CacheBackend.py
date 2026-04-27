@@ -22,12 +22,12 @@ from opsi_legacy.Backend.Backend import (
 )
 from opsi_legacy.Backend.Base.Extended import get_function_signature_and_args
 from opsi_legacy.Backend.Replicator import BackendReplicator
-from opsicommon.exceptions import BackendConfigurationError, BackendMissingDataError, BackendUnaccomplishableError
-from opsicommon.license import OPSI_MODULE_IDS
-from opsicommon.logging import get_logger
-from opsicommon.logging.constants import TRACE
-from opsicommon.objects import *  # noqa  # required for dynamic class loading
-from opsicommon.objects import (
+from opsi.exception import BackendConfigurationError, BackendMissingDataError, BackendUnaccomplishableError
+from opsi.opsi.licensing import OPSI_MODULE_IDS
+from opsi.logging import get_logger
+from opsi.logging import TRACE
+from opsi.opsi.service.model.object import *  # noqa  # required for dynamic class loading
+from opsi.opsi.service.model.object import (
 	BaseObject,
 	Config,
 	ConfigState,
@@ -38,7 +38,7 @@ from opsicommon.objects import (
 	objects_differ,
 	serialize,
 )
-from opsicommon.types import forceHostId
+from opsi.opsi.service.model.type import to_host_id
 
 from opsiclientd.Config import Config as OCDConfig
 from opsiclientd.OpsiService import ServiceClient
@@ -96,9 +96,9 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			elif option == "masterbackend":
 				self._masterBackend = value
 			elif option == "clientid":
-				self._clientId = forceHostId(value)
+				self._clientId = to_host_id(value)
 			elif option == "depotid":
-				self._depotId = forceHostId(value)
+				self._depotId = to_host_id(value)
 			elif option == "backendinfo":
 				self._backendInfo = value
 			elif option == "configvaluescachefile":
@@ -124,7 +124,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 	@depotId.setter
 	def depotId(self, depotId: str) -> None:
-		self._depotId = forceHostId(depotId)
+		self._depotId = to_host_id(depotId)
 
 	def backend_getLicensingInfo(
 		self, licenses: bool = False, legacy_modules: bool = False, dates: bool = False, allow_cache: bool = True

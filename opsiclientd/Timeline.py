@@ -35,8 +35,8 @@ import time
 from typing import Any
 
 from opsi_legacy.Backend.SQLite import SQLite
-from opsicommon.logging import get_logger
-from opsicommon.types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
+from opsi.logging import get_logger
+from opsi.opsi.service.model.type import to_bool, to_int, to_opsi_timestamp, to_string
 
 from opsiclientd.Config import Config
 
@@ -269,21 +269,21 @@ class Timeline:
 		with self._db_lock, self._sql.session() as session:
 			try:
 				if category:
-					category = forceUnicode(category)
+					category = to_string(category)
 				if not start:
 					start = timestamp()
-				start = forceOpsiTimestamp(start)
+				start = to_opsi_timestamp(start)
 
 				if end:
-					end = forceOpsiTimestamp(end)
+					end = to_opsi_timestamp(end)
 					durationEvent = True
 
 				event = {
-					"title": forceUnicode(title),
+					"title": to_string(title),
 					"category": category,
-					"description": forceUnicode(description),
-					"isError": forceBool(isError),
-					"durationEvent": forceBool(durationEvent),
+					"description": to_string(description),
+					"isError": to_bool(isError),
+					"durationEvent": to_bool(durationEvent),
 					"start": start,
 					"end": end,
 				}
@@ -304,10 +304,10 @@ class Timeline:
 
 		with self._db_lock, self._sql.session() as session:
 			try:
-				eventId = forceInt(eventId)
+				eventId = to_int(eventId)
 				if not end:
 					end = timestamp()
-				end = forceOpsiTimestamp(end)
+				end = to_opsi_timestamp(end)
 				return self._sql.update(session, "EVENT", f"`id` = {eventId}", {"end": end, "durationEvent": True})
 			except Exception as end_error:
 				logger.error("Failed to set end of event '%s': %s", eventId, end_error)

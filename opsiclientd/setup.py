@@ -19,12 +19,12 @@ from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.x509.oid import NameOID
-from opsicommon.client.opsiservice import ServiceClient
-from opsicommon.exceptions import OpsiServiceTimeoutError
-from opsicommon.logging import get_logger, secret_filter
-from opsicommon.ssl import as_pem, create_ca, create_server_cert
-from opsicommon.system import get_system_uuid
-from opsicommon.system.network import get_fqdn, get_hostnames, get_network_info
+from opsi.opsi.service.client import ServiceClient
+from opsi.exception import OpsiServiceTimeoutError
+from opsi.logging import get_logger, secret_filter
+from opsi.crypt.ssl import as_pem, create_ca, create_server_cert
+from opsi.system.efi import get_system_uuid
+from opsi.system.network import get_fqdn, get_hostnames, get_network_info
 from packaging import version
 
 from opsiclientd import __version__

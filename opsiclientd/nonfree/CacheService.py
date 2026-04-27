@@ -29,9 +29,9 @@ from opsi_legacy.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModific
 from opsi_legacy.Util.File.Opsi import PackageContentFile
 from opsi_legacy.Util.Message import ProgressSubjectProxy
 from opsi_legacy.Util.Repository import Repository, getRepository
-from opsicommon.logging import get_logger, log_context
-from opsicommon.objects import LocalbootProduct, ProductOnClient
-from opsicommon.types import forceBool, forceInt, forceProductIdList
+from opsi.logging import get_logger, log_context
+from opsi.opsi.service.model.object import LocalbootProduct, ProductOnClient
+from opsi.opsi.service.model.type import to_bool, to_int, to_product_id_list
 from packaging import version
 
 from opsiclientd.Config import Config
@@ -912,7 +912,7 @@ class ProductCacheService(threading.Thread):
 		self._storage_dir = Path(config.get("cache_service", "storage_dir"))
 		self._temp_dir = self._storage_dir / "tmp"
 		self._product_cache_dir = self._storage_dir / "depot"
-		self._product_cache_max_size = forceInt(config.get("cache_service", "product_cache_max_size"))
+		self._product_cache_max_size = to_int(config.get("cache_service", "product_cache_max_size"))
 
 	def update_cache_dir_sizes(self, *, product_id: str | None = None, force: bool = False) -> None:
 		with self._cache_dir_lock:
@@ -960,10 +960,10 @@ class ProductCacheService(threading.Thread):
 			self._network_monitor = None
 
 	def setMaxBandwidth(self, maxBandwidth: int) -> None:
-		self._max_bandwidth = forceInt(maxBandwidth)
+		self._max_bandwidth = to_int(maxBandwidth)
 
 	def setDynamicBandwidth(self, dynamicBandwidth: bool) -> None:
-		self._dynamic_andwidth = forceBool(dynamicBandwidth)
+		self._dynamic_andwidth = to_bool(dynamicBandwidth)
 
 	def start_caching_or_get_waiting_time(self) -> float:
 		try_after_seconds: float = 0.0
@@ -1094,8 +1094,8 @@ class ProductCacheService(threading.Thread):
 		needed_space: The amount of space to free up in bytes.
 		needed_products: A list of product IDs that should not be deleted.
 		"""
-		needed_space = forceInt(needed_space)
-		needed_products = forceProductIdList(needed_products or [])
+		needed_space = to_int(needed_space)
+		needed_products = to_product_id_list(needed_products or [])
 		self.update_cache_dir_sizes()
 		cache_dir_size = self.get_cache_dir_size()
 

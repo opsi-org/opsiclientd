@@ -57,7 +57,7 @@ def opsiclientd() -> None:
 	except Exception as err:
 		print(f"ERROR: {err}", file=sys.stderr)
 		try:
-			from opsicommon.logging import logger
+			from opsi.logging import logger
 
 			logger.critical(err, exc_info=True)
 		except Exception as log_err:

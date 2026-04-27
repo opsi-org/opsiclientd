@@ -30,9 +30,9 @@ import psutil
 from opsi.system.environment import chdir
 from opsi_legacy import System
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject, MessageSubjectProxy, ProgressSubjectProxy
-from opsicommon.logging import LOG_INFO, get_logger, log_context, logging_config
-from opsicommon.objects import Product, ProductOnClient
-from opsicommon.types import forceInt, forceStringList, forceUnicode, forceUnicodeLower
+from opsi.logging import LOG_INFO, get_logger, log_context, logging_config
+from opsi.opsi.service.model.object import Product, ProductOnClient
+from opsi.opsi.service.model.type import to_int, to_string_list, to_string, to_string_lower
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
@@ -241,7 +241,7 @@ class EventProcessingThread(threading.Thread):
 
 			self._notificationServer = NotificationServer(
 				address=config.get("notification_server", "interface"),
-				start_port=forceInt(config.get("notification_server", "start_port")),
+				start_port=to_int(config.get("notification_server", "start_port")),
 				subjects=[
 					self._statusSubject,
 					self._messageSubject,
@@ -352,13 +352,13 @@ class EventProcessingThread(threading.Thread):
 		if sessionId is None:
 			sessionId = self.getSessionId()
 
-		if not desktop or (forceUnicodeLower(desktop) == "current"):
+		if not desktop or (to_string_lower(desktop) == "current"):
 			if self.isLoginEvent:
 				desktop = "default"
 			else:
 				logger.debug("Getting current active desktop name")
 				assert self.opsiclientd
-				desktop = forceUnicodeLower(self.opsiclientd.getCurrentActiveDesktopName(sessionId))
+				desktop = to_string_lower(self.opsiclientd.getCurrentActiveDesktopName(sessionId))
 				logger.debug("Got current active desktop name: %s", desktop)
 				if desktop == "screen-saver":
 					logger.debug("Current active desktop is screen-saver, using default desktop")
@@ -836,7 +836,7 @@ class EventProcessingThread(threading.Thread):
 
 		except Exception as err:
 			logger.error("Failed to process login actions: %s", err, exc_info=True)
-			self.setStatusMessage(_("Failed to process login actions: %s") % forceUnicode(err))
+			self.setStatusMessage(_("Failed to process login actions: %s") % to_string(err))
 
 	def processProductActionRequests(self) -> None:
 		self.setStatusMessage(_("Getting action requests from config service"))
@@ -889,7 +889,7 @@ class EventProcessingThread(threading.Thread):
 				actionRequests = []
 			else:
 				if self.event.eventInfo.get("product_ids"):
-					includeProductIds = forceStringList(self.event.eventInfo["product_ids"])
+					includeProductIds = to_string_list(self.event.eventInfo["product_ids"])
 					logger.notice("Got product IDs from eventConfig: %r", includeProductIds)
 				else:
 					includeProductIds, excludeProductIds = get_include_exclude_product_ids(
@@ -1135,11 +1135,11 @@ class EventProcessingThread(threading.Thread):
 			desktop = self.event.eventConfig.actionProcessorDesktop
 
 			# Choose desktop for action processor
-			if not desktop or (forceUnicodeLower(desktop) == "current"):
+			if not desktop or (to_string_lower(desktop) == "current"):
 				if self.isLoginEvent:
 					desktop = "default"
 				else:
-					desktop = forceUnicodeLower(self.opsiclientd.getCurrentActiveDesktopName(self.getSessionId()))
+					desktop = to_string_lower(self.opsiclientd.getCurrentActiveDesktopName(self.getSessionId()))
 					if desktop == "screen-saver":
 						logger.debug("Current active desktop is screen-saver, using default desktop")
 						desktop = "default"
@@ -1832,8 +1832,8 @@ class EventProcessingThread(threading.Thread):
 				cancellable_after = 0
 				timeout = 30
 				try:
-					cancellable_after = forceInt(config.get("config_service", "user_cancelable_after"))
-					timeout = forceInt(config.get("config_service", "connection_timeout"))
+					cancellable_after = to_int(config.get("config_service", "user_cancelable_after"))
+					timeout = to_int(config.get("config_service", "connection_timeout"))
 				except Exception as err:
 					logger.error(err)
 

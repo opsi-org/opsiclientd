@@ -20,16 +20,16 @@ from urllib.parse import urlparse
 import netifaces  # ty: ignore[unresolved-import]
 from opsi_legacy import System
 from opsi_legacy.Util.File import IniFile
-from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
-from opsicommon.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
-from opsicommon.objects import serialize
-from opsicommon.system.network import get_fqdn
-from opsicommon.types import forceBool, forceHostId, forceList, forceProductIdList, forceUnicode, forceUnicodeList
+from opsi.opsi.service.client import ServiceClient, ServiceVerificationFlags
+from opsi.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
+from opsi.opsi.service.model.object import serialize
+from opsi.system.network import get_fqdn
+from opsi.opsi.service.model.type import to_bool, to_host_id, to_list, to_product_id_list, to_string, to_string_list
 
 from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_MACOS, RUNNING_ON_WINDOWS
 
 if TYPE_CHECKING:
-	from opsicommon.objects import OpsiDepotserver
+	from opsi.opsi.service.model.object import OpsiDepotserver
 
 	from opsiclientd.Events.Basic import Event
 
@@ -337,9 +337,9 @@ class Config:
 						resm_config.run_opsi_script = resm_config.run_opsi_script.strip()
 						resm_config.disabled_event_types = ["gui startup", "daemon startup"]
 					elif option == "remove_marker":
-						resm_config.remove_marker = forceBool(value)
+						resm_config.remove_marker = to_bool(value)
 					elif option == "restart_service":
-						resm_config.restart_service = forceBool(value)
+						resm_config.restart_service = to_bool(value)
 
 		logger.notice("Restart marker config: %r", resm_config)
 		if resm_config.disabled_event_types:
@@ -415,7 +415,7 @@ class Config:
 		if not raw and isinstance(value, str) and (value.count("%") >= 2):
 			value = self.replace(value)
 		if isinstance(value, str):
-			value = forceUnicode(value)
+			value = to_string(value)
 		return value
 
 	@property
@@ -487,7 +487,7 @@ class Config:
 		if option in ("exclude_product_group_ids", "include_product_group_ids", "alt_ids", "interface"):
 			if not isinstance(value, list):
 				value = [x.strip() for x in value.split(",") if x.strip()]
-			value = forceList(value)
+			value = to_list(value)
 
 		if RUNNING_ON_WINDOWS and (option.endswith("_dir") or option.endswith("_file")):
 			if ":" in value and ":\\" not in value:
@@ -505,7 +505,7 @@ class Config:
 				except ValueError:
 					value = 0
 			elif option in ("active",):
-				value = forceBool(value)
+				value = to_bool(value)
 
 		elif section in self._config and option in self._config[section]:
 			if section == "config_service" and option == "url":
@@ -516,7 +516,7 @@ class Config:
 			else:
 				try:
 					if isinstance(self._config[section][option], bool):
-						value = forceBool(value)
+						value = to_bool(value)
 					elif self._config[section][option] is not None:
 						_type = type(self._config[section][option])
 						value = _type(value)
@@ -532,7 +532,7 @@ class Config:
 						raise ValueError("Bad opsi host key, length != 32")
 					secret_filter.add_secrets(str(value))
 				elif option in ("depot_id", "host_id"):
-					value = forceHostId(str(value).replace("_", "-"))
+					value = to_host_id(str(value).replace("_", "-"))
 
 		else:
 			logger.warning("Refusing to set value '%s' for invalid config %s.%s", value, section, option)
@@ -552,17 +552,17 @@ class Config:
 			if not isinstance(values, dict):
 				continue
 			for key, value in values.items():
-				value = forceUnicode(value)
-				if string.find('"%' + forceUnicode(section) + "." + forceUnicode(key) + '%"') != -1 and escaped:
+				value = to_string(value)
+				if string.find('"%' + to_string(section) + "." + to_string(key) + '%"') != -1 and escaped:
 					if os.name == "posix":
 						value = value.replace('"', '\\"')
 					elif RUNNING_ON_WINDOWS:
 						value = value.replace('"', '^"')
-				newString = string.replace("%" + forceUnicode(section) + "." + forceUnicode(key) + "%", value)
+				newString = string.replace("%" + to_string(section) + "." + to_string(key) + "%", value)
 
 				if newString != string:
 					string = self.replace(newString, escaped)
-		return forceUnicode(string)
+		return to_string(string)
 
 	def readConfigFile(self) -> None:
 		"""Get settings from config file"""
@@ -629,11 +629,11 @@ class Config:
 						# Do not store these option
 						continue
 					if isinstance(value, list):
-						value = ", ".join(forceUnicodeList(value))
+						value = ", ".join(to_string_list(value))
 					elif isinstance(value, bool):
 						value = str(value).lower()
 					else:
-						value = forceUnicode(value)
+						value = to_string(value)
 
 					if value.lower() in ("true", "false"):
 						value = value.lower()
@@ -691,7 +691,7 @@ class Config:
 		masterOnly: bool = False,
 		forceDepotProtocol: str | None = None,
 	) -> tuple[OpsiDepotserver, str]:
-		productIds = forceProductIdList(productIds or [])
+		productIds = to_product_id_list(productIds or [])
 		if not configService.connected:
 			raise RuntimeError("Not connected to config service")
 
@@ -723,13 +723,13 @@ class Config:
 
 			if config_id == "opsiclientd.depot_server.depot_id" and values:
 				try:
-					depotId = forceHostId(values[0])
+					depotId = to_host_id(values[0])
 					depotIds.append(depotId)
 					logger.notice("Depot was set to '%s' from configState %s", depotId, config_id)
 				except Exception as err:
 					logger.error("Failed to set depot id from values %s in configState %s: %s", values, config_id, err)
 			elif not masterOnly and (config_id == "clientconfig.depot.dynamic") and values:
-				dynamicDepot = forceBool(values[0])
+				dynamicDepot = to_bool(values[0])
 
 			elif config_id == "clientconfig.depot.protocol" and values and not forceDepotProtocol:
 				depotProtocol = values[0]
@@ -837,7 +837,7 @@ class Config:
 		masterOnly: bool = False,
 	) -> None:
 		assert mode in ("mount", "sync")
-		productIds = forceProductIdList(productIds or [])
+		productIds = to_product_id_list(productIds or [])
 
 		logger.notice("Selecting depot for products %s", productIds)
 		logger.notice("MasterOnly --> '%s'", masterOnly)

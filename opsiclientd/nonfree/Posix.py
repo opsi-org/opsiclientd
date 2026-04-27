@@ -9,7 +9,7 @@ Non-free Posix part of opsiclientd
 import os
 import os.path
 
-from opsicommon.logging import logger
+from opsi.logging import logger
 
 from opsiclientd.Opsiclientd import Opsiclientd
 

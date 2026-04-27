@@ -15,9 +15,18 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from opsicommon.logging import LOG_INFO, use_logging_config
-from opsicommon.objects import Config, ConfigState, Host, LocalbootProduct, OpsiDepotserver, Product, ProductOnClient, ProductOnDepot
-from opsicommon.package.associated_files import create_package_content_file
+from opsi.logging import LOG_INFO, use_logging_config
+from opsi.opsi.service.model.object import (
+	Config,
+	ConfigState,
+	Host,
+	LocalbootProduct,
+	OpsiDepotserver,
+	Product,
+	ProductOnClient,
+	ProductOnDepot,
+)
+from opsi.opsi.package import create_package_content_file
 
 from opsiclientd.Config import Config as OpsiclientdConfig
 from opsiclientd.nonfree.CacheService import ProductCacheService

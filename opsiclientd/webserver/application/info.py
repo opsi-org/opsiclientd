@@ -5,7 +5,7 @@
 
 from fastapi import APIRouter, FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
-from opsicommon.logging import get_logger
+from opsi.logging import get_logger
 
 from opsiclientd.Config import Config
 from opsiclientd.Timeline import Timeline

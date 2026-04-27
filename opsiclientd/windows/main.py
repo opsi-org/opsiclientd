@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 import ntsecuritycon
-import opsicommon.logging
+import opsi.logging
 import psutil
 import win32api
 
@@ -22,8 +22,8 @@ import win32api
 import win32con
 import win32process
 import win32security
-from opsicommon.logging import LOG_NONE, get_logger
-from opsicommon.logging import init_logging as oc_init_logging
+from opsi.logging import LOG_NONE, get_logger
+from opsi.logging import logging_config
 
 from opsiclientd import DEFAULT_STDERR_LOG_FORMAT, init_logging, parser
 from opsiclientd.Config import Config
@@ -153,10 +153,10 @@ def main() -> None:
 		if options.config_file:
 			Config().set("global", "config_file", options.config_file)
 		if options.action == "setup":
-			oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+			logging_config(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
 			setup(full=True, options=options)
 		elif options.action == "download-from-depot":
-			oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+			logging_config(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
 			from opsiclientd.OpsiService import download_from_depot
 
 			Config().readConfigFile()
@@ -186,7 +186,7 @@ def main() -> None:
 
 	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
 
-	with opsicommon.logging.log_context({"instance": "opsiclientd"}):
+	with opsi.logging.log_context({"instance": "opsiclientd"}):
 		logger.notice("Running as user: %s", win32api.GetUserName())
 		if parent:
 			logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)

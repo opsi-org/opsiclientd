@@ -10,7 +10,7 @@ ISensLogon generator.
 import time
 from typing import Any
 
-from opsicommon.logging import get_logger
+from opsi.logging import get_logger
 
 from opsiclientd.Events.Basic import EventGenerator
 

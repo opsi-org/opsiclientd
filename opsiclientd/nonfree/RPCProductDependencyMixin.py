@@ -14,10 +14,10 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from opsicommon.exceptions import OpsiError
-from opsicommon.logging import get_logger
-from opsicommon.logging.constants import TRACE
-from opsicommon.objects import (
+from opsi.exception import OpsiError
+from opsi.logging import get_logger
+from opsi.logging import TRACE
+from opsi.opsi.service.model.object import (
 	Product,
 	ProductDependency,
 	ProductOnClient,

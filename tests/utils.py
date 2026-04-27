@@ -21,7 +21,7 @@ from fastapi.testclient import TestClient
 from httpx._auth import BasicAuth
 from httpx._models import Cookies
 from httpx._types import AuthTypes
-from opsicommon.objects import deserialize, serialize
+from opsi.opsi.service.model.object import deserialize, serialize
 from starlette.types import Scope
 
 from opsiclientd.Config import Config

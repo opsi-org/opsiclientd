@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 
 from opsi_legacy import System
 from opsi_legacy.Backend.JSONRPC import JSONRPCBackend
-from opsicommon.logging import LOG_NONE, get_logger, init_logging, log_context, secret_filter
+from opsi.logging import LOG_NONE, get_logger, logging_config, log_context, secret_filter
 
 from opsiclientd import DEFAULT_FILE_LOG_FORMAT, DEFAULT_STDERR_LOG_FORMAT
 
@@ -70,7 +70,7 @@ def main() -> None:
 	if runAsPassword:
 		secret_filter.add_secrets(runAsPassword)
 
-	init_logging(
+	logging_config(
 		stderr_level=LOG_NONE,
 		stderr_format=DEFAULT_STDERR_LOG_FORMAT,
 		log_file=logFile,

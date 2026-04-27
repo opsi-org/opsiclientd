@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from opsicommon.logging import get_logger, log_context
+from opsi.logging import get_logger, log_context
 
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 

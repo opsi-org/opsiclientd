@@ -20,7 +20,7 @@ import servicemanager
 import win32event
 import win32service
 import win32serviceutil
-from opsicommon.logging import get_logger, log_context
+from opsi.logging import get_logger, log_context
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd

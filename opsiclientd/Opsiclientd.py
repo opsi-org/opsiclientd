@@ -35,12 +35,10 @@ import psutil
 from opsi.crypt.secret import SecretAlphabet, generate_secret
 from opsi_legacy import System
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject
-from opsicommon import __version__ as opsicommon_version
-from opsicommon.logging import get_logger, log_context, secret_filter
-from opsicommon.package import OpsiPackage
-from opsicommon.system import ensure_not_already_running
-from opsicommon.system.subprocess import patch_popen
-from opsicommon.types import forceBool, forceInt, forceUnicode
+from opsi import __version__ as python_opsi_version
+from opsi.logging import get_logger, log_context, secret_filter
+from opsi.opsi.package import OpsiPackage
+from opsi.opsi.service.model.type import to_bool, to_int, to_string
 
 from opsiclientd import Config, __version__, check_signature, config, notify_posix_terminals
 from opsiclientd.ControlPipe import ControlPipe, ControlPipeFactory
@@ -68,13 +66,12 @@ if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import get_link_target, runCommandInSession
 else:
 	from opsi_legacy.System import runCommandInSession
-	from opsicommon.system.subprocess import get_subprocess_environment
+	from opsi.process import get_subprocess_environment
 
 if TYPE_CHECKING:
 	from opsiclientd.nonfree.CacheService import CacheService
 
 
-patch_popen()
 load_translation()
 
 timeline = Timeline()
@@ -85,6 +82,44 @@ logger = get_logger()
 
 def sha256string(input_string: str) -> str:
 	return sha256(input_string.encode("utf-8")).digest().hex()
+
+
+def ensure_not_already_running(process_name: str | None = None) -> None:
+	container_procs = ("containerd-shim", "lxc-start")
+	our_pid = os.getpid()
+	other_pid = None
+	try:
+		our_proc = psutil.Process(our_pid)
+		if not process_name:
+			process_name = our_proc.name()
+		exe_name = f"{process_name}.exe"
+		ignore_pids = [p.pid for p in our_proc.children(recursive=True)]
+		ignore_pids += [p.pid for p in our_proc.parents()]
+		for proc in psutil.process_iter():
+			# logger.debug("Found running process: %s", proc)
+			if proc.name() == process_name or proc.name() == exe_name:
+				logger.debug("Found running '%s' process: %s", process_name, proc)
+
+				running_in_container_pid = 0
+				for parent in proc.parents():
+					if parent.name() in container_procs:
+						running_in_container_pid = parent.pid
+						break
+				if running_in_container_pid:
+					logger.debug("Process is running in container %d, skipping", running_in_container_pid)
+					continue
+
+				if proc.pid != our_pid and proc.pid not in ignore_pids:
+					other_pid = proc.pid
+					break
+	except Exception as err:
+		logger.debug("Check for running processes failed: %s", err)
+
+	if other_pid:
+		raise RuntimeError(f"Another '{process_name}' process is running (pids: {other_pid} / {our_pid}).")
+
+	if other_pid:
+		raise RuntimeError(f"Another '{process_name}' process is running (pids: {other_pid} / {our_pid}).")
 
 
 @dataclass
@@ -355,7 +390,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		threading.Thread(target=_restart, args=(waitSeconds,), name="restart").start()
 
 	def setBlockLogin(self, blockLogin: bool, handleNotifier: bool = True) -> None:
-		blockLogin = forceBool(blockLogin)
+		blockLogin = to_bool(blockLogin)
 		changed = self._blockLogin != blockLogin
 		self._blockLogin = blockLogin
 		logger.notice("Block login now set to '%s'", self._blockLogin)
@@ -653,7 +688,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		try:
 			parent = psutil.Process(os.getpid()).parent()
 			parent_name = parent.name() if parent else None
-			event_title = f"opsiclientd {__version__} [python-opsi-common={opsicommon_version}] running on {platform.platform()!r}"
+			event_title = f"opsiclientd {__version__} [python-opsi={python_opsi_version}] running on {platform.platform()!r}"
 			logger.essential(event_title)
 			event_description = f"Parent process: {parent_name}\n"
 			logger.essential(f"Parent process: {parent_name}")
@@ -923,12 +958,12 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not opsiclientd_rpc:
 			raise RuntimeError("opsiclientd_rpc command not defined")
 
-		desktop = forceUnicode(desktop)
+		desktop = to_string(desktop)
 		if sessionId is None:
 			sessionId = System.getActiveSessionId()
 			if sessionId is None:
 				sessionId = System.getActiveConsoleSessionId()
-		sessionId = forceInt(sessionId)
+		sessionId = to_int(sessionId)
 
 		rpc = f"noop(System.switchDesktop('{desktop}'))"
 		cmd = f'{opsiclientd_rpc} "{rpc}"'

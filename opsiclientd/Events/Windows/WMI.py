@@ -13,7 +13,7 @@ import threading
 import time
 from typing import TYPE_CHECKING, Any
 
-from opsicommon.logging import logger
+from opsi.logging import logger
 
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.Basic import Event, EventGenerator

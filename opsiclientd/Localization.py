@@ -14,8 +14,8 @@ import re
 from pathlib import Path
 from typing import Any, Iterable
 
-from opsicommon.logging import get_logger
-from opsicommon.logging.constants import TRACE
+from opsi.logging import get_logger
+from opsi.logging import TRACE
 
 DOMAIN = "opsiclientd"
 logger = get_logger()

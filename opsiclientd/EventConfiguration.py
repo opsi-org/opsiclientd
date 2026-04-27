@@ -10,8 +10,8 @@ opsiclientd - Event configuration.
 import re
 from typing import Any
 
-from opsicommon.logging import log_context
-from opsicommon.types import forceBool, forceUnicode
+from opsi.logging import log_context
+from opsi.opsi.service.model.type import to_bool, to_string
 
 from .State import State
 
@@ -44,26 +44,26 @@ class EventConfig:
 		self.interval = int(conf.get("interval", 0))
 		self.actionWarningTime = int(conf.get("actionWarningTime", 0))
 		self.actionUserCancelable = int(conf.get("actionUserCancelable", 0))
-		self.shutdown = forceBool(conf.get("shutdown", False))
-		self.reboot = forceBool(conf.get("reboot", False))
+		self.shutdown = to_bool(conf.get("shutdown", False))
+		self.reboot = to_bool(conf.get("reboot", False))
 		self.shutdownWarningMessage = str(conf.get("shutdownWarningMessage", ""))
 		self.shutdownWarningTime = int(conf.get("shutdownWarningTime", 0))
 		self.shutdownWarningRepetitionTime = int(conf.get("shutdownWarningRepetitionTime", 3600))
-		self.shutdownUserSelectableTime = forceBool(conf.get("shutdownUserSelectableTime", False))
+		self.shutdownUserSelectableTime = to_bool(conf.get("shutdownUserSelectableTime", False))
 		self.shutdownLatestSelectableHour = int(conf.get("shutdownLatestSelectableHour", -1))
 		self.shutdownWarningTimeAfterTimeSelect = int(conf.get("shutdownWarningTimeAfterTimeSelect", -1))
 		if self.shutdownWarningTimeAfterTimeSelect == -1:
 			self.shutdownWarningTimeAfterTimeSelect = self.shutdownWarningTime
 		self.shutdownUserCancelable = int(conf.get("shutdownUserCancelable", 0))
 		self.shutdownCancelCounter = int(conf.get("shutdownCancelCounter", 0))
-		self.blockLogin = forceBool(conf.get("blockLogin", False))
-		self.logoffCurrentUser = forceBool(conf.get("logoffCurrentUser", False))
-		self.lockWorkstation = forceBool(conf.get("lockWorkstation", False))
-		self.processShutdownRequests = forceBool(conf.get("processShutdownRequests", True))
-		self.getConfigFromService = forceBool(conf.get("getConfigFromService", True))
-		self.updateConfigFile = forceBool(conf.get("updateConfigFile", True))
-		self.writeLogToService = forceBool(conf.get("writeLogToService", True))
-		self.updateActionProcessor = forceBool(conf.get("updateActionProcessor", True))
+		self.blockLogin = to_bool(conf.get("blockLogin", False))
+		self.logoffCurrentUser = to_bool(conf.get("logoffCurrentUser", False))
+		self.lockWorkstation = to_bool(conf.get("lockWorkstation", False))
+		self.processShutdownRequests = to_bool(conf.get("processShutdownRequests", True))
+		self.getConfigFromService = to_bool(conf.get("getConfigFromService", True))
+		self.updateConfigFile = to_bool(conf.get("updateConfigFile", True))
+		self.writeLogToService = to_bool(conf.get("writeLogToService", True))
+		self.updateActionProcessor = to_bool(conf.get("updateActionProcessor", True))
 		self.actionType = str(conf.get("actionType", ""))
 		self.eventNotifierCommand = str(conf.get("eventNotifierCommand", ""))
 		self.eventNotifierDesktop = str(conf.get("eventNotifierDesktop", "current"))
@@ -71,7 +71,7 @@ class EventConfig:
 		self.actionNotifierDesktop = str(conf.get("actionNotifierDesktop", "current"))
 		self.shutdownNotifierCommand = str(conf.get("shutdownNotifierCommand", ""))
 		self.shutdownNotifierDesktop = str(conf.get("shutdownNotifierDesktop", "current"))
-		self.processActions = forceBool(conf.get("processActions", True))
+		self.processActions = to_bool(conf.get("processActions", True))
 		self.actionProcessorCommand = str(conf.get("actionProcessorCommand", ""))
 		self.actionProcessorDesktop = str(conf.get("actionProcessorDesktop", "current"))
 		self.actionProcessorTimeout = int(conf.get("actionProcessorTimeout", 3 * 3600))
@@ -82,14 +82,14 @@ class EventConfig:
 		self.preActionProcessorCommand = str(conf.get("preActionProcessorCommand", ""))
 		self.postActionProcessorCommand = str(conf.get("postActionProcessorCommand", ""))
 		self.postEventCommand = str(conf.get("postEventCommand", ""))
-		self.trustedInstallerDetection = forceBool(conf.get("trustedInstallerDetection", True))
-		self.cacheProducts = forceBool(conf.get("cacheProducts", False))
+		self.trustedInstallerDetection = to_bool(conf.get("trustedInstallerDetection", True))
+		self.cacheProducts = to_bool(conf.get("cacheProducts", False))
 		self.cacheMaxBandwidth = int(conf.get("cacheMaxBandwidth", 0))
-		self.cacheDynamicBandwidth = forceBool(conf.get("cacheDynamicBandwidth", True))
-		self.useCachedProducts = forceBool(conf.get("useCachedProducts", False))
-		self.syncConfigToServer = forceBool(conf.get("syncConfigToServer", False))
-		self.syncConfigFromServer = forceBool(conf.get("syncConfigFromServer", False))
-		self.useCachedConfig = forceBool(conf.get("useCachedConfig", False))
+		self.cacheDynamicBandwidth = to_bool(conf.get("cacheDynamicBandwidth", True))
+		self.useCachedProducts = to_bool(conf.get("useCachedProducts", False))
+		self.syncConfigToServer = to_bool(conf.get("syncConfigToServer", False))
+		self.syncConfigFromServer = to_bool(conf.get("syncConfigFromServer", False))
+		self.useCachedConfig = to_bool(conf.get("useCachedConfig", False))
 		self.workingWindow = str(conf.get("workingWindow", ""))
 		self.priority = int(conf.get("priority", 0))
 
@@ -135,6 +135,6 @@ class EventConfig:
 			if not match:
 				break
 			name = match.group(1).replace("%state.", "")[:-1]
-			message = message.replace(match.group(1), forceUnicode(state.get(name)))
+			message = message.replace(match.group(1), to_string(state.get(name)))
 
 		return message

@@ -9,7 +9,7 @@ from typing import Literal
 from unittest.mock import patch
 
 import pytest
-from opsicommon.logging import LOG_INFO, use_logging_config
+from opsi.logging import LOG_INFO, use_logging_config
 
 from opsiclientd.Config import Config
 from opsiclientd.Opsiclientd import Opsiclientd, state

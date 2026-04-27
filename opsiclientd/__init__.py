@@ -18,8 +18,8 @@ from logging.handlers import RotatingFileHandler
 
 import psutil
 from opsi_legacy.System import execute, which
-from opsicommon import __version__ as opsicommon_version
-from opsicommon.logging import (
+from opsi import __version__ as python_opsi_version
+from opsi.logging import (
 	LOG_DEBUG,
 	LOG_NONE,
 	LOG_TRACE,
@@ -48,7 +48,7 @@ parser.add_argument(
 	"--version",
 	"-V",
 	action="version",
-	version=f"{__version__} [python-opsi-common={opsicommon_version}]",
+	version=f"{__version__} [python-opsi={python_opsi_version}]",
 )
 parser.add_argument(
 	"--log-level", "-l", dest="logLevel", type=int, choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], default=LOG_NONE, help="Set the log-level."

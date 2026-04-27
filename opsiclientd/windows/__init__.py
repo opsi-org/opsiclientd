@@ -27,8 +27,8 @@ from typing import Any, Callable
 import win32com.client
 import win32com.server.policy
 from opsi_legacy.System.Windows import createDesktop, getActiveSessionId, getUserToken, terminateProcess, win32con, win32event, win32process
-from opsicommon.logging import get_logger
-from opsicommon.types import forceBool, forceInt, forceUnicode, forceUnicodeLower
+from opsi.logging import get_logger
+from opsi.opsi.service.model.type import to_bool, to_int, to_string, to_string_lower
 
 # from Sens.h
 SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
@@ -146,17 +146,17 @@ def runCommandInSession(
 	if isinstance(command, list):
 		command = shlex.join(command)
 
-	command = forceUnicode(command)
+	command = to_string(command)
 	if sessionId is not None:
-		sessionId = forceInt(sessionId)
+		sessionId = to_int(sessionId)
 
-	desktop = forceUnicodeLower(desktop)
+	desktop = to_string_lower(desktop)
 	if desktop.find("\\") == -1:
 		desktop = "winsta0\\" + desktop
 
-	duplicateFrom = forceUnicode(duplicateFrom)
-	waitForProcessEnding = forceBool(waitForProcessEnding)
-	timeoutSeconds = forceInt(timeoutSeconds)
+	duplicateFrom = to_string(duplicateFrom)
+	waitForProcessEnding = to_bool(waitForProcessEnding)
+	timeoutSeconds = to_int(timeoutSeconds)
 
 	logger.debug("Session id given: %s", sessionId)
 	if sessionId is None or (sessionId < 0):

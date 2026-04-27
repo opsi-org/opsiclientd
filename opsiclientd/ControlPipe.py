@@ -20,7 +20,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from opsicommon.logging import get_logger, log_context
+from opsi.logging import get_logger, log_context
 
 from opsiclientd.webserver.rpc.control import get_pipe_control_interface
 from opsiclientd.webserver.rpc.jsonrpc import (

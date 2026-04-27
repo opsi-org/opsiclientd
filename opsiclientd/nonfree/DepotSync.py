@@ -19,8 +19,8 @@ from opsi.opsi.package import PackageContentFileEntry, parse_package_content_fil
 from opsi.system.environment import chdir
 from opsi_legacy.Util.Message import ProgressSubject
 from opsi_legacy.Util.Repository import Repository
-from opsicommon.logging import get_logger
-from opsicommon.types import forceUnicode, forceUnicodeList
+from opsi.logging import get_logger
+from opsi.opsi.service.model.type import to_string, to_string_list
 
 logger = get_logger()
 
@@ -37,8 +37,8 @@ class DepotToLocalDirectorySynchronizer:
 	) -> None:
 		productIds = productIds or []
 		self._sourceDepot: Any = sourceDepot
-		self._destinationDirectory: str = forceUnicode(destinationDirectory)
-		self._productIds: list[str] = forceUnicodeList(productIds)
+		self._destinationDirectory: str = to_string(destinationDirectory)
+		self._productIds: list[str] = to_string_list(productIds)
 		self._productId: str | None = None
 		self._linkFiles: dict[str, str] = {}
 		self._fileInfo: dict[str, PackageContentFileEntry] | None = None
@@ -47,8 +47,8 @@ class DepotToLocalDirectorySynchronizer:
 		self._continue_event = continue_event
 
 	def _synchronizeDirectories(self, source: str, destination: str, progressSubject: Optional[ProgressSubject] = None) -> None:
-		source = forceUnicode(source)
-		destination = forceUnicode(destination)
+		source = to_string(source)
+		destination = to_string(destination)
 		logger.debug("Syncing directory %s to %s", source, destination)
 		os.makedirs(destination, exist_ok=True)
 
@@ -72,7 +72,7 @@ class DepotToLocalDirectorySynchronizer:
 			if self._continue_event:
 				self._continue_event.wait()
 
-			source = forceUnicode(source)
+			source = to_string(source)
 			sourcePath = source + "/" + item["name"]
 			destinationPath = os.path.join(destination, item["name"])
 			relSource = sourcePath.split("/", 1)[1]

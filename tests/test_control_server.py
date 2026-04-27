@@ -19,9 +19,9 @@ from unittest.mock import mock_open, patch
 import pytest
 import requests
 from httpx import HTTPStatusError
-from opsicommon.logging import LOG_INFO, use_logging_config
-from opsicommon.objects import ProductOnClient, serialize
-from opsicommon.system.info import is_macos
+from opsi.logging import LOG_INFO, use_logging_config
+from opsi.opsi.service.model.object import ProductOnClient, serialize
+from opsi.system.info import is_macos
 from starlette.websockets import WebSocketDisconnect
 
 from opsiclientd import __version__
