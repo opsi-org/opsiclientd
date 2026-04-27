@@ -592,18 +592,6 @@ wheels = [
 ]
 
 [[package]]
-name = "mailbits"
-version = "0.2.3"
-source = { registry = "https://pypi.uib.gmbh/simple" }
-dependencies = [
-    { name = "attrs" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c7/65/475d80fdcca5b780801d4c5bc28edb99e9182835817ed7fd1803f08729fd/mailbits-0.2.3.tar.gz", hash = "sha256:13140be94825d440986dee0a6e653d81d3b4df4b0059fbdb6d78ba8ccb0c4ec0", size = 29576, upload-time = "2025-11-29T12:50:52.776Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/47/0e/758dc5f520eaafbb360973f60d3b7f74e17a2ff8e5de6998fb55b952b532/mailbits-0.2.3-py3-none-any.whl", hash = "sha256:75082106ed1b9a19fdd86f73aee268b3662a42df5aa024a06018b1d1bedac7dc", size = 11525, upload-time = "2025-11-29T12:50:51.481Z" },
-]
-
-[[package]]
 name = "markdown-it-py"
 version = "4.0.0"
 source = { registry = "https://pypi.uib.gmbh/simple" }
@@ -1162,46 +1150,8 @@ wheels = [
 ]
 
 [[package]]
-name = "python-opsi-common"
-version = "4.3.55.4"
-source = { registry = "https://pypi.uib.gmbh/simple" }
-dependencies = [
-    { name = "aiofiles" },
-    { name = "annotated-types" },
-    { name = "blake3" },
-    { name = "colorlog" },
-    { name = "cryptography" },
-    { name = "distro" },
-    { name = "dnspython" },
-    { name = "lz4" },
-    { name = "mailbits" },
-    { name = "msgpack", marker = "sys_platform == 'win32'" },
-    { name = "msgspec", marker = "sys_platform != 'win32'" },
-    { name = "netifaces" },
-    { name = "packaging" },
-    { name = "psutil" },
-    { name = "ptyprocess" },
-    { name = "pycryptodome" },
-    { name = "pydantic" },
-    { name = "pydantic-core" },
-    { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "pywinpty", marker = "sys_platform == 'win32'" },
-    { name = "pyzsync" },
-    { name = "requests" },
-    { name = "rich" },
-    { name = "tomlkit" },
-    { name = "websocket-client" },
-    { name = "wmi", marker = "sys_platform == 'win32'" },
-    { name = "zstandard" },
-]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.55.4.tar.gz", hash = "sha256:e26a89a0fb741107394fdcc18b066599facc875d8323b3286afb13b2a0b7c1c6" }
-wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.55.4-py3-none-any.whl", hash = "sha256:a3175867709f72d60e3b092e7c9ce94f157861f596c1ae354cb248dcf8ca4940" },
-]
-
-[[package]]
 name = "python-opsi-legacy"
-version = "4.3.11.0"
+version = "4.3.12.0"
 source = { registry = "https://pypi.uib.gmbh/simple" }
 dependencies = [
     { name = "colorlog" },
@@ -1215,7 +1165,7 @@ dependencies = [
     { name = "psutil" },
     { name = "pyasn1" },
     { name = "pycryptodome" },
-    { name = "python-opsi-common" },
+    { name = "python-opsi" },
     { name = "python-pam" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "pyzsync" },
@@ -1227,9 +1177,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wmi", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.11.0.tar.gz", hash = "sha256:e9e175f07362be77fc666e32e7bbfeadd93d347dc373b3b4fdd3087d3e6d3ffc" }
+sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.12.0.tar.gz", hash = "sha256:4334c9b22873e4e2b85a463f5df79d4d6e4f706499b364b601b8c26fbd90946a" }
 wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.11.0-py3-none-any.whl", hash = "sha256:c5fea68235356754ee7e33eaf43944c561d8bf7e22c4a5e286a5e1bf71042375" },
+    { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.12.0-py3-none-any.whl", hash = "sha256:335ea26b57de281fd8cdc8a808caef333caaf4235c15bcf093160285dbcedc1c" },
 ]
 
 [[package]]
