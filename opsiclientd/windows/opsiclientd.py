@@ -19,8 +19,8 @@ import threading
 import time
 import winreg
 from enum import StrEnum
+from opsi.process import run_script
 
-# pyright: reportMissingImports=false
 from typing import Any
 
 import psutil
@@ -65,21 +65,16 @@ class OpsiclientdNT(Opsiclientd):
 		logger.info("Sending SAS")
 		from ctypes import windll  # ty: ignore[unresolved-import]
 
-		windll.sas.SendSAS(0)  # pylint: disable=no-member
+		windll.sas.SendSAS(0)
 
 	def suspendBitlocker(self) -> None:
 		logger.notice("Suspending bitlocker for one reboot if active")
 		try:
-			System.execute(
-				'powershell.exe -ExecutionPolicy Bypass -Command "'
-				"foreach($v in Get-BitLockerVolume)"
-				"{if ($v.EncryptionPercentage -gt 0)"
-				'{$v | Suspend-BitLocker -RebootCount 1}}"',
-				captureStderr=True,
-				waitForEnding=True,
+			run_script(
+				"foreach($v in Get-BitLockerVolume) {if ($v.EncryptionPercentage -gt 0) {$v | Suspend-BitLocker -RebootCount 1}}",
+				interpreter="powershell",
 				timeout=20,
 			)
-
 		except Exception as err:
 			logger.error("Failed to suspend bitlocker: %s", err, exc_info=True)
 

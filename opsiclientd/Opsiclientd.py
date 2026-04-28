@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import platform
 import re
+from opsi.process import run_command
 import shlex
 import shutil
 import subprocess
@@ -737,7 +738,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						f"opsiclientd_restart_marker={config.restart_marker}",
 					]
 					logger.notice("Running startup script: %s", cmd)
-					System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)
+					run_command(cmd, timeout=3600)
 
 					restart_marker_config = config.check_restart_marker()
 					if restart_marker_config and restart_marker_config.restart_service:

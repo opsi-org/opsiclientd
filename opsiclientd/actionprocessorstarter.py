@@ -20,6 +20,7 @@ from opsi_legacy.Backend.JSONRPC import JSONRPCBackend
 from opsi.logging import LOG_NONE, get_logger, logging_config, log_context, secret_filter
 
 from opsiclientd import DEFAULT_FILE_LOG_FORMAT, DEFAULT_STDERR_LOG_FORMAT
+from opsi.process import run_command
 
 logger = get_logger()
 
@@ -179,7 +180,7 @@ def main() -> None:
 			if imp:
 				imp.runCommand(actionProcessorCommand, timeoutSeconds=int(actionProcessorTimeout))
 			else:
-				System.execute(actionProcessorCommand, waitForEnding=True, timeout=int(actionProcessorTimeout))
+				run_command(actionProcessorCommand, timeout=int(actionProcessorTimeout))
 
 			logger.notice("Action processor ended")
 			set_status_message(be, sessionId, _("Action processor ended"))

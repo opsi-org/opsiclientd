@@ -33,7 +33,7 @@ from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject, MessageSubje
 from opsi.logging import LOG_INFO, get_logger, log_context, logging_config
 from opsi.opsi.service.model.object import Product, ProductOnClient
 from opsi.opsi.service.model.type import to_int, to_string_list, to_string, to_string_lower
-
+from opsi.process import run_command
 from opsiclientd import __version__
 from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEvent
@@ -519,8 +519,8 @@ class EventProcessingThread(threading.Thread):
 				# Multiple connections to a server or shared resource by the same user
 				logger.debug("Trying to list existing network connections")
 				try:
-					result = System.execute("net use", captureStderr=True, waitForEnding=True, timeout=30, shell=True)
-					logger.notice("net use output:\n%s", "\n".join(result))
+					process = run_command(["net", "use"], timeout=30)
+					logger.notice("net use output:\n%s", process.get_output_text())
 				except Exception as err2:
 					logger.warning("Failed to list network connections: %s", err2)
 			raise err
@@ -706,8 +706,8 @@ class EventProcessingThread(threading.Thread):
 		if RUNNING_ON_WINDOWS:
 			logger.notice("Setting permissions for opsi-script")
 			opsi_script_dir = actionProcessorLocalDir.replace("\\\\", "\\")
-			System.execute(f'icacls "{opsi_script_dir}" /q /c /t /reset', shell=False)
-			System.execute(f'icacls "{opsi_script_dir}" /grant *S-1-5-32-545:(OI)(CI)RX', shell=False)
+			run_command(["icacls", opsi_script_dir, "/q", "/c", "/t", "/reset"])
+			run_command(["icacls", opsi_script_dir, "/grant", "*S-1-5-32-545:(OI)(CI)RX"])
 		else:
 			if RUNNING_ON_LINUX:
 				symlink = os.path.join("/usr/bin", actionProcessorFilename.split("/")[-1])
@@ -759,12 +759,28 @@ class EventProcessingThread(threading.Thread):
 			logger.notice("Trying to set the right permissions for opsi-winst")
 			setaclcmd = os.path.join(config.get("global", "base_dir"), "utilities", "setacl.exe")
 			winstdir = actionProcessorLocalDir.replace("\\\\", "\\")
-			cmd = (
-				f'"{setaclcmd}" -on "{winstdir}" -ot file'
-				' -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y"'
-				' -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"'
-			)
-			System.execute(cmd, shell=False)
+			cmd = [
+				setaclcmd,
+				"-on",
+				winstdir,
+				"-ot",
+				"file",
+				"-actn",
+				"ace",
+				"-ace",
+				"n:S-1-5-32-544;p:full;s:y",
+				"-ace",
+				"n:S-1-5-32-545;p:read_ex;s:y",
+				"-actn",
+				"clear",
+				"-clr",
+				"dacl,sacl",
+				"-actn",
+				"rstchldrn",
+				"-rst",
+				"dacl,sacl",
+			]
+			run_command(cmd)
 		elif RUNNING_ON_LINUX:
 			logger.info("Copying from '%s' to '%s'", actionProcessorRemoteDir, actionProcessorLocalDir)
 			for fn in os.listdir(actionProcessorRemoteDir):

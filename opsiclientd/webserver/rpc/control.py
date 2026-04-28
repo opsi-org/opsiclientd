@@ -9,6 +9,7 @@ webserver.rpc.control
 
 from __future__ import annotations
 
+from opsi.process import run_command, run_script
 import json
 import os
 import platform
@@ -402,7 +403,9 @@ class ControlInterface(PipeControlInterface):
 		encoding: str | None = None,
 		timeout: int = 300,
 	) -> str:
-		return System.execute(cmd=command, waitForEnding=waitForEnding, captureStderr=captureStderr, encoding=encoding, timeout=timeout)
+		func = run_script if isinstance(command, str) else run_command
+		proc = func(command, wait=waitForEnding, timeout=timeout, capture_output="both" if captureStderr else "stdout", encoding=encoding)
+		return proc.get_output_text()
 
 	def logoffSession(self, session_id: str | None = None, username: str | None = None) -> None:
 		System.logoffSession(session_id=session_id, username=username)

@@ -16,19 +16,10 @@ import sys
 import tempfile
 from logging.handlers import RotatingFileHandler
 
+from opsi.process import run_script, run_command
 import psutil
-from opsi_legacy.System import execute, which
 from opsi import __version__ as python_opsi_version
-from opsi.logging import (
-	LOG_DEBUG,
-	LOG_NONE,
-	LOG_TRACE,
-	get_all_handlers,
-	get_logger,
-	log_context,
-	logging_config,
-	set_filter_from_string,
-)
+from opsi.logging import LOG_DEBUG, LOG_NONE, LOG_TRACE, get_all_handlers, get_logger, log_context, logging_config, set_filter_from_string
 
 from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
@@ -169,9 +160,9 @@ def check_signature(bin_dir: str) -> None:
 		os.path.join(bin_dir, "action_processor_starter.exe"),
 	]
 	for binary in binary_list:
-		cmd = f"powershell.exe -ExecutionPolicy Bypass -Command \"(Get-AuthenticodeSignature '{binary}').Status -eq 'Valid'\""
-
-		result = execute(cmd, captureStderr=True, waitForEnding=True, timeout=30)
+		result = run_script(
+			f"(Get-AuthenticodeSignature '{binary}').Status -eq 'Valid'", interpreter="powershell", timeout=30
+		).get_stdout_text()
 		logger.debug(result)
 		if "True" not in result:
 			raise ValueError(f"Invalid Signature of file {binary}")
@@ -179,19 +170,12 @@ def check_signature(bin_dir: str) -> None:
 
 
 def notify_posix_terminals(message: str) -> None:
+	# On non-Windows systems, use 'wall' to display a message before reboot/shutdown
 	if RUNNING_ON_WINDOWS:
 		logger.debug("Running on windows, not notifying terminals of reboot/shutdown")
 		return
-	try:
-		wall_path = which("wall")
-	except RuntimeError:
-		logger.warning("Binary 'wall' not found in PATH, not notifying terminals of reboot/shutdown.")
-		return
 
-	# On non-Windows systems, use 'wall' to display a message before reboot/shutdown
-	command = [wall_path, "-n", message]
-	logger.debug("Executing %s", command)
 	try:
-		execute(command, shell=False)
+		run_command(["wall", "-n", message])
 	except Exception as err:
 		logger.warning("Failed to notify users via 'wall': %s", err)

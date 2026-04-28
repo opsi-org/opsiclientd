@@ -17,8 +17,6 @@ import ntsecuritycon
 import opsi.logging
 import psutil
 import win32api
-
-# pyright: reportMissingImports=false
 import win32con
 import win32process
 import win32security
