@@ -937,7 +937,7 @@ class ControlInterface(PipeControlInterface):
 			wait_for_ending = True
 
 		# Remove inherited permissions, allow SYSTEM only
-		cmd = ["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"]
+		cmd = ["icacls", str(script), "/inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"]
 		logger.info("Setting permissions: %s", cmd)
 		try:
 			run_command(cmd)
