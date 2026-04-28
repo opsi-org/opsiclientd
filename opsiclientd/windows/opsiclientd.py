@@ -13,14 +13,11 @@ import glob
 import os
 import random
 import string
-import subprocess
 import sys
 import threading
 import time
 import winreg
 from enum import StrEnum
-from opsi.process import run_script
-
 from typing import Any
 
 import psutil
@@ -30,9 +27,10 @@ import win32con
 import win32net
 import win32netcon
 import win32security
-from opsi_legacy import System
 from opsi.logging import get_logger, secret_filter
 from opsi.opsi.service.model.type import to_bool
+from opsi.process import run_command, run_script
+from opsi_legacy import System
 
 from opsiclientd import config
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
@@ -340,21 +338,17 @@ class OpsiclientdNT(Opsiclientd):
 
 					if exists:
 						logger.info("Deleting user %r, sid %r", username, sid)
-						cmd = [
-							"powershell.exe",
-							"-ExecutionPolicy",
-							"Bypass",
-							"-Command",
+						proc = run_script(
 							f"Remove-LocalUser -SID (New-Object 'Security.Principal.SecurityIdentifier' \"{sid}\") -Verbose",
-						]
-						logger.info("Executing: %s", cmd)
-						res = subprocess.run(cmd, shell=False, capture_output=True, check=False, timeout=60)
-						out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
-						if res.returncode == 0:
-							logger.info("Command %s successful: %s", cmd, out)
+							interpreter="powershell",
+							timeout=30,
+							success_exit_codes=None,
+						)
+						out = proc.get_output_text()
+						if proc.exit_code == 0:
 							modified = True
 						else:
-							logger.warning("Failed to delete user %r %r (exitcode %d): %s", cmd, username, res.returncode, out)
+							logger.warning("Failed to delete user %r (exitcode %d): %s", username, proc.exit_code, out)
 							try:
 								logger.info("Deleting user %r via windows api", username)
 								win32net.NetUserDel(None, username)  # ty: ignore[invalid-argument-type]
@@ -378,22 +372,23 @@ class OpsiclientdNT(Opsiclientd):
 						break
 
 		# takeown parameter /d is localized 😠
-		res = subprocess.run("choice <nul 2>nul", capture_output=True, check=False, shell=True)
-		yes = res.stdout.decode().split(",")[0].lstrip("[").strip()
+		res = run_script("choice <nul 2>nul", success_exit_codes=None, interpreter="cmd")
+		yes = res.get_output_text().strip().split(",")[0].lstrip("[").strip()
 		for pdir in glob.glob(f"c:\\users\\{OPSI_SETUP_USER_NAME}*"):
 			if keep_profile and keep_profile.lower() == pdir.lower():
 				continue
 			logger.info("Deleting user dir '%s'", pdir)
-			for cmd, shell, exit_codes_success in (
-				(["takeown", "/a", "/d", yes, "/r", "/f", pdir], False, [0, 1]),
-				(["del", pdir, "/f", "/s", "/q"], True, [0]),
-				(["rd", pdir, "/s", "/q"], True, [0]),
+			for cmd, success_exit_codes in (
+				(["takeown", "/a", "/d", yes, "/r", "/f", pdir], [0, 1]),
+				(f'del "{pdir}" /f /s /q', [0]),
+				(f'rd "{pdir}" /s /q', [0]),
 			):
 				logger.info("Executing: %s", cmd)
-				res = subprocess.run(cmd, shell=shell, capture_output=True, check=False)
-				out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
-				if res.returncode not in exit_codes_success:
-					logger.warning("Command %s failed with exit code %s: %s", cmd, res.returncode, out)
+				func = run_script if isinstance(cmd, str) else run_command
+				proc = func(cmd, success_exit_codes=None, timeout=60)
+				out = proc.get_output_text()
+				if proc.exit_code not in success_exit_codes:
+					logger.warning("Command %s failed with exit code %s: %s", cmd, res.exit_code, out)
 				else:
 					logger.info("Command %s successful: %s", cmd, out)
 
@@ -465,9 +460,13 @@ class OpsiclientdNT(Opsiclientd):
 			win32net.NetUserAdd(None, 1, user_info)
 
 		user_sid = win32security.ConvertSidToStringSid(win32security.LookupAccountName(None, str(user_info["name"]))[0])
-		subprocess.run(["icacls", os.path.dirname(sys.argv[0]), "/grant:r", f"*{user_sid}:(OI)(CI)RX"], check=False)
-		subprocess.run(["icacls", os.path.dirname(config.get("global", "log_file")), "/grant:r", f"*{user_sid}:(OI)(CI)F"], check=False)
-		subprocess.run(["icacls", os.path.dirname(config.get("global", "tmp_dir")), "/grant:r", f"*{user_sid}:(OI)(CI)F"], check=False)
+		run_command(["icacls", os.path.dirname(sys.argv[0]), "/grant:r", f"*{user_sid}:(OI)(CI)RX"], success_exit_codes=None)
+		run_command(
+			["icacls", os.path.dirname(config.get("global", "log_file")), "/grant:r", f"*{user_sid}:(OI)(CI)F"], success_exit_codes=None
+		)
+		run_command(
+			["icacls", os.path.dirname(config.get("global", "tmp_dir")), "/grant:r", f"*{user_sid}:(OI)(CI)F"], success_exit_codes=None
+		)
 
 		local_admin_group_sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
 		local_admin_group_name = win32security.LookupAccountSid(None, local_admin_group_sid)[0]

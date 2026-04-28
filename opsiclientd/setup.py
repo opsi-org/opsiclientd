@@ -9,7 +9,6 @@ setup tasks
 
 import datetime
 import os
-import subprocess
 import sys
 from argparse import Namespace
 from pathlib import Path
@@ -19,10 +18,11 @@ from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.x509.oid import NameOID
-from opsi.opsi.service.client import ServiceClient
+from opsi.crypt.ssl import as_pem, create_ca, create_server_cert
 from opsi.exception import OpsiServiceTimeoutError
 from opsi.logging import get_logger, secret_filter
-from opsi.crypt.ssl import as_pem, create_ca, create_server_cert
+from opsi.opsi.service.client import ServiceClient
+from opsi.process import ProcessError, run_command
 from opsi.system.efi import get_system_uuid
 from opsi.system.network import get_fqdn, get_hostnames, get_network_info
 from packaging import version
@@ -193,8 +193,10 @@ def setup_firewall_linux() -> None:
 		logger.warning("Could not configure firewall - no suitable executable found")
 
 	for cmd in cmds:
-		logger.info("Running command: %s", str(cmd))
-		subprocess.call(cmd)
+		try:
+			run_command(cmd)
+		except ProcessError as err:
+			logger.warning(err)
 
 
 def setup_firewall_macos() -> None:
@@ -206,8 +208,10 @@ def setup_firewall_macos() -> None:
 		["/usr/libexec/ApplicationFirewall/socketfilterfw", "--add", path],
 		["/usr/libexec/ApplicationFirewall/socketfilterfw", "--unblockapp", path],
 	):
-		logger.info("Running command: %s", str(cmd))
-		subprocess.call(cmd)
+		try:
+			run_command(cmd)
+		except ProcessError as err:
+			logger.warning(err)
 
 
 def setup_firewall_windows() -> None:
@@ -231,7 +235,10 @@ def setup_firewall_windows() -> None:
 
 	for cmd in cmds:
 		logger.info("Running command: %s", str(cmd))
-		subprocess.call(cmd)
+		try:
+			run_command(cmd)
+		except ProcessError as err:
+			logger.warning(err)
 
 
 def setup_firewall() -> None:
@@ -284,27 +291,21 @@ def install_service_windows() -> None:
 
 def install_service_linux() -> None:
 	logger.notice("Install opsiclientd service")
-	# subprocess.check_call(["systemctl", "daemon-reload"])
-	subprocess.check_call(["systemctl", "enable", "opsiclientd.service"])
+	run_command(["systemctl", "enable", "opsiclientd.service"])
 
 
 def install_service_macos() -> None:
 	logger.notice("Install opsiclientd service")
-	proc = subprocess.run(["launchctl", "list"], check=False, capture_output=True, text=True)
-	if "org.opsi.opsiclientd" in proc.stdout:  # on arm machines trying to bootstraps a present service leads to IO-Errors
+	proc = run_command(["launchctl", "list"], success_exit_codes=None)
+	if "org.opsi.opsiclientd" in proc.get_stdout_text():  # on arm machines trying to bootstraps a present service leads to IO-Errors
 		logger.info("opsiclientd service already installed")
 		return
 
-	proc = subprocess.run(
-		["launchctl", "bootstrap", "system", "/Library/LaunchDaemons/org.opsi.opsiclientd.plist"],
-		check=False,
-		capture_output=True,
-		text=True,
-	)
-	logger.debug("launchctl bootstrap output: %s", proc.stderr or "" + proc.stdout or "")
-	if proc.returncode not in (0, 37):
+	proc = run_command(["launchctl", "bootstrap", "system", "/Library/LaunchDaemons/org.opsi.opsiclientd.plist"], success_exit_codes=None)
+	logger.debug("launchctl bootstrap output: %s", proc.get_output_text())
+	if proc.exit_code not in (0, 37):
 		# 37 is the error code for "already bootstrapped"
-		error = f"Failed to launchctl bootstrap opsiclientd service: {proc.returncode} - {proc.stderr or '' + proc.stdout or ''}"
+		error = f"Failed to launchctl bootstrap opsiclientd service: {proc.exit_code} - {proc.get_output_text()}"
 		logger.error(error)
 		raise RuntimeError(error)
 

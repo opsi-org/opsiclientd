@@ -9,7 +9,6 @@ webserver.rpc.control
 
 from __future__ import annotations
 
-from opsi.process import run_command, run_script
 import json
 import os
 import platform
@@ -29,8 +28,6 @@ from uuid import uuid4
 import psutil
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
-from opsi_legacy import System
-from opsi_legacy.Util.Log import truncateLogData
 from opsi import __version__ as opsi_python_version
 from opsi.logging import get_logger, secret_filter
 from opsi.opsi.service.model.object import (
@@ -42,9 +39,12 @@ from opsi.opsi.service.model.object import (
 	ProductOnDepot,
 	generate_opsi_host_key,
 )
-from opsi.system.info import is_windows
 from opsi.opsi.service.model.type import to_bool, to_host_id, to_int, to_product_id_list, to_string
+from opsi.process import ProcessError, run_command, run_script
 from opsi.system.file.temp import TempDir
+from opsi.system.info import is_windows
+from opsi_legacy import System
+from opsi_legacy.Util.Log import truncateLogData
 
 from opsiclientd import __version__
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
@@ -937,8 +937,12 @@ class ControlInterface(PipeControlInterface):
 			wait_for_ending = True
 
 		# Remove inherited permissions, allow SYSTEM only
-		logger.info("Setting permissions: %s", ["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"])
-		subprocess.run(["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
+		cmd = ["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"]
+		logger.info("Setting permissions: %s", cmd)
+		try:
+			run_command(cmd)
+		except ProcessError as err:
+			logger.error("Failed to set permissions for script: %s", err)
 
 		try:
 			self._run_process_as_opsi_setup_user(

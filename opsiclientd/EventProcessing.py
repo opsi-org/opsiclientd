@@ -15,7 +15,6 @@ import os
 import re
 import shlex
 import shutil
-import subprocess
 import sys
 import tempfile
 import threading
@@ -27,13 +26,14 @@ from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlparse
 
 import psutil
+from opsi.logging import LOG_INFO, get_logger, log_context, logging_config
+from opsi.opsi.service.model.object import Product, ProductOnClient
+from opsi.opsi.service.model.type import to_int, to_string, to_string_list, to_string_lower
+from opsi.process import ProcessError, run_command, run_script
 from opsi.system.environment import chdir
 from opsi_legacy import System
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject, MessageSubjectProxy, ProgressSubjectProxy
-from opsi.logging import LOG_INFO, get_logger, log_context, logging_config
-from opsi.opsi.service.model.object import Product, ProductOnClient
-from opsi.opsi.service.model.type import to_int, to_string_list, to_string, to_string_lower
-from opsi.process import run_command
+
 from opsiclientd import __version__
 from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEvent
@@ -2050,23 +2050,13 @@ class EventProcessingThread(threading.Thread):
 					if not self.should_cancel():
 						if self.event.eventConfig.postEventCommand:
 							logger.notice("Running post event command '%s'", self.event.eventConfig.postEventCommand)
-							encoding = "cp850" if RUNNING_ON_WINDOWS else "utf-8"
 							try:
-								output = subprocess.check_output(
-									self.event.eventConfig.postEventCommand, shell=True, stderr=subprocess.STDOUT
-								)
+								proc = run_script(self.event.eventConfig.postEventCommand, timeout=300)
 								logger.info(
-									"Post event command '%s' output: %s",
-									self.event.eventConfig.postEventCommand,
-									output.decode(encoding, errors="replace"),
+									"Post event command '%s' output: %s", self.event.eventConfig.postEventCommand, proc.get_output_text()
 								)
-							except subprocess.CalledProcessError as err:
-								logger.error(
-									"Post event command '%s' returned exit code %s: %s",
-									self.event.eventConfig.postEventCommand,
-									err.returncode,
-									err.output.decode(encoding, errors="replace"),
-								)
+							except ProcessError as err:
+								logger.error(err)
 
 						# processActions is False for passive events like sync/sync_completed
 						if self.event.eventConfig.processActions:

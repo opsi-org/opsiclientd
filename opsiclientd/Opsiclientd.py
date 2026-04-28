@@ -13,7 +13,6 @@ from __future__ import annotations
 import os
 import platform
 import re
-from opsi.process import run_command
 import shlex
 import shutil
 import subprocess
@@ -30,16 +29,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Generator, Literal
 
 import opsi_legacy
+from opsi.process import ProcessError, run_command
 
 sys.modules["OPSI"] = opsi_legacy
 import psutil
-from opsi.crypt.secret import SecretAlphabet, generate_secret
-from opsi_legacy import System
-from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject
 from opsi import __version__ as python_opsi_version
+from opsi.crypt.secret import SecretAlphabet, generate_secret
 from opsi.logging import get_logger, log_context, secret_filter
 from opsi.opsi.package import OpsiPackage
 from opsi.opsi.service.model.type import to_bool, to_int, to_string
+from opsi_legacy import System
+from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject
 
 from opsiclientd import Config, __version__, check_signature, config, notify_posix_terminals
 from opsiclientd.ControlPipe import ControlPipe, ControlPipeFactory
@@ -66,8 +66,8 @@ if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.UserLogin import LoginDetector
 	from opsiclientd.windows import get_link_target, runCommandInSession
 else:
-	from opsi_legacy.System import runCommandInSession
 	from opsi.process import get_subprocess_environment
+	from opsi_legacy.System import runCommandInSession
 
 if TYPE_CHECKING:
 	from opsiclientd.nonfree.CacheService import CacheService
@@ -311,8 +311,8 @@ class Opsiclientd(EventListener, threading.Thread):
 
 				logger.info("Testing new binary: %s", binary)
 				# need to direct stderr to stdout to avoid error in cleanup due to 32 bit python performance warning (code 120)
-				out = subprocess.check_output([str(binary), "--version"], stderr=subprocess.STDOUT)
-				logger.info(out)
+				proc = run_command([str(binary), "--version"])
+				logger.info("New binary version: %s", proc.get_output_text())
 
 				if RUNNING_ON_WINDOWS:
 					inst1 = inst_dir.with_name("opsiclientd_bin1")
@@ -341,10 +341,11 @@ class Opsiclientd(EventListener, threading.Thread):
 					bin_dir.rename(new_dir)
 
 					logger.info("Creating link '%s' pointing to '%s'", link, new_dir)
-					process_stdout = subprocess.run(
-						f'mklink /j "{link}" "{new_dir}"', text=True, capture_output=True, check=False, shell=True
-					).stdout
-					logger.debug(process_stdout)
+					try:
+						run_command(["mklink", "/j", str(link), str(new_dir)], timeout=10)
+					except ProcessError as err:
+						logger.error("Failed to create link: %s", err)
+
 				else:
 					old_dir = inst_dir.with_name(f"{inst_dir.name}_old")
 					logger.info("Moving current installation dir '%s' to '%s'", inst_dir, old_dir)
