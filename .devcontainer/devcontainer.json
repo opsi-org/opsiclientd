@@ -8,7 +8,6 @@
 	"customizations": {
 		"vscode": {
 			"settings": {
-				"settings": {
 				"editor.insertSpaces": false,
 				"editor.renderWhitespace": "all",
 				"editor.formatOnType": true,
