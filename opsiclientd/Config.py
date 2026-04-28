@@ -18,13 +18,13 @@ from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 
 import netifaces  # ty: ignore[unresolved-import]
+from opsi.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
+from opsi.opsi.service.client import ServiceClient, ServiceVerificationFlags
+from opsi.opsi.service.model.object import serialize
+from opsi.opsi.service.model.type import to_bool, to_host_id, to_list, to_product_id_list, to_string, to_string_list
+from opsi.system.network import get_fqdn
 from opsi_legacy import System
 from opsi_legacy.Util.File import IniFile
-from opsi.opsi.service.client import ServiceClient, ServiceVerificationFlags
-from opsi.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
-from opsi.opsi.service.model.object import serialize
-from opsi.system.network import get_fqdn
-from opsi.opsi.service.model.type import to_bool, to_host_id, to_list, to_product_id_list, to_string, to_string_list
 
 from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_MACOS, RUNNING_ON_WINDOWS
 
@@ -1035,8 +1035,8 @@ class Config:
 				self.set(f"event_opsiclientd_start{precondition}", "active", False)
 				self.set(f"{start_event}{precondition}", "active", True)
 				self.set(f"{start_event}{precondition}", "cache_products", False)
-				self.set(f"{start_event}{precondition}", "use_cached_config", True)
-				self.set(f"{start_event}{precondition}", "use_cached_products", True)
+				self.set(f"{start_event}{precondition}", "use_cached_config", precondition == "{cache_ready}")
+				self.set(f"{start_event}{precondition}", "use_cached_products", precondition == "{cache_ready}")
 
 			self.set("event_on_demand", "cache_products", False)
 			self.set("event_on_demand", "use_cached_products", False)
@@ -1052,6 +1052,6 @@ class Config:
 
 			for precondition in ("{cache_ready_user_logged_in}", "{cache_ready}"):
 				section = f"event_sync_completed{precondition}"
-				self.set(section, "reboot", False)
+				self.set(section, "reboot", True)
 				self.set(section, "process_actions", False)
 				self.set(section, "use_cached_products", False)
