@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Generator, Literal
 
 import opsi_legacy
-from opsi.process import ProcessError, run_command
+from opsi.process import run_command
 
 sys.modules["OPSI"] = opsi_legacy
 import psutil
@@ -38,6 +38,7 @@ from opsi.crypt.secret import SecretAlphabet, generate_secret
 from opsi.logging import get_logger, log_context, secret_filter
 from opsi.opsi.package import OpsiPackage
 from opsi.opsi.service.model.type import to_bool, to_int, to_string
+from opsi.system.file.operation import get_link_target, link
 from opsi_legacy import System
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject
 
@@ -64,7 +65,7 @@ from opsiclientd.webserver import Webserver
 
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.UserLogin import LoginDetector
-	from opsiclientd.windows import get_link_target, runCommandInSession
+	from opsiclientd.windows import runCommandInSession
 else:
 	from opsi.process import get_subprocess_environment
 	from opsi_legacy.System import runCommandInSession
@@ -317,14 +318,14 @@ class Opsiclientd(EventListener, threading.Thread):
 				if RUNNING_ON_WINDOWS:
 					inst1 = inst_dir.with_name("opsiclientd_bin1")
 					inst2 = inst_dir.with_name("opsiclientd_bin2")
-					link = inst_dir.with_name("opsiclientd_bin")
+					link_path = inst_dir.with_name("opsiclientd_bin")
 					target: Path | None = None
-					if link.exists():
-						target = get_link_target(link)
+					if link_path.exists():
+						target = get_link_target(link_path)
 						if not target:
-							raise RuntimeError(f"{link} exists and is not a link")
+							raise RuntimeError(f"{link_path} exists and is not a link")
 
-					logger.info("Link '%s' is pointing to '%s'", link, target)
+					logger.info("Link '%s' is pointing to '%s'", link_path, target)
 
 					logger.info("Names: inst1=%r, inst2=%r, target=%r", inst1.name, inst2.name, target.name if target else None)
 					new_dir = inst2 if target and target.name == inst1.name else inst1
@@ -333,19 +334,11 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.info("Deleting dir '%s'", new_dir)
 						shutil.rmtree(new_dir)
 
-					if link.exists():
-						logger.info("Deleting link '%s'", link)
-						link.rmdir()
-
 					logger.info("Moving '%s' to '%s'", bin_dir, new_dir)
 					bin_dir.rename(new_dir)
 
-					logger.info("Creating link '%s' pointing to '%s'", link, new_dir)
-					try:
-						run_command(["mklink", "/j", str(link), str(new_dir)], timeout=10)
-					except ProcessError as err:
-						logger.error("Failed to create link: %s", err)
-
+					logger.info("Creating link '%s' pointing to '%s'", link_path, new_dir)
+					link(link_path, new_dir, link_type="junction", overwrite=True)
 				else:
 					old_dir = inst_dir.with_name(f"{inst_dir.name}_old")
 					logger.info("Moving current installation dir '%s' to '%s'", inst_dir, old_dir)
