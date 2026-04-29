@@ -879,22 +879,14 @@ class ControlInterface(PipeControlInterface):
 		if set_access_files:
 			for file in set_access_files:
 				# Remove inherited permissions, allow SYSTEM and opsisetupuser full access to the files
-				cmd = [
-					"icacls",
-					str(file),
-					"/inheritance:r",
-					"/grant:r",
-					"SYSTEM:(OI)(CI)F",
-					"/grant:r",
-					f"*{str_sid}:(OI)(CI)F",
-				]
+				cmd = ["icacls", str(file), "/inheritance:r", "/grant:r", "SYSTEM:F", "/grant:r", f"*{str_sid}:F"]
 				logger.info("Setting permissions: %s", cmd)
 				try:
 					run_command(cmd)
 				except ProcessError as err:
 					logger.error("Failed to set permissions for file: %s", err)
 
-		logger.info("Setting login shell to '%s' for user %s (%s)", user_info["name"], user_info["name"], str_sid)
+		logger.info("Setting login shell to '%s' for user %s (%s)", command, user_info["name"], str_sid)
 		logon = win32security.LogonUser(
 			user_info["name"],
 			None,
