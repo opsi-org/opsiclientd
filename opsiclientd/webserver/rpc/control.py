@@ -938,17 +938,23 @@ class ControlInterface(PipeControlInterface):
 		if remove_user and not wait_for_ending:
 			wait_for_ending = True
 
+		import win32security
+
+		user_sid = win32security.ConvertSidToStringSid(win32security.LookupAccountName(None, OPSI_SETUP_USER_NAME)[0])
+
 		logger.info(
-			"Running PowerShell script '%s' as opsi setup user (admin=%s, recreate_user=%s, remove_user=%s, wait_for_ending=%s, shell_window_style=%s)",
+			"Running PowerShell script '%s' as opsi setup user (user_sid=%s, admin=%s, recreate_user=%s, remove_user=%s, wait_for_ending=%s, shell_window_style=%s)",
 			script,
+			user_sid,
 			admin,
 			recreate_user,
 			remove_user,
 			wait_for_ending,
 			shell_window_style,
 		)
-		# Remove inherited permissions, allow SYSTEM only
-		cmd = ["icacls", str(script), "/inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"]
+		# Remove inherited permissions, allow SYSTEM and opsisetupuser full access to the script
+
+		cmd = ["icacls", str(script), "/inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F", "/grant:r", f"{user_sid}:(OI)(CI)F"]
 		logger.info("Setting permissions: %s", cmd)
 		try:
 			run_command(cmd)
