@@ -873,6 +873,7 @@ class ControlInterface(PipeControlInterface):
 			System.logoffSession(session_id)
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 
+		logger.info("Setting login shell to '%s' for user %s (%s)", user_info["name"], user_info["name"], user_info["user_sid"])
 		logon = win32security.LogonUser(
 			user_info["name"],
 			None,
@@ -918,6 +919,7 @@ class ControlInterface(PipeControlInterface):
 					break
 				time.sleep(0.5)
 
+		logger.info("Logging in as user %s (%s) to trigger execution of command", user_info["name"], user_info["user_sid"])
 		self.opsiclientd.loginUser(socket.gethostname().upper(), user_info["name"], user_info["password"])
 
 	def _run_powershell_script_as_opsi_setup_user(
@@ -936,6 +938,15 @@ class ControlInterface(PipeControlInterface):
 		if remove_user and not wait_for_ending:
 			wait_for_ending = True
 
+		logger.info(
+			"Running PowerShell script '%s' as opsi setup user (admin=%s, recreate_user=%s, remove_user=%s, wait_for_ending=%s, shell_window_style=%s)",
+			script,
+			admin,
+			recreate_user,
+			remove_user,
+			wait_for_ending,
+			shell_window_style,
+		)
 		# Remove inherited permissions, allow SYSTEM only
 		cmd = ["icacls", str(script), "/inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"]
 		logger.info("Setting permissions: %s", cmd)
