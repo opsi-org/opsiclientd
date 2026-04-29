@@ -886,7 +886,7 @@ class ControlInterface(PipeControlInterface):
 					"/grant:r",
 					"SYSTEM:(OI)(CI)F",
 					"/grant:r",
-					f"{str_sid}:(OI)(CI)F",
+					f"*{str_sid}:(OI)(CI)F",
 				]
 				logger.info("Setting permissions: %s", cmd)
 				try:
