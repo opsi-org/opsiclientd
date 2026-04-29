@@ -859,7 +859,9 @@ class ControlInterface(PipeControlInterface):
 			logger.error(err, exc_info=True)
 			raise
 
-	def _run_process_as_opsi_setup_user(self, command: str, admin: bool, recreate_user: bool) -> None:
+	def _run_process_as_opsi_setup_user(
+		self, command: str, admin: bool, recreate_user: bool, set_access_files: list[Path] | None = None
+	) -> None:
 		# https://bugs.python.org/file46988/issue.py
 		if not is_windows():
 			raise NotImplementedError(f"Not implemented on {platform.system()}")
@@ -872,6 +874,24 @@ class ControlInterface(PipeControlInterface):
 		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 			System.logoffSession(session_id)
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
+
+		if set_access_files:
+			for file in set_access_files:
+				# Remove inherited permissions, allow SYSTEM and opsisetupuser full access to the files
+				cmd = [
+					"icacls",
+					str(file),
+					"/inheritance:r",
+					"/grant:r",
+					"SYSTEM:(OI)(CI)F",
+					"/grant:r",
+					f"{user_info['user_sid']}:(OI)(CI)F",
+				]
+				logger.info("Setting permissions: %s", cmd)
+				try:
+					run_command(cmd)
+				except ProcessError as err:
+					logger.error("Failed to set permissions for file: %s", err)
 
 		logger.info("Setting login shell to '%s' for user %s (%s)", user_info["name"], user_info["name"], user_info["user_sid"])
 		logon = win32security.LogonUser(
@@ -938,34 +958,22 @@ class ControlInterface(PipeControlInterface):
 		if remove_user and not wait_for_ending:
 			wait_for_ending = True
 
-		import win32security
-
-		user_sid = win32security.ConvertSidToStringSid(win32security.LookupAccountName(None, OPSI_SETUP_USER_NAME)[0])
-
 		logger.info(
-			"Running PowerShell script '%s' as opsi setup user (user_sid=%s, admin=%s, recreate_user=%s, remove_user=%s, wait_for_ending=%s, shell_window_style=%s)",
+			"Running PowerShell script '%s' as opsi setup user (admin=%s, recreate_user=%s, remove_user=%s, wait_for_ending=%s, shell_window_style=%s)",
 			script,
-			user_sid,
 			admin,
 			recreate_user,
 			remove_user,
 			wait_for_ending,
 			shell_window_style,
 		)
-		# Remove inherited permissions, allow SYSTEM and opsisetupuser full access to the script
-
-		cmd = ["icacls", str(script), "/inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F", "/grant:r", f"{user_sid}:(OI)(CI)F"]
-		logger.info("Setting permissions: %s", cmd)
-		try:
-			run_command(cmd)
-		except ProcessError as err:
-			logger.error("Failed to set permissions for script: %s", err)
 
 		try:
 			self._run_process_as_opsi_setup_user(
 				f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}"',
 				admin,
 				recreate_user,
+				[script],
 			)
 			if wait_for_ending:
 				timeout = 7200
