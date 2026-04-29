@@ -874,6 +874,7 @@ class ControlInterface(PipeControlInterface):
 		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 			System.logoffSession(session_id)
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
+		str_sid = win32security.ConvertSidToStringSid(user_info["user_sid"])
 
 		if set_access_files:
 			for file in set_access_files:
@@ -885,7 +886,7 @@ class ControlInterface(PipeControlInterface):
 					"/grant:r",
 					"SYSTEM:(OI)(CI)F",
 					"/grant:r",
-					f"{user_info['user_sid']}:(OI)(CI)F",
+					f"{str_sid}:(OI)(CI)F",
 				]
 				logger.info("Setting permissions: %s", cmd)
 				try:
@@ -893,7 +894,7 @@ class ControlInterface(PipeControlInterface):
 				except ProcessError as err:
 					logger.error("Failed to set permissions for file: %s", err)
 
-		logger.info("Setting login shell to '%s' for user %s (%s)", user_info["name"], user_info["name"], user_info["user_sid"])
+		logger.info("Setting login shell to '%s' for user %s (%s)", user_info["name"], user_info["name"], str_sid)
 		logon = win32security.LogonUser(
 			user_info["name"],
 			None,
@@ -917,7 +918,6 @@ class ControlInterface(PipeControlInterface):
 
 			try:
 				# env = win32profile.CreateEnvironmentBlock(logon, False)
-				str_sid = win32security.ConvertSidToStringSid(user_info["user_sid"])
 				reg_key = winreg.OpenKey(  # ty: ignore[unresolved-attribute]
 					winreg.HKEY_USERS,  # ty: ignore[unresolved-attribute]
 					str_sid + r"\Software\Microsoft\Windows NT\CurrentVersion\Winlogon",
