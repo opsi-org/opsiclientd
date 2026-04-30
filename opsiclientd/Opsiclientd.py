@@ -39,13 +39,14 @@ from opsi.logging import get_logger, log_context, secret_filter
 from opsi.opsi.package import OpsiPackage
 from opsi.opsi.service.model.type import to_bool, to_string
 from opsi.system.file.operation import get_link_target, link
+from opsi.system.session import get_display_sessions
 from opsi_legacy import System
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject
 
 from opsiclientd import Config, __version__, check_signature, config, notify_posix_terminals
 from opsiclientd.ControlPipe import ControlPipe, ControlPipeFactory
 from opsiclientd.EventConfiguration import EventConfig
-from opsiclientd.EventProcessing import EventProcessingThread, get_sessions
+from opsiclientd.EventProcessing import EventProcessingThread
 from opsiclientd.Events.Basic import CannotCancelEventError, Event, EventListener
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
@@ -925,7 +926,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise RuntimeError("opsiclientd_rpc command not defined")
 
 		if sessionId is None:
-			sessions = get_sessions()
+			sessions = get_display_sessions()
 			if sessions:
 				sessionId = sessions[0].id
 			else:
@@ -957,7 +958,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		desktop = to_string(desktop)
 		if sessionId is None:
-			sessions = get_sessions()
+			sessions = get_display_sessions()
 			if sessions:
 				sessionId = sessions[0].id
 			else:
@@ -1097,7 +1098,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.info("Message of the day is disabled")
 			return []
 
-		sessions = get_sessions()
+		sessions = get_display_sessions()
 		logger.debug("Found sessions: %s", sessions)
 		host_id = config.get("global", "host_id")
 		messages_shown: list[str] = []
@@ -1249,7 +1250,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setChoices([_("Close")])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
-			session_ids = sessions or [session.id for session in get_sessions()]
+			session_ids = sessions or [session.id for session in get_display_sessions()]
 			desktops = desktops or ["default", "winlogon"]
 			if not session_ids:
 				if console_session_id := System.getActiveConsoleSessionId():  # type: ignore[possibly-missing-attribute]
@@ -1368,7 +1369,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start notification server: %s", err)
 				raise
 
-			session_ids = [session.id for session in get_sessions()]
+			session_ids = [session.id for session in get_display_sessions()]
 			desktops = ["default", "winlogon"]
 			if not session_ids:
 				if console_session_id := System.getActiveConsoleSessionId():  # type: ignore[possibly-missing-attribute]

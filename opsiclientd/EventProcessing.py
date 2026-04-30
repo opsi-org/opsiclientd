@@ -31,6 +31,7 @@ from opsi.opsi.service.model.object import Product, ProductOnClient
 from opsi.opsi.service.model.type import to_int, to_string, to_string_list, to_string_lower
 from opsi.process import ProcessError, run_command, run_script
 from opsi.system.environment import chdir
+from opsi.system.session import get_display_sessions
 from opsi_legacy import System
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject, MessageSubjectProxy, ProgressSubjectProxy
 
@@ -70,100 +71,6 @@ logger = get_logger()
 config = Config()
 state = State()
 timeline = Timeline()
-
-
-@dataclass
-class DesktopSession:
-	id: int
-	desktop: str
-	user: str
-	win_state: str | None = None
-
-
-def win_get_sessions(protocol: str | None = None, user: str | None = None) -> list[DesktopSession]:
-	import win32ts
-
-	WTS_PROTOCOLS = {
-		"console": win32ts.WTS_PROTOCOL_TYPE_CONSOLE,
-		"citrix": win32ts.WTS_PROTOCOL_TYPE_ICA,
-		"rdp": win32ts.WTS_PROTOCOL_TYPE_RDP,
-	}
-
-	WTS_STATES = {
-		win32ts.WTSActive: "active",
-		win32ts.WTSDisconnected: "disconnected",
-	}
-
-	if protocol is not None:
-		if protocol not in WTS_PROTOCOLS:
-			logger.warning("Invalid session protocol '%s'", protocol)
-			wts_protocol = None
-		else:
-			wts_protocol = WTS_PROTOCOLS[protocol]
-
-	server = win32ts.WTS_CURRENT_SERVER_HANDLE
-	sessions: list[DesktopSession] = []
-	for session in win32ts.WTSEnumerateSessions(server):
-		# WTS_CONNECTSTATE_CLASS:
-		# WTSActive,WTSConnected,WTSConnectQuery,WTSShadow,WTSDisconnected,WTSIdle,WTSListen,WTSReset,WTSDown,WTSInit
-		state = WTS_STATES.get(session.get("State"))  # ty: ignore[invalid-argument-type]
-		if not state:
-			continue
-		session_id = int(session["SessionId"])
-		session_user = win32ts.WTSQuerySessionInformation(server, session_id, win32ts.WTSUserName)
-		if not session_user or (user and session_user != user):
-			continue
-		if wts_protocol and wts_protocol != win32ts.WTSQuerySessionInformation(server, session_id, win32ts.WTSClientProtocolType):
-			continue
-		sessions.append(
-			DesktopSession(
-				id=session_id,
-				desktop=forceUnicodeLower(win32ts.WTSQuerySessionInformation(server, session_id, win32ts.WTSWorkingDirectory) or "default"),
-				user=session_user or "",
-				win_state=state,
-			)
-		)
-	return sessions
-
-
-def lin_get_sessions(user: str | None = None, limit_to_one_per_user: bool = True) -> list[DesktopSession]:
-	sessions: list[DesktopSession] = []
-	for proc in psutil.process_iter():
-		try:
-			env = proc.environ()
-			session_class = env.get("XDG_SESSION_CLASS")
-			if env.get("USER") and env.get("DISPLAY") and session_class:
-				if env.get("DISPLAY") == ":1024":
-					continue  # never try to use :1024 session as it seems to break gdm!
-				if user and env.get("USER") != user:
-					continue
-				if not any((session.id == int(env["DISPLAY"][1:]) for session in sessions)):
-					sessions.append(DesktopSession(id=int(env["DISPLAY"][1:]), desktop=session_class, user=env["USER"]))
-		except (psutil.AccessDenied, psutil.NoSuchProcess) as err:
-			logger.debug(err)
-	logger.devel(sessions)
-	if limit_to_one_per_user:
-		relevant_users = [user] if user else list({entry.user for entry in sessions})
-		relevant_sessions: list[DesktopSession] = []
-		for single_user in relevant_users:
-			relevant_sessions.append(
-				min([user_session for user_session in sessions if user_session.user == single_user], key=lambda x: x.id)
-			)
-		sessions = relevant_sessions
-	logger.devel(sessions)
-	return sessions
-
-
-def get_sessions(*, protocol: str | None = None, user: str | None = None) -> list[DesktopSession]:
-	if RUNNING_ON_WINDOWS:
-		return win_get_sessions(protocol=protocol, user=user)
-	elif RUNNING_ON_LINUX:
-		return lin_get_sessions(user=user)
-	elif RUNNING_ON_MACOS:
-		return [DesktopSession(id=1, desktop="default", user=os.getenv("USER") or "")]
-	else:
-		raise RuntimeError("Unsupported operating system")
-
 
 @dataclass
 class ProductInfo:
@@ -286,7 +193,7 @@ class EventProcessingThread(threading.Thread):
 				self._should_cancel = True
 
 	def getSessionId(self) -> int | None:
-		sessions = get_sessions()
+		sessions = get_display_sessions()
 
 		if RUNNING_ON_WINDOWS:
 			if self.isLoginEvent:
