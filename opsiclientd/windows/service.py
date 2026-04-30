@@ -16,11 +16,10 @@ from typing import TYPE_CHECKING, Any, Iterable, Sequence
 
 import servicemanager
 
-# pyright: reportMissingImports=false
 import win32event
 import win32service
 import win32serviceutil
-from opsicommon.logging import get_logger, log_context
+from opsi.logging import get_logger, log_context
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd

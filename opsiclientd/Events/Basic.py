@@ -13,9 +13,9 @@ import threading
 import time
 from typing import TYPE_CHECKING, Any
 
-import opsicommon.logging
-from opsicommon.logging import get_logger
-from opsicommon.types import forceList
+import opsi.logging
+from opsi.logging import get_logger
+from opsi.opsi.service.model.type import to_list
 
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.State import State
@@ -52,7 +52,7 @@ class EventGenerator(threading.Thread):
 	__repr__ = __str__
 
 	def setEventConfigs(self, eventConfigs: list[EventConfig]) -> None:
-		self._eventConfigs = forceList(eventConfigs)
+		self._eventConfigs = to_list(eventConfigs)
 
 	def addEventConfig(self, eventConfig: EventConfig) -> None:
 		self._eventConfigs.append(eventConfig)
@@ -164,7 +164,7 @@ class EventGenerator(threading.Thread):
 				self._event = event
 
 			def run(self) -> None:
-				with opsicommon.logging.log_context({"instance": "event generator " + self._event.eventConfig.getId()}):
+				with opsi.logging.log_context({"instance": "event generator " + self._event.eventConfig.getId()}):
 					if self._event.eventConfig.notificationDelay > 0:
 						logger.debug(
 							"Waiting %d seconds before notifying listener '%s' of event '%s'",
@@ -201,7 +201,7 @@ class EventGenerator(threading.Thread):
 				self._opsiclientd.eventLock.release()
 
 	def run(self) -> None:
-		with opsicommon.logging.log_context({"instance": f"event generator {self._generatorConfig.getId()}"}):
+		with opsi.logging.log_context({"instance": f"event generator {self._generatorConfig.getId()}"}):
 			try:
 				logger.info("Initializing event generator '%s'", self)
 				self.initialize()

@@ -9,6 +9,7 @@ Configuring opsiclientd.
 
 from __future__ import annotations
 
+import json
 import os
 import platform
 import sys
@@ -16,20 +17,19 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 
-import netifaces  # type: ignore[import]
+import netifaces  # ty: ignore[unresolved-import]
+from opsi.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
+from opsi.opsi.service.client import ServiceClient, ServiceVerificationFlags
+from opsi.opsi.service.model.object import serialize
+from opsi.opsi.service.model.type import to_bool, to_host_id, to_list, to_product_id_list, to_string, to_string_list
+from opsi.system.network import get_fqdn
 from opsi_legacy import System
-from opsi_legacy.Util import objectToBeautifiedText
 from opsi_legacy.Util.File import IniFile
-from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
-from opsicommon.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
-from opsicommon.system.network import get_fqdn
-from opsicommon.types import forceBool, forceHostId, forceList, forceProductIdList, forceUnicode, forceUnicodeList
-from opsicommon.utils import Singleton
 
 from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_MACOS, RUNNING_ON_WINDOWS
 
 if TYPE_CHECKING:
-	from opsicommon.objects import OpsiDepotserver
+	from opsi.opsi.service.model.object import OpsiDepotserver
 
 	from opsiclientd.Events.Basic import Event
 
@@ -96,8 +96,9 @@ class NoConfigOptionFoundException(ValueError):
 	pass
 
 
-class Config(metaclass=Singleton):
-	_initialized = False
+class Config:
+	_instance: Config | None = None
+
 	WINDOWS_DEFAULT_PATHS = {
 		"global": {
 			"tmp_dir": "c:\\opsi.org\\tmp",
@@ -148,8 +149,13 @@ class Config(metaclass=Singleton):
 		"depot_server": {"drive": "/private/var/opsisetupadmin/opsi_depot"},
 	}
 
+	def __new__(cls, *args: Any, **kwargs: Any) -> Config:
+		if cls._instance is None:
+			cls._instance = super().__new__(cls)
+		return cls._instance
+
 	def __init__(self) -> None:
-		if self._initialized:
+		if getattr(self, "_initialized", False):
 			return
 		self._initialized = True
 
@@ -331,9 +337,9 @@ class Config(metaclass=Singleton):
 						resm_config.run_opsi_script = resm_config.run_opsi_script.strip()
 						resm_config.disabled_event_types = ["gui startup", "daemon startup"]
 					elif option == "remove_marker":
-						resm_config.remove_marker = forceBool(value)
+						resm_config.remove_marker = to_bool(value)
 					elif option == "restart_service":
-						resm_config.restart_service = forceBool(value)
+						resm_config.restart_service = to_bool(value)
 
 		logger.notice("Restart marker config: %r", resm_config)
 		if resm_config.disabled_event_types:
@@ -409,7 +415,7 @@ class Config(metaclass=Singleton):
 		if not raw and isinstance(value, str) and (value.count("%") >= 2):
 			value = self.replace(value)
 		if isinstance(value, str):
-			value = forceUnicode(value)
+			value = to_string(value)
 		return value
 
 	@property
@@ -481,7 +487,7 @@ class Config(metaclass=Singleton):
 		if option in ("exclude_product_group_ids", "include_product_group_ids", "alt_ids", "interface"):
 			if not isinstance(value, list):
 				value = [x.strip() for x in value.split(",") if x.strip()]
-			value = forceList(value)
+			value = to_list(value)
 
 		if RUNNING_ON_WINDOWS and (option.endswith("_dir") or option.endswith("_file")):
 			if ":" in value and ":\\" not in value:
@@ -499,7 +505,7 @@ class Config(metaclass=Singleton):
 				except ValueError:
 					value = 0
 			elif option in ("active",):
-				value = forceBool(value)
+				value = to_bool(value)
 
 		elif section in self._config and option in self._config[section]:
 			if section == "config_service" and option == "url":
@@ -510,7 +516,7 @@ class Config(metaclass=Singleton):
 			else:
 				try:
 					if isinstance(self._config[section][option], bool):
-						value = forceBool(value)
+						value = to_bool(value)
 					elif self._config[section][option] is not None:
 						_type = type(self._config[section][option])
 						value = _type(value)
@@ -526,7 +532,7 @@ class Config(metaclass=Singleton):
 						raise ValueError("Bad opsi host key, length != 32")
 					secret_filter.add_secrets(str(value))
 				elif option in ("depot_id", "host_id"):
-					value = forceHostId(str(value).replace("_", "-"))
+					value = to_host_id(str(value).replace("_", "-"))
 
 		else:
 			logger.warning("Refusing to set value '%s' for invalid config %s.%s", value, section, option)
@@ -546,17 +552,17 @@ class Config(metaclass=Singleton):
 			if not isinstance(values, dict):
 				continue
 			for key, value in values.items():
-				value = forceUnicode(value)
-				if string.find('"%' + forceUnicode(section) + "." + forceUnicode(key) + '%"') != -1 and escaped:
+				value = to_string(value)
+				if string.find('"%' + to_string(section) + "." + to_string(key) + '%"') != -1 and escaped:
 					if os.name == "posix":
 						value = value.replace('"', '\\"')
 					elif RUNNING_ON_WINDOWS:
 						value = value.replace('"', '^"')
-				newString = string.replace("%" + forceUnicode(section) + "." + forceUnicode(key) + "%", value)
+				newString = string.replace("%" + to_string(section) + "." + to_string(key) + "%", value)
 
 				if newString != string:
 					string = self.replace(newString, escaped)
-		return forceUnicode(string)
+		return to_string(string)
 
 	def readConfigFile(self) -> None:
 		"""Get settings from config file"""
@@ -592,7 +598,7 @@ class Config(metaclass=Singleton):
 		self.set("control_server", "static_dir", self.get("control_server", "static_dir").replace("/", os.sep))
 
 		logger.notice("Config read")
-		logger.debug("Config is now:\n %s", objectToBeautifiedText(self._config))
+		logger.debug("Config is now:\n %s", json.dumps(serialize(self.getDict()), indent=4))
 
 	def updateConfigFile(self, force: bool = False) -> None:
 		logger.info("Updating config file: '%s'", self.get("global", "config_file"))
@@ -623,11 +629,11 @@ class Config(metaclass=Singleton):
 						# Do not store these option
 						continue
 					if isinstance(value, list):
-						value = ", ".join(forceUnicodeList(value))
+						value = ", ".join(to_string_list(value))
 					elif isinstance(value, bool):
 						value = str(value).lower()
 					else:
-						value = forceUnicode(value)
+						value = to_string(value)
 
 					if value.lower() in ("true", "false"):
 						value = value.lower()
@@ -685,7 +691,7 @@ class Config(metaclass=Singleton):
 		masterOnly: bool = False,
 		forceDepotProtocol: str | None = None,
 	) -> tuple[OpsiDepotserver, str]:
-		productIds = forceProductIdList(productIds or [])
+		productIds = to_product_id_list(productIds or [])
 		if not configService.connected:
 			raise RuntimeError("Not connected to config service")
 
@@ -701,14 +707,14 @@ class Config(metaclass=Singleton):
 		config_states = {}
 		if hasattr(configService, "configState_getValues"):
 			logger.info("Using configState_getValues")
-			config_states = configService.configState_getValues(  # type: ignore[attr-defined]
+			config_states = configService.configState_getValues(  # ty: ignore[call-non-callable]
 				config_ids=config_ids, object_ids=[self.get("global", "host_id")], with_defaults=True
 			).get(self.get("global", "host_id"), {})
 		else:
 			logger.info("Using configState_getObjects")
-			for config in configService.config_getObjects(id=config_ids):  # type: ignore[attr-defined]
+			for config in configService.config_getObjects(id=config_ids):  # ty: ignore[unresolved-attribute]
 				config_states[config.id] = config.defaultValues
-			for config_state in configService.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):  # type: ignore[attr-defined]
+			for config_state in configService.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):  # ty: ignore[unresolved-attribute]
 				config_states[config_state.configId] = config_state.values
 
 		for config_id, values in config_states.items():
@@ -717,13 +723,13 @@ class Config(metaclass=Singleton):
 
 			if config_id == "opsiclientd.depot_server.depot_id" and values:
 				try:
-					depotId = forceHostId(values[0])
+					depotId = to_host_id(values[0])
 					depotIds.append(depotId)
 					logger.notice("Depot was set to '%s' from configState %s", depotId, config_id)
 				except Exception as err:
 					logger.error("Failed to set depot id from values %s in configState %s: %s", values, config_id, err)
 			elif not masterOnly and (config_id == "clientconfig.depot.dynamic") and values:
-				dynamicDepot = forceBool(values[0])
+				dynamicDepot = to_bool(values[0])
 
 			elif config_id == "clientconfig.depot.protocol" and values and not forceDepotProtocol:
 				depotProtocol = values[0]
@@ -746,7 +752,7 @@ class Config(metaclass=Singleton):
 			logger.info("Dynamic depot selection disabled")
 
 		if not depotIds:
-			clientToDepotservers = configService.configState_getClientToDepotserver(  # type: ignore[attr-defined]
+			clientToDepotservers = configService.configState_getClientToDepotserver(  # ty: ignore[unresolved-attribute]
 				clientIds=[self.get("global", "host_id")], masterOnly=bool(not dynamicDepot), productIds=productIds
 			)
 			if not clientToDepotservers:
@@ -759,7 +765,7 @@ class Config(metaclass=Singleton):
 		logger.debug("Fetching depot servers %s from config service", depotIds)
 		masterDepot = None
 		alternativeDepots = []
-		for depot in configService.host_getObjects(type="OpsiDepotserver", id=depotIds):  # type: ignore[attr-defined]
+		for depot in configService.host_getObjects(type="OpsiDepotserver", id=depotIds):  # ty: ignore[unresolved-attribute]
 			logger.trace("Depot: %s", depot)
 			if depot.id == depotIds[0]:
 				masterDepot = depot
@@ -805,7 +811,7 @@ class Config(metaclass=Singleton):
 
 					logger.info("Passing client configuration to depot selection algorithm: %s", clientConfig)
 
-					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()  # type: ignore[attr-defined]
+					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()  # ty: ignore[unresolved-attribute]
 					logger.trace("depotSelectionAlgorithm:\n%s", depotSelectionAlgorithm)
 
 					currentLocals = locals()
@@ -831,7 +837,7 @@ class Config(metaclass=Singleton):
 		masterOnly: bool = False,
 	) -> None:
 		assert mode in ("mount", "sync")
-		productIds = forceProductIdList(productIds or [])
+		productIds = to_product_id_list(productIds or [])
 
 		logger.notice("Selecting depot for products %s", productIds)
 		logger.notice("MasterOnly --> '%s'", masterOnly)
@@ -868,7 +874,7 @@ class Config(metaclass=Singleton):
 			raise RuntimeError("Not connected to config service")
 
 		depotServerUsername = self.get("depot_server", "username")
-		depotServerPassword = configService.user_getCredentials(username="pcpatch")["password"]  # type: ignore[attr-defined]
+		depotServerPassword = configService.user_getCredentials(username="pcpatch")["password"]  # ty: ignore[unresolved-attribute]
 		secret_filter.add_secrets(depotServerPassword)
 		logger.debug("Using username '%s' for depot connection", depotServerUsername)
 		return (depotServerUsername, depotServerPassword)
@@ -894,7 +900,7 @@ class Config(metaclass=Singleton):
 		if hasattr(service_client, "configState_getValues"):
 			use_get_objects = False
 			logger.info("Using configState_getValues")
-			config_states = service_client.configState_getValues(  # type: ignore[attr-defined]
+			config_states = service_client.configState_getValues(  # ty: ignore[call-non-callable]
 				config_ids=config_ids, object_ids=[self.get("global", "host_id")], with_defaults=True
 			).get(self.get("global", "host_id"), {})
 			if (
@@ -907,9 +913,9 @@ class Config(metaclass=Singleton):
 				use_get_objects = True
 		if use_get_objects:
 			logger.info("Using configState_getObjects")
-			for config in service_client.config_getObjects(id=config_ids):  # type: ignore[attr-defined]
+			for config in service_client.config_getObjects(id=config_ids):  # ty: ignore[unresolved-attribute]
 				config_states[config.id] = config.defaultValues
-			for config_state in service_client.configState_getObjects(  # type: ignore[attr-defined]
+			for config_state in service_client.configState_getObjects(  # ty: ignore[unresolved-attribute]
 				objectId=self.get("global", "host_id"),
 				configId=config_ids,
 			):
@@ -930,7 +936,7 @@ class Config(metaclass=Singleton):
 			and config_states["clientconfig.smart_cache.sync_completed_action"]
 		):
 			val = config_states["clientconfig.smart_cache.sync_completed_action"][0]
-			if val in ("reboot", "none"):
+			if val in ("none", "process", "reboot"):
 				smart_cache_sync_completed_action = val
 				logger.info("SmartCache sync completed action is set to %r", smart_cache_sync_completed_action)
 			else:
@@ -977,62 +983,75 @@ class Config(metaclass=Singleton):
 			self.setProductCachingMode(True, sync_completed_action=smart_cache_sync_completed_action)
 
 		logger.notice("Got config from service")
-		logger.debug("Config is now:\n %s", objectToBeautifiedText(self.getDict()))
+		logger.debug("Config is now:\n %s", json.dumps(serialize(self.getDict()), indent=4))
 
-	def setProductCachingMode(self, activated: bool, sync_completed_action: Literal["reboot", "none"] | None = None) -> None:
+	def setProductCachingMode(self, activated: bool, sync_completed_action: Literal["none", "process", "reboot"] | None = None) -> None:
+		start_event = "event_gui_startup" if RUNNING_ON_WINDOWS else "event_opsiclientd_start"
 		if activated:
 			self.set("event_net_connection", "active", False)
 			self.set("event_timer", "active", True)
-			if RUNNING_ON_WINDOWS:
-				self.set("event_gui_startup", "active", False)
-				self.set("event_opsiclientd_start", "active", False)
-				self.set("event_gui_startup{cache_ready}", "active", True)
-				self.set("event_gui_startup{cache_ready}", "use_cached_config", False)
-				self.set("event_gui_startup{cache_ready}", "use_cached_products", True)
-			else:
-				self.set("event_gui_startup", "active", False)
-				self.set("event_opsiclientd_start", "active", False)
-				self.set("event_opsiclientd_start{cache_ready}", "active", True)
-				self.set("event_opsiclientd_start{cache_ready}", "use_cached_config", False)
-				self.set("event_opsiclientd_start{cache_ready}", "use_cached_products", True)
+
+			for precondition in ("", "{cache_ready}"):
+				self.set(f"event_gui_startup{precondition}", "active", False)
+				self.set(f"event_opsiclientd_start{precondition}", "active", False)
+				if not precondition:
+					# cache-ready not needed, actions will be processed on startup no matter if cache is ready or not
+					self.set(f"{start_event}{precondition}", "active", True)
+				self.set(f"{start_event}{precondition}", "cache_products", True)
+				self.set(f"{start_event}{precondition}", "use_cached_config", False)
+				self.set(f"{start_event}{precondition}", "use_cached_products", True)
+
+			self.set("event_on_demand", "cache_products", True)
+			self.set("event_on_demand", "use_cached_products", True)
+
 			self.set("event_sync", "sync_config_from_server", False)
 			self.set("event_sync", "sync_config_to_server", False)
 			self.set("event_sync", "cache_products", True)
+
 			self.set("precondition_cache_ready_user_logged_in", "config_cached", False)
 			self.set("precondition_cache_ready_user_logged_in", "products_cached", True)
 			self.set("precondition_cache_ready", "config_cached", False)
 			self.set("precondition_cache_ready", "products_cached", True)
-			self.set("event_sync_completed{cache_ready_user_logged_in}", "reboot", sync_completed_action == "reboot")
-			self.set("event_sync_completed{cache_ready}", "reboot", sync_completed_action == "reboot")
-			# Make configurable?
-			self.set("event_on_demand", "cache_products", True)
-			self.set("event_on_demand", "use_cached_products", True)
+
+			# sync_completed_action can be "none", "process" or "reboot"
+			for precondition in ("{cache_ready_user_logged_in}", "{cache_ready}"):
+				section = f"event_sync_completed{precondition}"
+				self.set(section, "reboot", False)
+				self.set(section, "process_actions", False)
+				self.set(section, "use_cached_products", False)
+				if sync_completed_action == "reboot":
+					self.set(section, "reboot", True)
+				elif sync_completed_action == "process":
+					self.set(section, "process_actions", True)
+					self.set(section, "use_cached_products", True)
+
 		else:
 			# Set back to default values (as defined in default config file)
 			self.set("event_net_connection", "active", False)
 			self.set("event_timer", "active", False)
-			if RUNNING_ON_WINDOWS:
-				self.set("event_gui_startup", "active", True)
-				self.set("event_gui_startup{cache_ready}", "active", True)
-				self.set("event_opsiclientd_start", "active", False)
-				self.set("event_opsiclientd_start{cache_ready}", "active", False)
-			else:
-				self.set("event_gui_startup", "active", False)
-				self.set("event_gui_startup{cache_ready}", "active", False)
-				self.set("event_opsiclientd_start", "active", True)
-				self.set("event_opsiclientd_start{cache_ready}", "active", True)
-			self.set("event_gui_startup{cache_ready}", "use_cached_config", True)
-			self.set("event_gui_startup{cache_ready}", "use_cached_products", True)
-			self.set("event_opsiclientd_start{cache_ready}", "use_cached_config", True)
-			self.set("event_opsiclientd_start{cache_ready}", "use_cached_products", True)
+
+			for precondition in ("", "{cache_ready}"):
+				self.set(f"event_gui_startup{precondition}", "active", False)
+				self.set(f"event_opsiclientd_start{precondition}", "active", False)
+				self.set(f"{start_event}{precondition}", "active", True)
+				self.set(f"{start_event}{precondition}", "cache_products", False)
+				self.set(f"{start_event}{precondition}", "use_cached_config", precondition == "{cache_ready}")
+				self.set(f"{start_event}{precondition}", "use_cached_products", precondition == "{cache_ready}")
+
+			self.set("event_on_demand", "cache_products", False)
+			self.set("event_on_demand", "use_cached_products", False)
+
 			self.set("event_sync", "sync_config_from_server", True)
 			self.set("event_sync", "sync_config_to_server", True)
 			self.set("event_sync", "cache_products", True)
+
 			self.set("precondition_cache_ready_user_logged_in", "config_cached", True)
 			self.set("precondition_cache_ready_user_logged_in", "products_cached", True)
 			self.set("precondition_cache_ready", "config_cached", True)
 			self.set("precondition_cache_ready", "products_cached", True)
-			self.set("event_sync_completed{cache_ready_user_logged_in}", "reboot", True)
-			self.set("event_sync_completed{cache_ready}", "reboot", True)
-			self.set("event_on_demand", "cache_products", False)
-			self.set("event_on_demand", "use_cached_products", False)
+
+			for precondition in ("{cache_ready_user_logged_in}", "{cache_ready}"):
+				section = f"event_sync_completed{precondition}"
+				self.set(section, "reboot", True)
+				self.set(section, "process_actions", False)
+				self.set(section, "use_cached_products", False)

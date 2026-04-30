@@ -15,9 +15,18 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from opsicommon.logging import LOG_INFO, use_logging_config
-from opsicommon.objects import Config, ConfigState, Host, LocalbootProduct, OpsiDepotserver, Product, ProductOnClient, ProductOnDepot
-from opsicommon.package.associated_files import create_package_content_file
+from opsi.logging import LOG_INFO, use_logging_config
+from opsi.opsi.service.model.object import (
+	Config,
+	ConfigState,
+	Host,
+	LocalbootProduct,
+	OpsiDepotserver,
+	Product,
+	ProductOnClient,
+	ProductOnDepot,
+)
+from opsi.opsi.package import create_package_content_file
 
 from opsiclientd.Config import Config as OpsiclientdConfig
 from opsiclientd.nonfree.CacheService import ProductCacheService
@@ -160,7 +169,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		patch("opsiclientd.nonfree.CacheService.ProductCacheService._updateConfig", _updateConfig),
 		patch("opsiclientd.nonfree.CacheService.ProductCacheService.service_client", service_client),
 	):
-		product_cache_service = ProductCacheService(opsiclientd=None)  # type: ignore[arg-type]
+		product_cache_service = ProductCacheService(opsiclientd=None)  # ty: ignore[invalid-argument-type]
 
 		# Test opsi-script only
 		service_client.updated_pocs.clear()

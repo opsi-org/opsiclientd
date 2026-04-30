@@ -8,7 +8,7 @@ import io
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse
-from opsicommon.logging import get_logger
+from opsi.logging import get_logger
 
 from opsiclientd.Config import Config
 from opsiclientd.webserver.application import get_opsiclientd

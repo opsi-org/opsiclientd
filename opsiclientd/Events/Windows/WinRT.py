@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from opsicommon.logging import get_logger, log_context
+from opsi.logging import get_logger, log_context
 
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
@@ -35,7 +35,7 @@ def _get_winrt_module(module_path: str) -> Any:
 	if module_path not in _winrt_imports:
 		try:
 			if module_path == "winrt.windows.networking.connectivity":
-				from winrt.windows.networking.connectivity import (  # type: ignore
+				from winrt.windows.networking.connectivity import (  # ty: ignore
 					NetworkConnectivityLevel,
 					NetworkCostType,
 					NetworkInformation,

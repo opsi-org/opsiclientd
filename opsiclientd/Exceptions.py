@@ -7,7 +7,7 @@
 Non-standard exceptions.
 """
 
-from opsicommon.types import forceUnicode
+from opsi.opsi.service.model.type import to_string
 
 
 class OpsiclientdError(Exception):
@@ -15,7 +15,7 @@ class OpsiclientdError(Exception):
 
 	def __init__(self, message: str = "") -> None:
 		Exception.__init__(self)
-		self._message = forceUnicode(message)
+		self._message = to_string(message)
 
 	def __str__(self) -> str:
 		_str = self.ExceptionShortDescription

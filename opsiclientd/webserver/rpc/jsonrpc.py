@@ -20,9 +20,10 @@ from typing import Any, AsyncGenerator, Literal
 from fastapi import HTTPException
 from fastapi.requests import Request
 from fastapi.responses import Response
-from opsicommon.logging import get_logger
-from opsicommon.objects import deserialize, serialize
-from opsicommon.utils import compress_data, decompress_data, json_decode, json_encode, msgpack_decode, msgpack_encode
+from opsi.logging import get_logger
+from opsi.opsi.service.model.object import deserialize, serialize
+from opsi.compression import compress, decompress
+from opsi.serialization import json_decode, json_encode, msgpack_decode, msgpack_encode
 from starlette.concurrency import run_in_threadpool
 
 from opsiclientd.webserver.rpc.interface import Interface
@@ -327,7 +328,7 @@ async def process_request(interface: Interface, request: Request, response: Resp
 			raise ValueError("Request data must be bytes")
 		if request_data:
 			if request_compression:
-				request_data = await run_in_threadpool(decompress_data, request_data, request_compression)
+				request_data = await run_in_threadpool(decompress, request_data, request_compression)
 		else:
 			request_data = urllib.parse.unquote(request.url.query).encode("utf-8")
 		if not request_data:
@@ -356,11 +357,11 @@ async def process_request(interface: Interface, request: Request, response: Resp
 	data_len = len(data)
 	if response_compression and data_len > COMPRESS_MIN_SIZE:
 		response.headers["content-encoding"] = response_compression
-		lz4_block_linked = True
+		block_linked = True
 		if request.headers.get("user-agent", "").startswith(("opsi config editor", "opsi-configed")):
 			# lz4-java - RuntimeException: Dependent block stream is unsupported (BLOCK_INDEPENDENCE must be set).
-			lz4_block_linked = False
-		data = await run_in_threadpool(compress_data, data, response_compression, 0, lz4_block_linked)
+			block_linked = False
+		data = await run_in_threadpool(compress, data, response_compression, compression_level=0, block_linked=block_linked)
 
 	content_length = len(data)
 	response.headers["content-length"] = str(content_length)

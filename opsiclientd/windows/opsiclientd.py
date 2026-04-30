@@ -13,14 +13,11 @@ import glob
 import os
 import random
 import string
-import subprocess
 import sys
 import threading
 import time
 import winreg
 from enum import StrEnum
-
-# pyright: reportMissingImports=false
 from typing import Any
 
 import psutil
@@ -30,9 +27,10 @@ import win32con
 import win32net
 import win32netcon
 import win32security
+from opsi.logging import get_logger, secret_filter
+from opsi.opsi.service.model.type import to_bool
+from opsi.process import run_command, run_script
 from opsi_legacy import System
-from opsicommon.logging import get_logger, secret_filter
-from opsicommon.types import forceBool
 
 from opsiclientd import config
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
@@ -48,7 +46,7 @@ logger = get_logger()
 
 
 def opsiclientd_factory() -> OpsiclientdNT:
-	windowsVersion = sys.getwindowsversion()  # type: ignore[attr-defined]
+	windowsVersion = sys.getwindowsversion()  # ty: ignore[unresolved-attribute]
 	if windowsVersion.major == 5:  # NT5: XP
 		return OpsiclientdNT5()
 	if windowsVersion.major >= 6:  # NT6: Vista / Windows7 and later
@@ -63,23 +61,18 @@ class OpsiclientdNT(Opsiclientd):
 
 	def sendSAS(self) -> None:
 		logger.info("Sending SAS")
-		from ctypes import windll  # type: ignore[attr-defined]
+		from ctypes import windll  # ty: ignore[unresolved-import]
 
-		windll.sas.SendSAS(0)  # pylint: disable=no-member
+		windll.sas.SendSAS(0)
 
 	def suspendBitlocker(self) -> None:
 		logger.notice("Suspending bitlocker for one reboot if active")
 		try:
-			System.execute(  # type: ignore[possibly-missing-attribute]
-				'powershell.exe -ExecutionPolicy Bypass -Command "'
-				"foreach($v in Get-BitLockerVolume)"
-				"{if ($v.EncryptionPercentage -gt 0)"
-				'{$v | Suspend-BitLocker -RebootCount 1}}"',
-				captureStderr=True,
-				waitForEnding=True,
+			run_script(
+				"foreach($v in Get-BitLockerVolume) {if ($v.EncryptionPercentage -gt 0) {$v | Suspend-BitLocker -RebootCount 1}}",
+				interpreter="powershell",
 				timeout=20,
 			)
-
 		except Exception as err:
 			logger.error("Failed to suspend bitlocker: %s", err, exc_info=True)
 
@@ -112,7 +105,7 @@ class OpsiclientdNT(Opsiclientd):
 			self.clearRebootRequest()
 			return False
 
-		return forceBool(rebootRequested)
+		return to_bool(rebootRequested)
 
 	def isShutdownRequested(self) -> bool:
 		try:
@@ -122,7 +115,7 @@ class OpsiclientdNT(Opsiclientd):
 			shutdownRequested = 0
 
 		logger.notice("Shutdown request in Registry: %s", shutdownRequested)
-		return forceBool(shutdownRequested)
+		return to_bool(shutdownRequested)
 
 	def isWindowsRebootPending(self) -> bool:
 		if sys.platform != "win32":
@@ -267,10 +260,10 @@ class OpsiclientdNT(Opsiclientd):
 	def loginUser(self, domain: str, username: str, password: str) -> bool:
 		secret_filter.add_secrets(password)
 		assert self._controlPipe
-		for session_id in System.getActiveSessionIds(protocol="console"):  # type: ignore[possibly-missing-attribute]
+		for session_id in System.getActiveSessionIds(protocol="console"):  # ty: ignore[unknown-argument]
 			desktop = self.getCurrentActiveDesktopName(session_id)
 			if desktop and desktop.lower() != "winlogon":
-				System.lockSession(session_id)  # type: ignore[possibly-missing-attribute]
+				System.lockSession(session_id)
 			break
 
 		for seconds in range(20):
@@ -298,13 +291,13 @@ class OpsiclientdNT(Opsiclientd):
 		while modified:
 			modified = False
 			# We need to start over iterating after key change
-			with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:  # type: ignore[attr-defined]
+			with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:  # ty: ignore[unresolved-attribute]
 				for idx in range(1024):
 					try:
-						profile_key = winreg.EnumKey(key, idx)  # type: ignore[attr-defined]
+						profile_key = winreg.EnumKey(key, idx)  # ty: ignore[unresolved-attribute]
 						logger.debug("Processing profile key %r", profile_key)
 					except WindowsError as err:
-						if err.errno == 22:  # type: ignore[attr-defined]
+						if err.errno == 22:  # ty: ignore[unresolved-attribute]
 							logger.debug("No more subkeys")
 							break
 						logger.debug(err)
@@ -312,8 +305,8 @@ class OpsiclientdNT(Opsiclientd):
 					sid = profile_key.replace(".bak", "")
 
 					try:
-						with winreg.OpenKey(key, profile_key) as subkey:  # type: ignore[attr-defined]
-							profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]  # type: ignore[attr-defined]
+						with winreg.OpenKey(key, profile_key) as subkey:  # ty: ignore[unresolved-attribute]
+							profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]  # ty: ignore[unresolved-attribute]
 							if keep_sid and sid == keep_sid:
 								keep_profile = profile_path
 								continue
@@ -332,7 +325,7 @@ class OpsiclientdNT(Opsiclientd):
 						continue
 
 					try:
-						win32api.RegUnLoadKey(win32con.HKEY_USERS, profile_key)  # type: ignore[arg-type]
+						win32api.RegUnLoadKey(win32con.HKEY_USERS, profile_key)  # ty: ignore[invalid-argument-type]
 					except pywintypes.error as err:
 						logger.debug(err)
 
@@ -345,37 +338,33 @@ class OpsiclientdNT(Opsiclientd):
 
 					if exists:
 						logger.info("Deleting user %r, sid %r", username, sid)
-						cmd = [
-							"powershell.exe",
-							"-ExecutionPolicy",
-							"Bypass",
-							"-Command",
+						proc = run_script(
 							f"Remove-LocalUser -SID (New-Object 'Security.Principal.SecurityIdentifier' \"{sid}\") -Verbose",
-						]
-						logger.info("Executing: %s", cmd)
-						res = subprocess.run(cmd, shell=False, capture_output=True, check=False, timeout=60)
-						out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
-						if res.returncode == 0:
-							logger.info("Command %s successful: %s", cmd, out)
+							interpreter="powershell",
+							timeout=30,
+							success_exit_codes=None,
+						)
+						out = proc.get_output_text()
+						if proc.exit_code == 0:
 							modified = True
 						else:
-							logger.warning("Failed to delete user %r %r (exitcode %d): %s", cmd, username, res.returncode, out)
+							logger.warning("Failed to delete user %r (exitcode %d): %s", username, proc.exit_code, out)
 							try:
 								logger.info("Deleting user %r via windows api", username)
-								win32net.NetUserDel(None, username)  # type: ignore[arg-type]
+								win32net.NetUserDel(None, username)  # ty: ignore[invalid-argument-type]
 							except Exception as err:
 								logger.warning("Failed to delete user %r via windows api: %s", username, err)
 
 					else:
 						logger.info("User %r, sid %r does not exist, deleting key", username, sid)
 						try:
-							winreg.DeleteKey(key, profile_key)  # type: ignore[attr-defined]
+							winreg.DeleteKey(key, profile_key)  # ty: ignore[unresolved-attribute]
 							modified = True
 						except OSError as err:
 							logger.debug(err)
 
 					try:
-						winreg.DeleteKey(winreg.HKEY_USERS, sid)  # type: ignore[attr-defined]
+						winreg.DeleteKey(winreg.HKEY_USERS, sid)  # ty: ignore[unresolved-attribute]
 					except OSError as err:
 						logger.debug(err)
 					if modified:
@@ -383,22 +372,23 @@ class OpsiclientdNT(Opsiclientd):
 						break
 
 		# takeown parameter /d is localized 😠
-		res = subprocess.run("choice <nul 2>nul", capture_output=True, check=False, shell=True)
-		yes = res.stdout.decode().split(",")[0].lstrip("[").strip()
+		res = run_script("choice <nul 2>nul", success_exit_codes=None, interpreter="cmd")
+		yes = res.get_output_text().strip().split(",")[0].lstrip("[").strip()
 		for pdir in glob.glob(f"c:\\users\\{OPSI_SETUP_USER_NAME}*"):
 			if keep_profile and keep_profile.lower() == pdir.lower():
 				continue
 			logger.info("Deleting user dir '%s'", pdir)
-			for cmd, shell, exit_codes_success in (
-				(["takeown", "/a", "/d", yes, "/r", "/f", pdir], False, [0, 1]),
-				(["del", pdir, "/f", "/s", "/q"], True, [0]),
-				(["rd", pdir, "/s", "/q"], True, [0]),
+			for cmd, success_exit_codes in (
+				(["takeown", "/a", "/d", yes, "/r", "/f", pdir], [0, 1]),
+				(f'del "{pdir}" /f /s /q', [0]),
+				(f'rd "{pdir}" /s /q', [0]),
 			):
 				logger.info("Executing: %s", cmd)
-				res = subprocess.run(cmd, shell=shell, capture_output=True, check=False)
-				out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
-				if res.returncode not in exit_codes_success:
-					logger.warning("Command %s failed with exit code %s: %s", cmd, res.returncode, out)
+				func = run_script if isinstance(cmd, str) else run_command
+				proc = func(cmd, success_exit_codes=None, timeout=60)
+				out = proc.get_output_text()
+				if proc.exit_code not in success_exit_codes:
+					logger.warning("Command %s failed with exit code %s: %s", cmd, res.exit_code, out)
 				else:
 					logger.info("Command %s successful: %s", cmd, out)
 
@@ -470,9 +460,13 @@ class OpsiclientdNT(Opsiclientd):
 			win32net.NetUserAdd(None, 1, user_info)
 
 		user_sid = win32security.ConvertSidToStringSid(win32security.LookupAccountName(None, str(user_info["name"]))[0])
-		subprocess.run(["icacls", os.path.dirname(sys.argv[0]), "/grant:r", f"*{user_sid}:(OI)(CI)RX"], check=False)
-		subprocess.run(["icacls", os.path.dirname(config.get("global", "log_file")), "/grant:r", f"*{user_sid}:(OI)(CI)F"], check=False)
-		subprocess.run(["icacls", os.path.dirname(config.get("global", "tmp_dir")), "/grant:r", f"*{user_sid}:(OI)(CI)F"], check=False)
+		run_command(["icacls", os.path.dirname(sys.argv[0]), "/grant:r", f"*{user_sid}:(OI)(CI)RX"], success_exit_codes=None)
+		run_command(
+			["icacls", os.path.dirname(config.get("global", "log_file")), "/grant:r", f"*{user_sid}:(OI)(CI)F"], success_exit_codes=None
+		)
+		run_command(
+			["icacls", os.path.dirname(config.get("global", "tmp_dir")), "/grant:r", f"*{user_sid}:(OI)(CI)F"], success_exit_codes=None
+		)
 
 		local_admin_group_sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
 		local_admin_group_name = win32security.LookupAccountSid(None, local_admin_group_sid)[0]
@@ -502,14 +496,14 @@ class OpsiclientdNT5(OpsiclientdNT):
 
 	def shutdownMachine(self, waitSeconds: int = 3) -> None:
 		self._isShutdownTriggered = True
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)  # type: ignore[possibly-missing-attribute]
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
 
 		# Running in thread to avoid failure of shutdown (device not ready)
 		ShutdownThread().start()
 
 	def rebootMachine(self, waitSeconds: int = 3) -> None:
 		self._isRebootTriggered = True
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)  # type: ignore[possibly-missing-attribute]
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
 
 		# Running in thread to avoid failure of reboot (device not ready)
 		RebootThread().start()
@@ -522,7 +516,7 @@ class ShutdownThread(threading.Thread):
 	def run(self) -> None:
 		while True:
 			try:
-				System.shutdown(0)  # type: ignore[possibly-missing-attribute]
+				System.shutdown(0)
 				logger.notice("Shutdown initiated")
 				break
 			except Exception as err:
@@ -538,7 +532,7 @@ class RebootThread(threading.Thread):
 	def run(self) -> None:
 		while True:
 			try:
-				System.reboot(0)  # type: ignore[possibly-missing-attribute]
+				System.reboot(0)
 				logger.notice("Reboot initiated")
 				break
 			except Exception as err:

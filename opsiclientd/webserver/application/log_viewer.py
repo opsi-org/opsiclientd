@@ -11,8 +11,8 @@ import time
 
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
-from opsicommon.logging import LEVEL_TO_NAME, OPSI_LEVEL_TO_LEVEL, get_logger
-from opsicommon.utils import msgpack_encode
+from opsi.logging import LEVEL_TO_NAME, OPSI_LEVEL_TO_LEVEL, get_logger
+from opsi.serialization import msgpack_encode
 from starlette.endpoints import WebSocketEndpoint
 from starlette.status import HTTP_401_UNAUTHORIZED
 from starlette.types import Receive, Scope, Send
@@ -118,7 +118,7 @@ class LogReaderThread(threading.Thread):
 		match = self.record_start_regex.match(line)
 		if not match:
 			if self.record_buffer:
-				self.record_buffer[-1]["msg"] += f"\n{line.rstrip()}"  # type: ignore
+				self.record_buffer[-1]["msg"] += f"\n{line.rstrip()}"  # ty: ignore
 			return None
 		context: dict[int, str] = {}
 		cnum = 0
@@ -244,7 +244,7 @@ class LoggerWebsocket(WebSocketEndpoint):
 		await self._check_authorization()
 
 		try:
-			num_records = int(num_records)  # type: ignore[arg-type]
+			num_records = int(num_records)  # ty: ignore[invalid-argument-type]
 		except (ValueError, TypeError):
 			num_records = -1
 

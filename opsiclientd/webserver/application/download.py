@@ -5,7 +5,7 @@
 
 from fastapi import APIRouter, BackgroundTasks, FastAPI, Query
 from fastapi.responses import FileResponse
-from opsicommon.logging import get_logger
+from opsi.logging import get_logger
 
 from opsiclientd.webserver.application import get_opsiclientd
 

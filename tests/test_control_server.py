@@ -19,9 +19,9 @@ from unittest.mock import mock_open, patch
 import pytest
 import requests
 from httpx import HTTPStatusError
-from opsicommon.logging import LOG_INFO, use_logging_config
-from opsicommon.objects import ProductOnClient, serialize
-from opsicommon.system.info import is_macos
+from opsi.logging import LOG_INFO, use_logging_config
+from opsi.opsi.service.model.object import ProductOnClient, serialize
+from opsi.system.info import is_macos
 from starlette.websockets import WebSocketDisconnect
 
 from opsiclientd import __version__
@@ -69,8 +69,6 @@ def test_auth_direct(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple
 			assert response.status_code == 200
 			session_id = response.headers["set-cookie"].split(";")[0].split("=")[1].strip()
 			assert len(session_id) == 32
-			print(client.cookies)
-			print(client.cookies.jar)
 
 			response = client.get("/")
 			assert response.status_code == 200
@@ -265,7 +263,7 @@ def test_log_reader_start_position(tmp_path: Path) -> None:
 			for idx in range(log_lines):
 				file.write(f"[5] [2021-01-02 11:12:13.456] [opsiclientd] log line {idx + 1}   (opsiclientd.py:123)\n")
 
-		lrt = LogReaderThread(filename=log_file, loop=None, websocket=None, num_tail_records=num_tail_records)  # type: ignore
+		lrt = LogReaderThread(filename=log_file, loop=None, websocket=None, num_tail_records=num_tail_records)  # ty: ignore
 		start_position = lrt._get_start_position()
 
 		with open(log_file, "r", encoding="utf-8", errors="replace") as file:
@@ -287,7 +285,7 @@ def test_cache_service_interface(default_config: Config, tmp_path: Path) -> None
 		assert "accessControl_authenticated" in interface
 		assert "productOnClient_generateSequence" in interface
 		assert "productOnClient_getObjectsWithSequence" in interface
-		backend.productOnClient_getObjectsWithSequence()  # type: ignore[attr-defined]
+		backend.productOnClient_getObjectsWithSequence()  # ty: ignore[unresolved-attribute]
 		assert hasattr(backend, "config_getObjects")  # not explicitely added to interface
 
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 from threading import Thread
 from typing import TYPE_CHECKING
 
-from opsicommon.logging import get_logger, log_context
+from opsi.logging import get_logger, log_context
 from uvicorn.config import Config as UvicornConfig
 from uvicorn.server import Server as UvicornServer
 

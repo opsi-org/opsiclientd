@@ -26,6 +26,8 @@ Timeline event attributes:
 * description - will be displayed inside the bubble with the event's title and image.
 """
 
+from __future__ import annotations
+
 import os
 import sqlite3
 import threading
@@ -33,10 +35,8 @@ import time
 from typing import Any
 
 from opsi_legacy.Backend.SQLite import SQLite
-from opsi_legacy.Util import timestamp
-from opsicommon.logging import get_logger
-from opsicommon.types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
-from opsicommon.utils import Singleton
+from opsi.logging import get_logger
+from opsi.opsi.service.model.type import to_bool, to_int, to_opsi_timestamp, to_string
 
 from opsiclientd.Config import Config
 
@@ -120,16 +120,24 @@ function onResize() {
 """
 
 
-class Timeline(metaclass=Singleton):
+def timestamp(secs: float = 0.0) -> str:
+	return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(secs or time.time()))
+
+
+class Timeline:
 	"""Timeline"""
 
-	_initialized = False
+	_instance: Timeline | None = None
+
+	def __new__(cls) -> Timeline:
+		if cls._instance is None:
+			cls._instance = super(Timeline, cls).__new__(cls)
+		return cls._instance
 
 	def __init__(self) -> None:
-		if self._initialized:
+		if getattr(self, "_initialized", False):
 			return
 		self._initialized = True
-
 		self._sql: SQLite | None = None
 		self._db_lock = threading.Lock()
 		self._stopped = False
@@ -146,7 +154,7 @@ class Timeline(metaclass=Singleton):
 
 	def stop(self) -> None:
 		self._stopped = True
-		end = forceOpsiTimestamp(timestamp())
+		end = timestamp()
 
 		if self._sql:
 			with self._db_lock, self._sql.session() as session:
@@ -261,21 +269,21 @@ class Timeline(metaclass=Singleton):
 		with self._db_lock, self._sql.session() as session:
 			try:
 				if category:
-					category = forceUnicode(category)
+					category = to_string(category)
 				if not start:
 					start = timestamp()
-				start = forceOpsiTimestamp(start)
+				start = to_opsi_timestamp(start)
 
 				if end:
-					end = forceOpsiTimestamp(end)
+					end = to_opsi_timestamp(end)
 					durationEvent = True
 
 				event = {
-					"title": forceUnicode(title),
+					"title": to_string(title),
 					"category": category,
-					"description": forceUnicode(description),
-					"isError": forceBool(isError),
-					"durationEvent": forceBool(durationEvent),
+					"description": to_string(description),
+					"isError": to_bool(isError),
+					"durationEvent": to_bool(durationEvent),
 					"start": start,
 					"end": end,
 				}
@@ -296,10 +304,10 @@ class Timeline(metaclass=Singleton):
 
 		with self._db_lock, self._sql.session() as session:
 			try:
-				eventId = forceInt(eventId)
+				eventId = to_int(eventId)
 				if not end:
 					end = timestamp()
-				end = forceOpsiTimestamp(end)
+				end = to_opsi_timestamp(end)
 				return self._sql.update(session, "EVENT", f"`id` = {eventId}", {"end": end, "durationEvent": True})
 			except Exception as end_error:
 				logger.error("Failed to set end of event '%s': %s", eventId, end_error)
@@ -310,4 +318,4 @@ class Timeline(metaclass=Singleton):
 			return []
 
 		with self._db_lock, self._sql.session() as session:
-			return self._sql.getSet(session, "select * from EVENT")  # type: ignore[invalid-return-type]
+			return self._sql.getSet(session, "select * from EVENT")  # ty: ignore[invalid-return-type]

@@ -16,8 +16,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from opsicommon.logging import get_logger
-from opsicommon.system.network import get_network_info
+from opsi.logging import get_logger
+from opsi.system.network import get_network_info
 
 from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
@@ -47,14 +47,14 @@ def get_include_exclude_product_ids(
 	if includeProductGroupIds:
 		includeProductIds = [
 			obj.objectId
-			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)  # type: ignore[attr-defined]
+			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)  # ty: ignore[unresolved-attribute]
 		]
 		logger.debug("Only products ids %s will be regarded", includeProductIds)
 
 	if excludeProductGroupIds:
 		excludeProductIds = [
 			obj.objectId
-			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)  # type: ignore[attr-defined]
+			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)  # ty: ignore[unresolved-attribute]
 		]
 		logger.debug("Product ids %s will be excluded", excludeProductIds)
 
@@ -239,7 +239,7 @@ def get_mshotfix_package_name() -> str | None:
 	return releasePackageName
 
 
-# TODO: move to opsicommon or opsi-script
+# TODO: move to opsi or opsi-script
 def get_registry_value(sub_key: str, value_name: str, root=None) -> str:
 	if not RUNNING_ON_WINDOWS:
 		raise RuntimeError("Can only access registry on Windows")
@@ -253,7 +253,7 @@ def get_registry_value(sub_key: str, value_name: str, root=None) -> str:
 		return winreg.QueryValueEx(hkey, value_name)[0]
 
 
-# TODO: move to opsicommon or opsi-script
+# TODO: move to opsi or opsi-script
 def set_registry_value(sub_key: str, value_name: str, value: str | int, root=None) -> None:
 	if not RUNNING_ON_WINDOWS:
 		return

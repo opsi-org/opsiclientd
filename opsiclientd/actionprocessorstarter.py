@@ -17,9 +17,10 @@ from urllib.parse import urlparse
 
 from opsi_legacy import System
 from opsi_legacy.Backend.JSONRPC import JSONRPCBackend
-from opsicommon.logging import LOG_NONE, get_logger, init_logging, log_context, secret_filter
+from opsi.logging import LOG_NONE, get_logger, logging_config, log_context, secret_filter
 
 from opsiclientd import DEFAULT_FILE_LOG_FORMAT, DEFAULT_STDERR_LOG_FORMAT
+from opsi.process import run_command
 
 logger = get_logger()
 
@@ -29,7 +30,7 @@ def set_status_message(backend: JSONRPCBackend, session_id: str, message: str) -
 		logger.debug("Not setting status message")
 		return
 	try:
-		backend.setStatusMessage(session_id, message)  # type: ignore[attr-defined]
+		backend.setStatusMessage(session_id, message)  # ty: ignore[unresolved-attribute]
 	except Exception as err:
 		logger.warning("Failed to set status message: %s", err)
 
@@ -70,7 +71,7 @@ def main() -> None:
 	if runAsPassword:
 		secret_filter.add_secrets(runAsPassword)
 
-	init_logging(
+	logging_config(
 		stderr_level=LOG_NONE,
 		stderr_format=DEFAULT_STDERR_LOG_FORMAT,
 		log_file=logFile,
@@ -106,7 +107,7 @@ def main() -> None:
 
 		language = "en"
 		try:
-			language = locale.getlocale()[0].split("_")[0]  # type: ignore[union-attr]
+			language = locale.getlocale()[0].split("_")[0]  # ty: ignore[unresolved-attribute]
 		except Exception as err:
 			logger.debug("Failed to find default language: %s", err)
 
@@ -122,7 +123,7 @@ def main() -> None:
 				sp = os.path.join(sp, "site-packages")
 			sp = os.path.join(sp, "opsiclientd_data", "locale")
 			translation = gettext.translation("opsiclientd", sp, [language])
-			_ = translation.gettext  # type: ignore[invalid-argumnet]
+			_ = translation.gettext  # ty: ignore[invalid-assignment]
 		except Exception as err:
 			logger.debug("Failed to load locale for %s from %s: %s", language, sp, err)
 
@@ -137,7 +138,7 @@ def main() -> None:
 			if runAsUser:
 				if getpass.getuser().lower() != runAsUser.lower():
 					logger.info("Impersonating user '%s'", runAsUser)
-					imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)  # type: ignore[possibly-missing-attribute]
+					imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
 					imp.start(
 						logonType="INTERACTIVE",
 						newDesktop=False,
@@ -145,7 +146,7 @@ def main() -> None:
 					)
 			elif depot_url.scheme in ("smb", "cifs"):
 				logger.info("Impersonating network account '%s'", depotServerUsername)
-				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)  # type: ignore[possibly-missing-attribute]
+				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
 				imp.start(logonType="NEW_CREDENTIALS")
 
 			if (depot_url.hostname or "").lower() not in ("127.0.0.1", "localhost", "::1"):
@@ -153,7 +154,7 @@ def main() -> None:
 				set_status_message(be, sessionId, _("Mounting depot share %s") % depotRemoteUrl)
 
 				if runAsUser or depot_url.scheme not in ("smb", "cifs"):
-					System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)  # type: ignore[possibly-missing-attribute]
+					System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 				else:
 					try:
 						if isinstance(ip_address(depot_url.hostname or ""), IPv6Address):
@@ -170,7 +171,7 @@ def main() -> None:
 						# Can be a hostname
 						logger.debug("Failed to check ip format, using %s for depot mount: %s", depotRemoteUrl, err)
 
-					System.mount(depotRemoteUrl, depotDrive)  # type: ignore[possibly-missing-attribute]
+					System.mount(depotRemoteUrl, depotDrive)
 				depotShareMounted = True
 
 			logger.notice("Starting action processor")
@@ -179,7 +180,7 @@ def main() -> None:
 			if imp:
 				imp.runCommand(actionProcessorCommand, timeoutSeconds=int(actionProcessorTimeout))
 			else:
-				System.execute(actionProcessorCommand, waitForEnding=True, timeout=int(actionProcessorTimeout))  # type: ignore[possibly-missing-attribute]
+				run_command(actionProcessorCommand, timeout=int(actionProcessorTimeout))
 
 			logger.notice("Action processor ended")
 			set_status_message(be, sessionId, _("Action processor ended"))
@@ -193,7 +194,7 @@ def main() -> None:
 		if depotShareMounted:
 			try:
 				logger.notice("Unmounting depot share")
-				System.umount(depotDrive)  # type: ignore[possibly-missing-attribute]
+				System.umount(depotDrive)
 			except Exception as err:
 				logger.debug("Caught exception in umount: %s", err)
 		if imp:

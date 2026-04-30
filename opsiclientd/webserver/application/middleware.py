@@ -18,11 +18,11 @@ from urllib.parse import urlparse
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
 from opsi_legacy.Backend.Manager.Authentication import AuthenticationModule
-from opsicommon.exceptions import BackendAuthenticationError, BackendPermissionDeniedError
-from opsicommon.logging import get_logger, secret_filter
-from opsicommon.logging.constants import TRACE
-from opsicommon.system.info import is_linux, is_windows
-from opsicommon.utils import unix_timestamp
+from opsi.exception import BackendAuthenticationError, BackendPermissionDeniedError
+from opsi.logging import get_logger, secret_filter
+from opsi.logging import TRACE
+from opsi.system.info import is_linux, is_windows
+from opsi.time import unix_timestamp
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import Headers, MutableHeaders
 from starlette.types import Message, Receive, Scope, Send

@@ -9,7 +9,7 @@ Posix-specific custom event.
 This does not use WMI.
 """
 
-from opsicommon.logging import logger
+from opsi.logging import logger
 
 __all__ = ["CustomEvent", "CustomEventConfig", "CustomEventGenerator"]
 

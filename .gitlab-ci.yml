@@ -1,45 +1,27 @@
-image: docker.uib.gmbh/opsi/dev/pybuilder:deb9-py3.11
+image: docker.uib.gmbh/opsi/dev/pybuilder:deb9
 
 stages:
   - test
   - build
   - viruscheck
 
-viruscheck:virustotal:
-  stage: viruscheck
-  tags:
-    - win10-x64
-  script:
-    - irm "${OPSIDEVTOOLS_INSTALLER_URL_WINDOWS_X86}" | iex
-    - opsi-dev-cli -l info --output-format summary virustotal check opsiclientd_windows_x86\opsiclientd.exe --allow-detections=5 > viruscheck.txt
-  artifacts:
-    name: "opsiclientd_viruscheck"
-    paths:
-      - viruscheck.txt
-    expire_in: 14 days
-  only:
-    - tags
-  except:
-    variables:
-      - $SKIP_TESTS
-
-test:pytest-darwin:
+test:pytest-macos:
   stage: test
   tags:
-    - catalina-py311-x64
+    - catalina-x64
   script:
-    - export UV_PYTHON="3.13-x86_64"
+    - export UV_PYTHON="3.14-x86_64"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
     - uv run pytest --tb=short -x -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
-    - mv .coverage coverage_darwin
+    - mv .coverage coverage_macos
   artifacts:
-    name: "opsiclientd_test_darwin"
+    name: "opsiclientd_test_macos"
     paths:
       - coverage.xml
       - testreport.xml
-      - coverage_darwin
+      - coverage_macos
     expire_in: 3 days
   except:
     variables:
@@ -52,8 +34,7 @@ test:pytest-windows:
   script:
     - $Env:UV_PYTHON_INSTALL_DIR = "c:\\uv\\python"
     - $Env:UV_CACHE_DIR = "c:\\uv\\cache"
-    # Using Python 3.11 for compatibility with Windows 7
-    - $Env:UV_PYTHON = "3.11-x86"
+    - $Env:UV_PYTHON = "3.14-x86"
     - $Env:UV_PYTHON_PREFERENCE = "only-managed"
     - $Env:RUSTUP_TOOLCHAIN = "stable-i686-pc-windows-msvc"
     - uv sync --frozen
@@ -73,7 +54,7 @@ test:pytest-windows:
 test:pytest-linux:
   stage: test
   script:
-    - export UV_PYTHON="3.13-x86_64"
+    - export UV_PYTHON="3.14-x86_64"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
@@ -102,12 +83,12 @@ lint-pytest:
     # We want to combine test coverage from all test jobs
     - job: test:pytest-windows
       artifacts: true
-    - job: test:pytest-darwin
+    - job: test:pytest-macos
       artifacts: true
     - job: test:pytest-linux
       artifacts: true
   script:
-    - export UV_PYTHON="3.13-x86_64"
+    - export UV_PYTHON="3.14-x86_64"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
@@ -129,7 +110,7 @@ lint-pytest:
 build:pyinstaller-linux-x64:
   stage: build
   script:
-    - export UV_PYTHON="3.13-x86_64"
+    - export UV_PYTHON="3.14-x86_64"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - TRANSIFEX_MIN_REVIEW_RATE=0.0
     - '[ "$CI_COMMIT_TAG" = "" ] || TRANSIFEX_MIN_REVIEW_RATE=1.0'
@@ -149,9 +130,9 @@ build:pyinstaller-linux-x64:
 build:pyinstaller-macos-x64:
   stage: build
   tags:
-    - catalina-py311-x64
+    - catalina-x64
   script:
-    - export UV_PYTHON="3.13-x86_64"
+    - export UV_PYTHON="3.14-x86_64"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - TRANSIFEX_MIN_REVIEW_RATE=0.0
     - '[ "$CI_COMMIT_TAG" = "" ] || TRANSIFEX_MIN_REVIEW_RATE=1.0'
@@ -159,12 +140,12 @@ build:pyinstaller-macos-x64:
     - uv self update
     - uv sync --frozen
     - uv run opsi-dev-cli -l info pyinstaller build
-    - mv dist/opsiclientd opsiclientd_darwin_x64
+    - mv dist/opsiclientd opsiclientd_macos_x64
     # Check if binary is working
-    - ./opsiclientd_darwin_x64/opsiclientd --version
+    - ./opsiclientd_macos_x64/opsiclientd --version
     # Push to biaryindex
-    - '[ "$CI_COMMIT_TAG" = "" ] && opsi-dev-cli -l info binary push opsiclientd_darwin_x64 --prerelease="$CI_JOB_ID"'
-    - '[ "$CI_COMMIT_TAG" = "" ] || opsi-dev-cli -l info binary push opsiclientd_darwin_x64'
+    - '[ "$CI_COMMIT_TAG" = "" ] && opsi-dev-cli -l info binary push opsiclientd_macos_x64 --prerelease="$CI_JOB_ID"'
+    - '[ "$CI_COMMIT_TAG" = "" ] || opsi-dev-cli -l info binary push opsiclientd_macos_x64'
 
 build:pyinstaller-windows-x86:
   stage: build
@@ -173,8 +154,7 @@ build:pyinstaller-windows-x86:
   script:
     - $Env:UV_PYTHON_INSTALL_DIR = "c:\\uv\\python"
     - $Env:UV_CACHE_DIR = "c:\\uv\\cache"
-    # Using Python 3.11 for compatibility with Windows 7
-    - $Env:UV_PYTHON = "3.11-x86"
+    - $Env:UV_PYTHON = "3.14-x86"
     - $Env:UV_PYTHON_PREFERENCE = "only-managed"
     - $Env:RUSTUP_TOOLCHAIN = "stable-i686-pc-windows-msvc"
     - $Env:TRANSIFEX_MIN_REVIEW_RATE="0.0"
@@ -200,7 +180,7 @@ build:pyinstaller-windows-x64:
   script:
     - $Env:UV_PYTHON_INSTALL_DIR = "c:\\uv\\python"
     - $Env:UV_CACHE_DIR = "c:\\uv\\cache"
-    - $Env:UV_PYTHON = "3.13-x86_64"
+    - $Env:UV_PYTHON = "3.14-x86_64"
     - $Env:UV_PYTHON_PREFERENCE = "only-managed"
     - $Env:RUSTUP_TOOLCHAIN = "stable-x86_64-pc-windows-msvc"
     - $Env:TRANSIFEX_MIN_REVIEW_RATE="0.0"
@@ -218,3 +198,21 @@ build:pyinstaller-windows-x64:
     name: "opsiclientd_windows_x64"
     paths:
       - opsiclientd_windows_x64\opsiclientd.exe
+
+viruscheck:virustotal:
+  stage: viruscheck
+  tags:
+    - win10-x64
+  script:
+    - irm "${OPSIDEVTOOLS_INSTALLER_URL_WINDOWS_X86}" | iex
+    - opsi-dev-cli -l info --output-format summary virustotal check opsiclientd_windows_x86\opsiclientd.exe --allow-detections=5 > viruscheck.txt
+  artifacts:
+    name: "opsiclientd_viruscheck"
+    paths:
+      - viruscheck.txt
+    expire_in: 14 days
+  only:
+    - tags
+  except:
+    variables:
+      - $SKIP_TESTS

@@ -13,7 +13,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 import psutil
-from opsicommon.logging import get_logger
+from opsi.logging import get_logger
 
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
 from opsiclientd.Events.Basic import Event, EventConfig

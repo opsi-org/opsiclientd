@@ -7,28 +7,17 @@
 opsiclientd.windows
 """
 
-import ctypes
-import os
 import shlex
 import threading
 import time
-from ctypes import wintypes
-
-if os.name == "nt":
-	from ctypes import WinError, get_last_error, windll
-
-else:
-	WinError = get_last_error = windll = lambda *args, **kwargs: None
-
-from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable
 
 import win32com.client
 import win32com.server.policy
+from opsi.logging import get_logger
+from opsi.opsi.service.model.type import to_bool, to_int, to_string, to_string_lower
 from opsi_legacy.System.Windows import createDesktop, getActiveSessionId, getUserToken, terminateProcess, win32con, win32event, win32process
-from opsicommon.logging import get_logger
-from opsicommon.types import forceBool, forceInt, forceUnicode, forceUnicodeLower
 
 # from Sens.h
 SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
@@ -66,7 +55,7 @@ def importWmiAndPythoncom(importWmi: bool = True, importPythoncom: bool = True) 
 						logger.debug("Importing wmi")
 						pythoncom.CoInitialize()
 						try:
-							import wmi  # type: ignore[import]
+							import wmi  # ty: ignore[unresolved-import]
 						finally:
 							pythoncom.CoUninitialize()
 				except Exception as import_error:
@@ -81,7 +70,7 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 	_public_methods_ = ["Logon", "Logoff", "StartShell", "DisplayLock", "DisplayUnlock", "StartScreenSaver", "StopScreenSaver"]
 
 	def __init__(self, callback: Callable) -> None:
-		self._wrap_(self)  # type: ignore[attr-defined]
+		self._wrap_(self)  # ty: ignore[unresolved-attribute]
 		self._callback = callback
 
 	def subscribe(self) -> None:
@@ -146,17 +135,17 @@ def runCommandInSession(
 	if isinstance(command, list):
 		command = shlex.join(command)
 
-	command = forceUnicode(command)
+	command = to_string(command)
 	if sessionId is not None:
-		sessionId = forceInt(sessionId)
+		sessionId = to_int(sessionId)
 
-	desktop = forceUnicodeLower(desktop)
+	desktop = to_string_lower(desktop)
 	if desktop.find("\\") == -1:
 		desktop = "winsta0\\" + desktop
 
-	duplicateFrom = forceUnicode(duplicateFrom)
-	waitForProcessEnding = forceBool(waitForProcessEnding)
-	timeoutSeconds = forceInt(timeoutSeconds)
+	duplicateFrom = to_string(duplicateFrom)
+	waitForProcessEnding = to_bool(waitForProcessEnding)
+	timeoutSeconds = to_int(timeoutSeconds)
 
 	logger.debug("Session id given: %s", sessionId)
 	if sessionId is None or (sessionId < 0):
@@ -183,14 +172,14 @@ def runCommandInSession(
 		logger.notice("Executing: '%s' in session '%s' on desktop '%s'", command, sessionId, desktop)
 		(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcessAsUser(
 			userToken,
-			None,  # type: ignore[invalid-argument-type]
+			None,  # ty: ignore[invalid-argument-type]
 			command,
-			None,  # type: ignore[invalid-argument-type]
-			None,  # type: ignore[invalid-argument-type]
+			None,  # ty: ignore[invalid-argument-type]
+			None,  # ty: ignore[invalid-argument-type]
 			1,
 			dwCreationFlags,
 			None,
-			None,  # type: ignore[invalid-argument-type]
+			None,  # ty: ignore[invalid-argument-type]
 			sti,
 		)
 
@@ -219,149 +208,3 @@ def runCommandInSession(
 			continue
 		return (None, None, None, None)
 	return (None, None, None, None)
-
-
-# Reparse point handling
-FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000
-FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
-GENERIC_READ = 0x80000000
-OPEN_EXISTING = 3
-INVALID_HANDLE_VALUE = wintypes.HANDLE(-1).value
-FSCTL_GET_REPARSE_POINT = 0x000900A8
-IO_REPARSE_TAG_SYMLINK = 0xA000000C
-IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003  # Junction
-MAXIMUM_REPARSE_DATA_BUFFER_SIZE = 16 * 1024  # 16KB
-ERROR_NOT_A_REPARSE_POINT = 0x1126  # 4390
-SYMLINK_FLAG_RELATIVE = 0x00000001
-
-CreateFileW = windll.kernel32.CreateFileW  # type: ignore[possibly-missing-attribute]
-CreateFileW.restype = wintypes.HANDLE
-CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
-
-DeviceIoControl = windll.kernel32.DeviceIoControl  # type: ignore[possibly-missing-attribute]
-DeviceIoControl.restype = wintypes.BOOL
-DeviceIoControl.argtypes = [
-	wintypes.HANDLE,
-	wintypes.DWORD,
-	wintypes.LPVOID,
-	wintypes.DWORD,
-	wintypes.LPVOID,
-	wintypes.DWORD,
-	ctypes.POINTER(wintypes.DWORD),
-	ctypes.c_void_p,
-]
-
-CloseHandle = windll.kernel32.CloseHandle  # type: ignore[possibly-missing-attribute]
-CloseHandle.restype = wintypes.BOOL
-CloseHandle.argtypes = [wintypes.HANDLE]
-
-
-class SYMBOLIC_LINK_REPARSE_BUFFER(ctypes.Structure):
-	_fields_ = [
-		("SubstituteNameOffset", wintypes.USHORT),
-		("SubstituteNameLength", wintypes.USHORT),
-		("PrintNameOffset", wintypes.USHORT),
-		("PrintNameLength", wintypes.USHORT),
-		("Flags", wintypes.ULONG),
-		("PathBuffer", wintypes.WCHAR * 1),
-	]
-
-
-class MOUNT_POINT_REPARSE_BUFFER(ctypes.Structure):
-	_fields_ = [
-		("SubstituteNameOffset", wintypes.USHORT),
-		("SubstituteNameLength", wintypes.USHORT),
-		("PrintNameOffset", wintypes.USHORT),
-		("PrintNameLength", wintypes.USHORT),
-		("PathBuffer", wintypes.WCHAR * 1),
-	]
-
-
-class GENERIC_REPARSE_BUFFER(ctypes.Structure):
-	_fields_ = [("DataBuffer", wintypes.BYTE * 1)]
-
-
-class REPARSE_BUFFER_UNION(ctypes.Union):
-	_fields_ = [
-		("SymbolicLinkReparseBuffer", SYMBOLIC_LINK_REPARSE_BUFFER),
-		("MountPointReparseBuffer", MOUNT_POINT_REPARSE_BUFFER),
-		("GenericReparseBuffer", GENERIC_REPARSE_BUFFER),
-	]
-
-
-class REPARSE_DATA_BUFFER(ctypes.Structure):
-	_fields_ = [
-		("ReparseTag", wintypes.ULONG),
-		("ReparseDataLength", wintypes.USHORT),
-		("Reserved", wintypes.USHORT),
-		("ReparseBuffer", REPARSE_BUFFER_UNION),
-	]
-
-
-def get_link_target(link_path: str | Path) -> Path | None:
-	if not isinstance(link_path, Path):
-		link_path = Path(link_path)
-	handle = CreateFileW(
-		str(link_path), GENERIC_READ, 0, None, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, None
-	)
-	if handle == INVALID_HANDLE_VALUE:
-		return None
-
-	try:
-		reparse_buffer_raw = ctypes.create_string_buffer(MAXIMUM_REPARSE_DATA_BUFFER_SIZE)
-		bytes_returned = wintypes.DWORD()
-		success = DeviceIoControl(
-			handle,
-			FSCTL_GET_REPARSE_POINT,
-			None,
-			0,
-			reparse_buffer_raw,
-			MAXIMUM_REPARSE_DATA_BUFFER_SIZE,
-			ctypes.byref(bytes_returned),
-			None,
-		)
-
-		if not success:
-			last_error = get_last_error()
-			if last_error == ERROR_NOT_A_REPARSE_POINT:
-				logger.debug("'%s' is not a reparse point", link_path)
-				return None
-			logger.warning("DeviceIoControl failed for '%s': %s", link_path, WinError(last_error))
-			return None
-
-		rdb = ctypes.cast(reparse_buffer_raw, ctypes.POINTER(REPARSE_DATA_BUFFER)).contents
-		target_path = ""
-
-		if rdb.ReparseTag == IO_REPARSE_TAG_SYMLINK:
-			symlink_buffer = rdb.ReparseBuffer.SymbolicLinkReparseBuffer
-			path_buffer_start_addr = ctypes.addressof(symlink_buffer) + type(symlink_buffer).PathBuffer.offset
-
-			sub_name_addr = path_buffer_start_addr + symlink_buffer.SubstituteNameOffset
-			sub_name_len_chars = symlink_buffer.SubstituteNameLength // ctypes.sizeof(wintypes.WCHAR)
-			target_path = ctypes.wstring_at(sub_name_addr, sub_name_len_chars)
-
-			if symlink_buffer.Flags & SYMLINK_FLAG_RELATIVE:
-				link_dir = link_path.parent
-				target_path = str((link_dir / target_path).absolute())
-
-		elif rdb.ReparseTag == IO_REPARSE_TAG_MOUNT_POINT:
-			mount_point_buffer = rdb.ReparseBuffer.MountPointReparseBuffer
-			path_buffer_start_addr = ctypes.addressof(mount_point_buffer) + type(mount_point_buffer).PathBuffer.offset
-			sub_name_addr = path_buffer_start_addr + mount_point_buffer.SubstituteNameOffset
-			sub_name_len_chars = mount_point_buffer.SubstituteNameLength // ctypes.sizeof(wintypes.WCHAR)
-			target_path = ctypes.wstring_at(sub_name_addr, sub_name_len_chars)
-
-		else:
-			logger.warning("Unsupported reparse tag %r for link '%s'", rdb.ReparseTag, link_path)
-			return None
-
-		# Strip "\??\" prefix if it leads to a drive letter path (e.g., \??\C:\...)
-		if target_path.startswith("\\??\\") and len(target_path) > 4 and target_path[5] == ":" and target_path[6] == "\\":
-			target_path = target_path[4:]
-		return Path(target_path)
-
-	except OSError as err:
-		logger.warning("Error processing reparse point for '%s': %s", link_path, err)
-		return None
-	finally:
-		CloseHandle(handle)

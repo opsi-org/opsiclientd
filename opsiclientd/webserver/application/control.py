@@ -7,7 +7,7 @@ import json
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse, Response
-from opsicommon.logging import get_logger
+from opsi.logging import get_logger
 
 from opsiclientd.webserver.application import INTERFACE_PAGE, get_opsiclientd
 from opsiclientd.webserver.rpc.control import get_control_interface

@@ -9,7 +9,7 @@ from typing import Literal
 from unittest.mock import patch
 
 import pytest
-from opsicommon.logging import LOG_INFO, use_logging_config
+from opsi.logging import LOG_INFO, use_logging_config
 
 from opsiclientd.Config import Config
 from opsiclientd.EventProcessing import DesktopSession
@@ -59,7 +59,7 @@ def test_motd_update_without_valid_until(default_config: Config, tmp_path: Path,
 				user_message="Test message user",
 				user_message_valid_until=0,
 				device_message="Test message device",
-				device_message_valid_until=None,  # type: ignore[arg-type]
+				device_message_valid_until=None,  # ty: ignore[invalid-argument-type]
 			)
 			second = controlServer.messageOfTheDayUpdated(user_message="Test message user", device_message="Test message device")
 

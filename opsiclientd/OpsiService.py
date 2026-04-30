@@ -9,7 +9,6 @@ Connecting to a opsi service.
 
 from __future__ import annotations
 
-import abc  # Add this import
 import asyncio
 import os
 import re
@@ -26,12 +25,12 @@ from urllib.parse import urlparse
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
-from opsicommon.client.opsiservice import MessagebusListener, ServiceClient, ServiceConnectionListener
-from opsicommon.exceptions import OpsiServiceAuthenticationError, OpsiServiceTimeoutError
-from opsicommon.logging import get_logger, log_context
-from opsicommon.logging.constants import TRACE
-from opsicommon.messagebus.file_transfer import process_messagebus_message as process_filetransfer_message
-from opsicommon.messagebus.message import (
+from opsi.opsi.service.client import MessagebusListener, ServiceClient, ServiceConnectionListener
+from opsi.exception import OpsiServiceAuthenticationError, OpsiServiceTimeoutError
+from opsi.logging import get_logger, log_context
+from opsi.logging import TRACE
+from opsi.opsi.messagebus import (
+	process_file_transfer_message,
 	Error,
 	FileDownloadRequestMessage,
 	FileTransferMessage,
@@ -44,17 +43,19 @@ from opsicommon.messagebus.message import (
 	TerminalMessage,
 	TraceRequestMessage,
 	TraceResponseMessage,
-	timestamp,
+	messagebus_timestamp,
 )
-from opsicommon.messagebus.process import process_messagebus_message as process_process_message
-from opsicommon.messagebus.process import stop_running_processes
-from opsicommon.messagebus.terminal import process_messagebus_message as process_terminal_message
-from opsicommon.messagebus.terminal import stop_running_terminals, terminals
-from opsicommon.ssl import install_ca, load_cas, remove_ca
-from opsicommon.system import lock_file
-from opsicommon.system.network import get_fqdn
-from opsicommon.types import forceProductId, forceString
-from opsicommon.utils import Singleton, replace_placeholders
+from opsi.opsi.messagebus import (
+	process_process_message,
+	process_terminal_message,
+	get_terminal,
+	stop_running_terminals,
+	stop_running_processes,
+)
+from opsi.system.certificate_store import install_ca, load_cas, remove_ca
+from opsi.system.file.lock import lock_file
+from opsi.system.network import get_fqdn
+from opsi.opsi.service.model.type import to_product_id, to_string
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
@@ -68,6 +69,15 @@ config = Config()
 cert_file_lock = threading.Lock()
 
 logger = get_logger()
+
+
+def replace_placeholders(input_string: str, placeholders: dict[str, str]) -> str:
+	"""
+	Replace placeholders in the input string with the values from the placeholders dictionary.
+	"""
+	for placeholder, replacement in placeholders.items():
+		input_string = input_string.replace(placeholder, replacement)
+	return input_string
 
 
 def update_os_ca_store(allow_remove: bool = False) -> None:
@@ -92,7 +102,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 	utc_now = datetime.now(tz=timezone.utc)
 	install_ca_into_os_store = config.get("global", "install_opsi_ca_into_os_store")
 	for ca_cert in ca_certs:
-		subject_name = forceString(ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value)
+		subject_name = to_string(ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value)
 		if subject_name == "uib opsi CA":
 			# uib opsi CA will not be installed into system cert store
 			continue
@@ -186,18 +196,19 @@ def get_service_client(address: str | list[str] | None = None, connect_timeout: 
 	)
 
 
-class CombinedSingletonABCMeta(Singleton, abc.ABCMeta):
-	pass
-
-
-class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener, metaclass=CombinedSingletonABCMeta):
-	_initialized = False
+class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener):
 	opsiclientd: Opsiclientd | None = None
+	_instance: PermanentServiceConnection | None = None
+
+	def __new__(cls, *args, **kwargs) -> PermanentServiceConnection:
+		if not cls._instance:
+			cls._instance = super().__new__(cls)
+		return cls._instance
 
 	def __init__(self, opsiclientd: Opsiclientd | None = None) -> None:
 		if opsiclientd and not self.opsiclientd:
 			self.opsiclientd = opsiclientd
-		if self._initialized:
+		if getattr(self, "_initialized", False):
 			return
 		self._initialized = True
 		threading.Thread.__init__(self, name="PermanentServiceConnection")
@@ -363,7 +374,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			self.update_host_id()
 
 			try:
-				client_to_depotservers = service_client.configState_getClientToDepotserver(  # type: ignore[attr-defined]
+				client_to_depotservers = service_client.configState_getClientToDepotserver(  # ty: ignore[unresolved-attribute]
 					clientIds=config.get("global", "host_id")
 				)
 				if not client_to_depotservers:
@@ -451,7 +462,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					ref_id=message.id,
 					req_trace=message.trace,
 					payload=message.payload,
-					trace={"sender_ws_send": timestamp()},
+					trace={"sender_ws_send": messagebus_timestamp()},
 				)
 			)
 		elif isinstance(message, TerminalMessage):
@@ -459,7 +470,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		elif isinstance(message, FileTransferMessage):
 			if isinstance(message, FileUploadRequestMessage):
 				if message.terminal_id and not message.destination_dir:
-					terminal = terminals.get(message.terminal_id)
+					terminal = get_terminal(message.terminal_id)
 					if terminal:
 						destination_dir = terminal.get_cwd()
 						message.destination_dir = str(destination_dir)
@@ -472,7 +483,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 							"{OPSI_SCRIPT_LOG_FILE_PATH}": os.path.join(config.get("global", "log_dir"), "opsi-script", "opsi-script.log"),
 						},
 					)
-			await process_filetransfer_message(message=message, send_message=self._service_client.messagebus.async_send_message)
+			await process_file_transfer_message(message=message, send_message=self._service_client.messagebus.async_send_message)
 		elif isinstance(message, ProcessMessage):
 			await process_process_message(message=message, send_message=self._service_client.messagebus.async_send_message)
 
@@ -480,7 +491,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 def download_from_depot(
 	product_id: str, destination: str | Path, sub_path: str | None = None, service_client: ServiceClient | None = None
 ) -> None:
-	product_id = forceProductId(product_id)
+	product_id = to_product_id(product_id)
 	if isinstance(destination, str):
 		destination = Path(destination).resolve()
 
@@ -491,7 +502,7 @@ def download_from_depot(
 		disconnect = True
 
 	try:
-		product_idents = service_client.product_getIdents(id=product_id)  # type: ignore[attr-defined]
+		product_idents = service_client.product_getIdents(id=product_id)  # ty: ignore[unresolved-attribute]
 		if not product_idents:
 			raise ValueError(f"Product {product_id!r} not available")
 

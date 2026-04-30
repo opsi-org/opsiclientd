@@ -16,19 +16,10 @@ import sys
 import tempfile
 from logging.handlers import RotatingFileHandler
 
+from opsi.process import run_script, run_command
 import psutil
-from opsi_legacy.System import execute, which
-from opsicommon import __version__ as opsicommon_version
-from opsicommon.logging import (
-	LOG_DEBUG,
-	LOG_NONE,
-	LOG_TRACE,
-	get_all_handlers,
-	get_logger,
-	log_context,
-	logging_config,
-	set_filter_from_string,
-)
+from opsi import __version__ as python_opsi_version
+from opsi.logging import LOG_DEBUG, LOG_NONE, LOG_TRACE, get_all_handlers, get_logger, log_context, logging_config, set_filter_from_string
 
 from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
@@ -48,7 +39,7 @@ parser.add_argument(
 	"--version",
 	"-V",
 	action="version",
-	version=f"{__version__} [python-opsi-common={opsicommon_version}]",
+	version=f"{__version__} [python-opsi={python_opsi_version}]",
 )
 parser.add_argument(
 	"--log-level", "-l", dest="logLevel", type=int, choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], default=LOG_NONE, help="Set the log-level."
@@ -124,9 +115,9 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | N
 		return f"{tmp[0]}_{int(tmp[2]) - 1}.{tmp[1]}"
 
 	handler = get_all_handlers(handler_type=RotatingFileHandler)[0]
-	handler.namer = namer  # type: ignore[attr-defined]
+	handler.namer = namer  # ty: ignore[unresolved-attribute]
 	try:
-		handler.doRollover()  # type: ignore[attr-defined]
+		handler.doRollover()  # ty: ignore[unresolved-attribute]
 	except Exception as err:
 		logger.error("Failed to rotate log file: %s", err)
 	if log_filter:
@@ -150,8 +141,8 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | N
 			else:
 				logger.trace(args)
 
-	http.client.HTTPConnection.debuglevel = 1  # type: ignore[possibly-missing-attribute]
-	http.client.print = log_http  # type: ignore[attr-defined]
+	http.client.HTTPConnection.debuglevel = 1  # ty: ignore[possibly-missing-submodule]
+	http.client.print = log_http  # ty: ignore[possibly-missing-submodule]
 
 
 def check_signature(bin_dir: str) -> None:
@@ -169,9 +160,9 @@ def check_signature(bin_dir: str) -> None:
 		os.path.join(bin_dir, "action_processor_starter.exe"),
 	]
 	for binary in binary_list:
-		cmd = f"powershell.exe -ExecutionPolicy Bypass -Command \"(Get-AuthenticodeSignature '{binary}').Status -eq 'Valid'\""
-
-		result = execute(cmd, captureStderr=True, waitForEnding=True, timeout=30)
+		result = run_script(
+			f"(Get-AuthenticodeSignature '{binary}').Status -eq 'Valid'", interpreter="powershell", timeout=30
+		).get_stdout_text()
 		logger.debug(result)
 		if "True" not in result:
 			raise ValueError(f"Invalid Signature of file {binary}")
@@ -179,19 +170,12 @@ def check_signature(bin_dir: str) -> None:
 
 
 def notify_posix_terminals(message: str) -> None:
+	# On non-Windows systems, use 'wall' to display a message before reboot/shutdown
 	if RUNNING_ON_WINDOWS:
 		logger.debug("Running on windows, not notifying terminals of reboot/shutdown")
 		return
-	try:
-		wall_path = which("wall")
-	except RuntimeError:
-		logger.warning("Binary 'wall' not found in PATH, not notifying terminals of reboot/shutdown.")
-		return
 
-	# On non-Windows systems, use 'wall' to display a message before reboot/shutdown
-	command = [wall_path, "-n", message]
-	logger.debug("Executing %s", command)
 	try:
-		execute(command, shell=False)
+		run_command(["wall", "-n", message])
 	except Exception as err:
 		logger.warning("Failed to notify users via 'wall': %s", err)

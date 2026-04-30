@@ -6,7 +6,7 @@
 from fastapi import APIRouter, FastAPI
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from opsicommon.logging import get_logger
+from opsi.logging import get_logger
 from starlette.status import HTTP_308_PERMANENT_REDIRECT
 
 from opsiclientd.webserver.application import get_opsiclientd

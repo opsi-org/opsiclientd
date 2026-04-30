@@ -12,8 +12,8 @@ from __future__ import annotations
 import copy
 from typing import TYPE_CHECKING, Type
 
-from opsicommon.logging import get_logger
-from opsicommon.types import forceUnicode
+from opsi.logging import get_logger
+from opsi.opsi.service.model.type import to_string
 
 from opsiclientd.Config import Config
 from opsiclientd.Events.Basic import EventGenerator
@@ -143,7 +143,7 @@ def getEventGenerator(name: str) -> EventGenerator:
 	:rtype: EventGenerator
 	:raises: ValueError if no matching event found.
 	"""
-	name = forceUnicode(name)
+	name = to_string(name)
 	try:
 		return _EVENT_GENERATORS[name]
 	except KeyError as err:

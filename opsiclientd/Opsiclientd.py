@@ -29,18 +29,18 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Generator, Literal
 
 import opsi_legacy
+from opsi.process import run_command
 
 sys.modules["OPSI"] = opsi_legacy
 import psutil
+from opsi import __version__ as python_opsi_version
+from opsi.crypt.secret import SecretAlphabet, generate_secret
+from opsi.logging import get_logger, log_context, secret_filter
+from opsi.opsi.package import OpsiPackage
+from opsi.opsi.service.model.type import to_bool, to_string
+from opsi.system.file.operation import get_link_target, link
 from opsi_legacy import System
-from opsi_legacy.Util import randomString
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject
-from opsicommon import __version__ as opsicommon_version
-from opsicommon.logging import get_logger, log_context, secret_filter
-from opsicommon.package import OpsiPackage
-from opsicommon.system import ensure_not_already_running
-from opsicommon.system.subprocess import patch_popen
-from opsicommon.types import forceBool, forceInt, forceUnicode
 
 from opsiclientd import Config, __version__, check_signature, config, notify_posix_terminals
 from opsiclientd.ControlPipe import ControlPipe, ControlPipeFactory
@@ -65,16 +65,15 @@ from opsiclientd.webserver import Webserver
 
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.UserLogin import LoginDetector
-	from opsiclientd.windows import get_link_target, runCommandInSession
+	from opsiclientd.windows import runCommandInSession
 else:
+	from opsi.process import get_subprocess_environment
 	from opsi_legacy.System import runCommandInSession
-	from opsicommon.system.subprocess import get_subprocess_environment
 
 if TYPE_CHECKING:
 	from opsiclientd.nonfree.CacheService import CacheService
 
 
-patch_popen()
 load_translation()
 
 timeline = Timeline()
@@ -85,6 +84,44 @@ logger = get_logger()
 
 def sha256string(input_string: str) -> str:
 	return sha256(input_string.encode("utf-8")).digest().hex()
+
+
+def ensure_not_already_running(process_name: str | None = None) -> None:
+	container_procs = ("containerd-shim", "lxc-start")
+	our_pid = os.getpid()
+	other_pid = None
+	try:
+		our_proc = psutil.Process(our_pid)
+		if not process_name:
+			process_name = our_proc.name()
+		exe_name = f"{process_name}.exe"
+		ignore_pids = [p.pid for p in our_proc.children(recursive=True)]
+		ignore_pids += [p.pid for p in our_proc.parents()]
+		for proc in psutil.process_iter():
+			# logger.debug("Found running process: %s", proc)
+			if proc.name() == process_name or proc.name() == exe_name:
+				logger.debug("Found running '%s' process: %s", process_name, proc)
+
+				running_in_container_pid = 0
+				for parent in proc.parents():
+					if parent.name() in container_procs:
+						running_in_container_pid = parent.pid
+						break
+				if running_in_container_pid:
+					logger.debug("Process is running in container %d, skipping", running_in_container_pid)
+					continue
+
+				if proc.pid != our_pid and proc.pid not in ignore_pids:
+					other_pid = proc.pid
+					break
+	except Exception as err:
+		logger.debug("Check for running processes failed: %s", err)
+
+	if other_pid:
+		raise RuntimeError(f"Another '{process_name}' process is running (pids: {other_pid} / {our_pid}).")
+
+	if other_pid:
+		raise RuntimeError(f"Another '{process_name}' process is running (pids: {other_pid} / {our_pid}).")
 
 
 @dataclass
@@ -275,20 +312,20 @@ class Opsiclientd(EventListener, threading.Thread):
 
 				logger.info("Testing new binary: %s", binary)
 				# need to direct stderr to stdout to avoid error in cleanup due to 32 bit python performance warning (code 120)
-				out = subprocess.check_output([str(binary), "--version"], stderr=subprocess.STDOUT)
-				logger.info(out)
+				proc = run_command([str(binary), "--version"])
+				logger.info("New binary version: %s", proc.get_output_text())
 
 				if RUNNING_ON_WINDOWS:
 					inst1 = inst_dir.with_name("opsiclientd_bin1")
 					inst2 = inst_dir.with_name("opsiclientd_bin2")
-					link = inst_dir.with_name("opsiclientd_bin")
+					link_path = inst_dir.with_name("opsiclientd_bin")
 					target: Path | None = None
-					if link.exists():
-						target = get_link_target(link)
+					if link_path.exists():
+						target = get_link_target(link_path)
 						if not target:
-							raise RuntimeError(f"{link} exists and is not a link")
+							raise RuntimeError(f"{link_path} exists and is not a link")
 
-					logger.info("Link '%s' is pointing to '%s'", link, target)
+					logger.info("Link '%s' is pointing to '%s'", link_path, target)
 
 					logger.info("Names: inst1=%r, inst2=%r, target=%r", inst1.name, inst2.name, target.name if target else None)
 					new_dir = inst2 if target and target.name == inst1.name else inst1
@@ -297,18 +334,11 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.info("Deleting dir '%s'", new_dir)
 						shutil.rmtree(new_dir)
 
-					if link.exists():
-						logger.info("Deleting link '%s'", link)
-						link.rmdir()
-
 					logger.info("Moving '%s' to '%s'", bin_dir, new_dir)
 					bin_dir.rename(new_dir)
 
-					logger.info("Creating link '%s' pointing to '%s'", link, new_dir)
-					process_stdout = subprocess.run(
-						f'mklink /j "{link}" "{new_dir}"', text=True, capture_output=True, check=False, shell=True
-					).stdout
-					logger.debug(process_stdout)
+					logger.info("Creating link '%s' pointing to '%s'", link_path, new_dir)
+					link(link_path, new_dir, link_type="junction", overwrite=True)
 				else:
 					old_dir = inst_dir.with_name(f"{inst_dir.name}_old")
 					logger.info("Moving current installation dir '%s' to '%s'", inst_dir, old_dir)
@@ -344,7 +374,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				subprocess.Popen(
 					"net stop opsiclientd & net start opsiclientd",
 					shell=True,
-					creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,  # type: ignore[attr-defined]  # only windows
+					creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,  # ty: ignore[unresolved-attribute]  # only windows
 				)
 			else:
 				logger.notice("Executing: %s", self._argv)
@@ -355,7 +385,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		threading.Thread(target=_restart, args=(waitSeconds,), name="restart").start()
 
 	def setBlockLogin(self, blockLogin: bool, handleNotifier: bool = True) -> None:
-		blockLogin = forceBool(blockLogin)
+		blockLogin = to_bool(blockLogin)
 		changed = self._blockLogin != blockLogin
 		self._blockLogin = blockLogin
 		logger.notice("Block login now set to '%s'", self._blockLogin)
@@ -370,14 +400,14 @@ class Opsiclientd(EventListener, threading.Thread):
 				if handleNotifier and RUNNING_ON_WINDOWS:
 					logger.info("Starting block login notifier app")
 					# Start block login notifier on physical console
-					sessionId = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
+					sessionId = System.getActiveConsoleSessionId()
 					while True:
 						try:
 							desktop = "winlogon"
 							notifierCommand, _elevation_required = self.getNotifierCommand(
 								command=config.get("global", "block_login_notifier"), notifier_id="block_login", desktop=desktop
 							)
-							self._blockLoginNotifierPid = System.runCommandInSession(  # type: ignore[possibly-missing-attribute]
+							self._blockLoginNotifierPid = System.runCommandInSession(
 								command=notifierCommand,
 								sessionId=sessionId,
 								desktop=desktop,
@@ -395,7 +425,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			if handleNotifier and self._blockLoginNotifierPid:
 				try:
 					logger.info("Terminating block login notifier app (pid %s)", self._blockLoginNotifierPid)
-					System.terminateProcess(processId=self._blockLoginNotifierPid)  # type: ignore[possibly-missing-attribute]
+					System.terminateProcess(processId=self._blockLoginNotifierPid)
 				except Exception as err:
 					log = logger.warning
 					if isinstance(err, OSError) and getattr(err, "errno", None) == 87:
@@ -441,18 +471,20 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.warning("Ignoring domain part of user to run action processor '%s'", run_as_user)
 			run_as_user = run_as_user.split("\\", -1)
 
-		if not recreate and self._actionProcessorUserName and self._actionProcessorUserPassword and System.existsUser(username=run_as_user):  # type: ignore[possibly-missing-attribute]
+		if not recreate and self._actionProcessorUserName and self._actionProcessorUserPassword and System.existsUser(username=run_as_user):
 			return
 
 		self._actionProcessorUserName = run_as_user
 		logger.notice(f"Creating local user '{run_as_user}'")
 
-		self._actionProcessorUserPassword = "$!?" + str(randomString(16)) + "!/%"
+		self._actionProcessorUserPassword = generate_secret(
+			22, alphabet=(SecretAlphabet.ASCII_LETTERS, SecretAlphabet.DIGITS), required_chars="$!?/%"
+		)
 		secret_filter.add_secrets(self._actionProcessorUserPassword)
 
-		if System.existsUser(username=run_as_user):  # type: ignore[possibly-missing-attribute]
-			System.deleteUser(username=run_as_user)  # type: ignore[possibly-missing-attribute]
-		System.createUser(username=run_as_user, password=self._actionProcessorUserPassword, groups=[System.getAdminGroupName()])  # type: ignore[possibly-missing-attribute]
+		if System.existsUser(username=run_as_user):
+			System.deleteUser(username=run_as_user)
+		System.createUser(username=run_as_user, password=self._actionProcessorUserPassword, groups=[System.getAdminGroupName()])
 
 	def deleteActionProcessorUser(self) -> None:
 		if not config.get("action_processor", "delete_user"):
@@ -461,11 +493,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not self._actionProcessorUserName:
 			return
 
-		if not System.existsUser(username=self._actionProcessorUserName):  # type: ignore[possibly-missing-attribute]
+		if not System.existsUser(username=self._actionProcessorUserName):
 			return
 
 		logger.notice("Deleting local user '%s'", self._actionProcessorUserName)
-		System.deleteUser(username=self._actionProcessorUserName)  # type: ignore[possibly-missing-attribute]
+		System.deleteUser(username=self._actionProcessorUserName)
 		self._actionProcessorUserName = ""
 		self._actionProcessorUserPassword = ""
 
@@ -651,7 +683,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		try:
 			parent = psutil.Process(os.getpid()).parent()
 			parent_name = parent.name() if parent else None
-			event_title = f"opsiclientd {__version__} [python-opsi-common={opsicommon_version}] running on {platform.platform()!r}"
+			event_title = f"opsiclientd {__version__} [python-opsi={python_opsi_version}] running on {platform.platform()!r}"
 			logger.essential(event_title)
 			event_description = f"Parent process: {parent_name}\n"
 			logger.essential(f"Parent process: {parent_name}")
@@ -700,7 +732,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						f"opsiclientd_restart_marker={config.restart_marker}",
 					]
 					logger.notice("Running startup script: %s", cmd)
-					System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)  # type: ignore[possibly-missing-attribute]
+					run_command(cmd, timeout=3600)
 
 					restart_marker_config = config.check_restart_marker()
 					if restart_marker_config and restart_marker_config.restart_service:
@@ -923,7 +955,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not opsiclientd_rpc:
 			raise RuntimeError("opsiclientd_rpc command not defined")
 
-		desktop = forceUnicode(desktop)
+		desktop = to_string(desktop)
 		if sessionId is None:
 			sessions = get_sessions()
 			if sessions:
@@ -958,7 +990,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.debug(err)
 		self.clearRebootRequest()
 		notify_posix_terminals(f"Rebooting in {waitSeconds} seconds")
-		System.reboot(wait=waitSeconds)  # type: ignore[possibly-missing-attribute]
+		System.reboot(wait=waitSeconds)
 
 	def shutdownMachine(self, waitSeconds: int = 3) -> None:
 		self._isShutdownTriggered = True
@@ -969,7 +1001,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.debug(err)
 		self.clearShutdownRequest()
 		notify_posix_terminals(f"Shutdown in {waitSeconds} seconds")
-		System.shutdown(wait=waitSeconds)  # type: ignore[possibly-missing-attribute]
+		System.shutdown(wait=waitSeconds)
 
 	def isRebootTriggered(self) -> bool:
 		if self._isRebootTriggered:

@@ -14,16 +14,14 @@ from datetime import datetime
 from pathlib import Path
 
 import ntsecuritycon
-import opsicommon.logging
+import opsi.logging
 import psutil
 import win32api
-
-# pyright: reportMissingImports=false
 import win32con
 import win32process
 import win32security
-from opsicommon.logging import LOG_NONE, get_logger
-from opsicommon.logging import init_logging as oc_init_logging
+from opsi.logging import LOG_NONE, get_logger
+from opsi.logging import logging_config
 
 from opsiclientd import DEFAULT_STDERR_LOG_FORMAT, init_logging, parser
 from opsiclientd.Config import Config
@@ -53,9 +51,9 @@ def run_as_system(command: str) -> None:
 		TokenType=ntsecuritycon.TokenImpersonation,
 		TokenAttributes=None,
 	)
-	_id = win32security.LookupPrivilegeValue(None, win32security.SE_DEBUG_NAME)  # type: ignore[arg-type]
+	_id = win32security.LookupPrivilegeValue(None, win32security.SE_DEBUG_NAME)  # ty: ignore[invalid-argument-type]
 	newprivs = [(_id, win32security.SE_PRIVILEGE_ENABLED)]
-	win32security.AdjustTokenPrivileges(duplicatedCurrentProcessToken, False, newprivs)  # type: ignore[arg-type]
+	win32security.AdjustTokenPrivileges(duplicatedCurrentProcessToken, False, newprivs)  # ty: ignore[invalid-argument-type]
 
 	win32security.SetThreadToken(win32api.GetCurrentThread(), duplicatedCurrentProcessToken)
 
@@ -90,7 +88,7 @@ def run_as_system(command: str) -> None:
 	for privtuple in privs:
 		newprivs.append((privtuple[0], win32security.SE_PRIVILEGE_ENABLED))
 	privs = tuple(newprivs)
-	win32security.AdjustTokenPrivileges(systemToken, False, newprivs)  # type: ignore[arg-type]
+	win32security.AdjustTokenPrivileges(systemToken, False, newprivs)  # ty: ignore[invalid-argument-type]
 
 	win32security.SetThreadToken(win32api.GetCurrentThread(), systemToken)
 
@@ -109,11 +107,11 @@ def run_as_system(command: str) -> None:
 	for privtuple in privs:
 		newprivs.append((privtuple[0], win32security.SE_PRIVILEGE_ENABLED))
 	privs = tuple(newprivs)
-	win32security.AdjustTokenPrivileges(hToken, False, newprivs)  # type: ignore[arg-type]
+	win32security.AdjustTokenPrivileges(hToken, False, newprivs)  # ty: ignore[invalid-argument-type]
 
 	si = win32process.STARTUPINFO()
 	dwCreationFlags = win32con.CREATE_NEW_CONSOLE
-	win32process.CreateProcessAsUser(hToken, None, command, None, None, 1, dwCreationFlags, None, None, si)  # type: ignore[arg-type]
+	win32process.CreateProcessAsUser(hToken, None, command, None, None, 1, dwCreationFlags, None, None, si)  # ty: ignore[invalid-argument-type]
 
 
 def get_integrity_level() -> str:
@@ -153,10 +151,10 @@ def main() -> None:
 		if options.config_file:
 			Config().set("global", "config_file", options.config_file)
 		if options.action == "setup":
-			oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+			logging_config(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
 			setup(full=True, options=options)
 		elif options.action == "download-from-depot":
-			oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+			logging_config(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
 			from opsiclientd.OpsiService import download_from_depot
 
 			Config().readConfigFile()
@@ -186,7 +184,7 @@ def main() -> None:
 
 	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
 
-	with opsicommon.logging.log_context({"instance": "opsiclientd"}):
+	with opsi.logging.log_context({"instance": "opsiclientd"}):
 		logger.notice("Running as user: %s", win32api.GetUserName())
 		if parent:
 			logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)

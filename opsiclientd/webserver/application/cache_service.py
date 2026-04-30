@@ -7,7 +7,7 @@ import json
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse, Response
-from opsicommon.logging import get_logger
+from opsi.logging import get_logger
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
 from opsiclientd.Config import Config

@@ -8,7 +8,7 @@ import tempfile
 
 from fastapi import APIRouter, FastAPI, UploadFile
 from fastapi.responses import JSONResponse
-from opsicommon.logging import get_logger
+from opsi.logging import get_logger
 
 from opsiclientd.webserver.application import get_opsiclientd
 

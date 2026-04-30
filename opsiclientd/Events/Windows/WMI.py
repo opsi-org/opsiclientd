@@ -13,7 +13,7 @@ import threading
 import time
 from typing import TYPE_CHECKING, Any
 
-from opsicommon.logging import logger
+from opsi.logging import logger
 
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.Basic import Event, EventGenerator
@@ -89,7 +89,7 @@ class WMIEventGenerator(EventGenerator):
 			try:
 				wqlResult = self._watcher(timeout_ms=500)
 				break
-			except wmi.x_wmi_timed_out:  # type: ignore[possibly-missing-attribute]
+			except wmi.x_wmi_timed_out:  # ty: ignore[unresolved-attribute]
 				continue
 			except Exception:
 				if self._opsiclientd.is_stopping():

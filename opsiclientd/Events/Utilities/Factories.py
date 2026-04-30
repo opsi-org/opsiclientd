@@ -97,7 +97,7 @@ def EventGeneratorFactory(opsiclientd: Opsiclientd, eventConfig: EventConfig) ->
 	if isinstance(eventConfig, ProcessActionRequestsEventConfig):
 		return ProcessActionRequestsEventGenerator(opsiclientd, eventConfig)
 	if isinstance(eventConfig, CustomEventConfig):
-		return CustomEventGenerator(opsiclientd, eventConfig)  # type: ignore[invalid-argument-type]
+		return CustomEventGenerator(opsiclientd, eventConfig)  # ty: ignore[invalid-argument-type]
 	if isinstance(eventConfig, SwOnDemandEventConfig):
 		return SwOnDemandEventGenerator(opsiclientd, eventConfig)
 	if isinstance(eventConfig, GUIStartupEventConfig):
