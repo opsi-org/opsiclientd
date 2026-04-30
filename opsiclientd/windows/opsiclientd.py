@@ -249,13 +249,35 @@ class OpsiclientdNT(Opsiclientd):
 
 	def isWindowsInstallerBusy(self) -> bool:
 		# since win11: ms_update_installer.isBusy is always False when TrustedInstaller is running, so we check the service instead
+		trusted_installer_running = False
 		for p in psutil.process_iter():
 			try:
 				if "trustedinstaller" in p.name().lower():
-					return True
+					trusted_installer_running = True
+					break
 			except (psutil.NoSuchProcess, psutil.AccessDenied):
 				pass  # process terminated or access denied, ignore
-		return False
+
+		logger.info("TrustedInstaller process running: %s", trusted_installer_running)
+		if not trusted_installer_running:
+			return False
+
+		keys = {}
+		for key in (
+			r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\TiRunning",
+			r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootInProgress",
+			r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending",
+			r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired",
+		):
+			key_name = key.rsplit("\\", 1)[-1]
+			keys[key_name] = False
+			try:
+				with winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, key, 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY):  # ty: ignore[unresolved-attribute]
+					keys[key_name] = True
+			except FileNotFoundError:
+				pass
+			logger.info("Windows CBS key %r exists: %r", key, keys[key_name])
+		return True
 
 	def loginUser(self, domain: str, username: str, password: str) -> bool:
 		secret_filter.add_secrets(password)
