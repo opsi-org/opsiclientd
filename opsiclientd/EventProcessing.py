@@ -72,6 +72,7 @@ config = Config()
 state = State()
 timeline = Timeline()
 
+
 @dataclass
 class ProductInfo:
 	id: str

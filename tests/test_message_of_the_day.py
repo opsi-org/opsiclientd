@@ -10,9 +10,9 @@ from unittest.mock import patch
 
 import pytest
 from opsi.logging import LOG_INFO, use_logging_config
+from opsi.system.session._common import DisplaySession
 
 from opsiclientd.Config import Config
-from opsiclientd.EventProcessing import DesktopSession
 from opsiclientd.Opsiclientd import Opsiclientd, state
 from opsiclientd.webserver.rpc.control import get_control_interface
 
@@ -44,17 +44,17 @@ class FakeOpsiclientd(Opsiclientd):
 def test_motd_update_without_valid_until(default_config: Config, tmp_path: Path, user_logged_in: bool, motd_enabled: bool) -> None:  # noqa
 	default_config.set("global", "message_of_the_day_enabled", motd_enabled)
 
-	def get_sessions() -> list[DesktopSession]:
+	def get_display_sessions() -> list[DisplaySession]:
 		if not user_logged_in:
 			return []
-		return [DesktopSession(id=1, desktop="default", user="testuser"), DesktopSession(id=2, desktop="default", user="testuser2")]
+		return [DisplaySession(id=1, desktop="default", user="testuser"), DisplaySession(id=2, desktop="default", user="testuser2")]
 
 	ocd = FakeOpsiclientd()
 	controlServer = get_control_interface(ocd)
 	state._stateFile = str(tmp_path / "state_file.json")
 
 	with use_logging_config(stderr_level=LOG_INFO):
-		with patch("opsiclientd.Opsiclientd.get_sessions", get_sessions):
+		with patch("opsiclientd.Opsiclientd.get_display_sessions", get_display_sessions):
 			first = controlServer.messageOfTheDayUpdated(
 				user_message="Test message user",
 				user_message_valid_until=0,
@@ -83,16 +83,16 @@ def test_motd_update_without_valid_until(default_config: Config, tmp_path: Path,
 def test_motd_update_valid_until(default_config: Config, tmp_path: Path, user_logged_in: bool) -> None:  # noqa
 	default_config.set("global", "message_of_the_day_enabled", True)
 
-	def get_sessions() -> list[DesktopSession]:
+	def get_display_sessions() -> list[DisplaySession]:
 		if not user_logged_in:
 			return []
-		return [DesktopSession(id=1, desktop="default", user="testuser"), DesktopSession(id=2, desktop="default", user="testuser2")]
+		return [DisplaySession(id=1, desktop="default", user="testuser"), DisplaySession(id=2, desktop="default", user="testuser2")]
 
 	ocd = FakeOpsiclientd()
 	controlServer = get_control_interface(ocd)
 	state._stateFile = str(tmp_path / "state_file.json")
 
-	with patch("opsiclientd.Opsiclientd.get_sessions", get_sessions):
+	with patch("opsiclientd.Opsiclientd.get_display_sessions", get_display_sessions):
 		valid_until = int((datetime.now(tz=timezone.utc) - timedelta(days=1)).timestamp())
 		first = controlServer.messageOfTheDayUpdated(
 			user_message="usermsg1",
