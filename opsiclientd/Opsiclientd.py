@@ -37,7 +37,7 @@ from opsi import __version__ as python_opsi_version
 from opsi.crypt.secret import SecretAlphabet, generate_secret
 from opsi.logging import get_logger, log_context, secret_filter
 from opsi.opsi.package import OpsiPackage
-from opsi.opsi.service.model.type import to_bool, to_string
+from opsi.opsi.service.model.type import to_bool, to_int, to_string
 from opsi.system.file.operation import get_link_target, link
 from opsi.system.session import get_display_sessions
 from opsi_legacy import System
@@ -930,7 +930,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			if sessions:
 				sessionId = sessions[0].id
 			else:
-				sessionId = System.getActiveConsoleSessionId()  # ty: ignore[possibly-missing-attribute]
+				sessionId = System.getActiveConsoleSessionId()
 
 		assert sessionId
 
@@ -963,7 +963,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				sessionId = sessions[0].id
 			else:
 				sessionId = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
-		sessionId = forceInt(sessionId)
+		sessionId = to_int(sessionId)
 
 		rpc = f"noop(System.switchDesktop('{desktop}'))"
 		cmd = f'{opsiclientd_rpc} "{rpc}"'
