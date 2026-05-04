@@ -31,6 +31,7 @@ from opsi.opsi.service.model.object import Product, ProductOnClient
 from opsi.opsi.service.model.type import to_int, to_string, to_string_list, to_string_lower
 from opsi.process import ProcessError, run_command, run_script
 from opsi.system.environment import chdir
+from opsi.system.session import get_display_sessions
 from opsi_legacy import System
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject, MessageSubjectProxy, ProgressSubjectProxy
 
@@ -193,28 +194,28 @@ class EventProcessingThread(threading.Thread):
 				self._should_cancel = True
 
 	def getSessionId(self) -> int | None:
+		sessions = get_display_sessions()
+
 		if RUNNING_ON_WINDOWS:
 			if self.isLoginEvent:
-				user_session_ids = System.getUserSessionIds(self.event.eventInfo["User"])
-				if user_session_ids:
-					session_id = user_session_ids[0]
+				user_sessions = [session for session in sessions if session.user == self.event.eventInfo["User"]]
+				if user_sessions:
+					session_id = user_sessions[0].id
 					logger.info("Using session id of user '%s': %s", self.event.eventInfo["User"], session_id)
-					return session_id
-
-			# Prefer active console/rdp sessions
-			for session in System.getActiveSessionInformation():
-				if session.get("StateName") == "active":
-					session_id = session["SessionId"]
-					logger.info("Using session id of user '%s': %s", session.get("UserName"), session_id)
-					return session_id
+					return int(session_id)
+			for session in sessions:  # try to find active session first, then fallback to active console session
+				if session.win_state == "active":
+					session_id = session.id
+					logger.info("Using active session id: %s", session_id)
+					return int(session_id)
 
 			session_id = System.getActiveConsoleSessionId()
 			logger.info("Using active console session id: %s", session_id)
 			return session_id
 
-		session_id = System.getActiveSessionId()
+		session_id = min((int(session.id) for session in sessions)) if sessions else None
 		logger.info("Using active session id: %s", session_id)
-		return session_id
+		return session_id  # seems like this is ignored for non-windows
 
 	def setStatusMessage(self, message: str) -> None:
 		logger.debug("Setting status message to: %s", message)
@@ -371,7 +372,7 @@ class EventProcessingThread(threading.Thread):
 		try:
 			process, _hThread, processId, _dwThreadId = runCommandInSession(
 				command=command,
-				sessionId=sessionId,
+				sessionId=sessionId if RUNNING_ON_WINDOWS else f":{sessionId}",  # ty: ignore[invalid-argument-type]
 				desktop=desktop,
 				waitForProcessEnding=waitForProcessEnding,
 				timeoutSeconds=timeoutSeconds,
@@ -1278,7 +1279,7 @@ class EventProcessingThread(threading.Thread):
 					with chdir(Path(tmpdir)):
 						runCommandInSession(
 							command=command,
-							sessionId=self.getSessionId(),
+							sessionId=f":{self.getSessionId()}",  # ty: ignore[invalid-argument-type]
 							waitForProcessEnding=True,
 							timeoutSeconds=self.event.eventConfig.actionProcessorTimeout,
 						)

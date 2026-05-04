@@ -39,6 +39,7 @@ from opsi.logging import get_logger, log_context, secret_filter
 from opsi.opsi.package import OpsiPackage
 from opsi.opsi.service.model.type import to_bool, to_int, to_string
 from opsi.system.file.operation import get_link_target, link
+from opsi.system.session import get_display_sessions
 from opsi_legacy import System
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject
 
@@ -925,8 +926,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise RuntimeError("opsiclientd_rpc command not defined")
 
 		if sessionId is None:
-			sessionId = System.getActiveSessionId()
-			if sessionId is None:
+			sessions = get_display_sessions()
+			if sessions:
+				sessionId = sessions[0].id
+			else:
 				sessionId = System.getActiveConsoleSessionId()
 
 		assert sessionId
@@ -955,9 +958,11 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		desktop = to_string(desktop)
 		if sessionId is None:
-			sessionId = System.getActiveSessionId()
-			if sessionId is None:
-				sessionId = System.getActiveConsoleSessionId()
+			sessions = get_display_sessions()
+			if sessions:
+				sessionId = sessions[0].id
+			else:
+				sessionId = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
 		sessionId = to_int(sessionId)
 
 		rpc = f"noop(System.switchDesktop('{desktop}'))"
@@ -1093,7 +1098,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.info("Message of the day is disabled")
 			return []
 
-		sessions = System.getActiveSessionInformation()
+		sessions = get_display_sessions()
 		logger.debug("Found sessions: %s", sessions)
 		host_id = config.get("global", "host_id")
 		messages_shown: list[str] = []
@@ -1136,7 +1141,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			else:
 				relevant_sessions = []
 				for entry in sessions:
-					if sha256string(user_message) == message_of_the_day_state.get("last_user_message_hash", {}).get(entry.get("UserName")):
+					if sha256string(user_message) == message_of_the_day_state.get("last_user_message_hash", {}).get(entry.user):
 						logger.info("Not showing user-specific message of the day, because it was already shown")
 						continue
 					relevant_sessions.append(entry)
@@ -1149,12 +1154,12 @@ class Opsiclientd(EventListener, threading.Thread):
 						mode="replace",
 						addTimestamp=False,
 						link_handling="browser",
-						sessions=[entry.get("SessionId") for entry in relevant_sessions],
+						sessions=[entry.id for entry in relevant_sessions],
 						desktops=["default"],
 					)
 					messages_shown.append("user")
 					for entry in relevant_sessions:
-						message_of_the_day_state["last_user_message_hash"][entry.get("UserName")] = sha256string(user_message)
+						message_of_the_day_state["last_user_message_hash"][entry.user] = sha256string(user_message)
 		else:
 			# Show device message
 			if not device_message:
@@ -1176,7 +1181,6 @@ class Opsiclientd(EventListener, threading.Thread):
 					mode="replace",
 					addTimestamp=False,
 					link_handling="no",
-					sessions=[entry.get("SessionId") for entry in sessions],
 				)
 				message_of_the_day_state["last_device_message_hash"] = sha256string(device_message)
 				messages_shown.append("device")
@@ -1246,13 +1250,13 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setChoices([_("Close")])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
-			sessions = sessions or System.getActiveSessionIds()
+			session_ids = sessions or [session.id for session in get_display_sessions()]
 			desktops = desktops or ["default", "winlogon"]
-			if not sessions:
-				if console_session_id := System.getActiveConsoleSessionId():
-					sessions = [int(console_session_id)]
+			if not session_ids:
+				if console_session_id := System.getActiveConsoleSessionId():  # type: ignore[possibly-missing-attribute]
+					session_ids = [int(console_session_id)]
 					desktops = ["winlogon"]
-			for sessionId in sessions:
+			for sessionId in session_ids:
 				try:
 					if RUNNING_ON_WINDOWS:
 						for desktop in desktops:
@@ -1282,7 +1286,8 @@ class Opsiclientd(EventListener, threading.Thread):
 							timeout=displaySeconds,
 						)
 						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
-						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
+						# sessionId is int for windows and str for posix
+						runCommandInSession(command=notifierCommand, sessionId=f":{sessionId}", waitForProcessEnding=False)  # ty: ignore[invalid-argument-type]
 				except Exception as err:
 					logger.error(
 						"Failed to start popup message notifier app in session %r on desktop %r: %s", sessionId, desktop, err, exc_info=True
@@ -1364,13 +1369,13 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start notification server: %s", err)
 				raise
 
-			sessions = System.getActiveSessionIds()
+			session_ids = [session.id for session in get_display_sessions()]
 			desktops = ["default", "winlogon"]
-			if not sessions:
-				if console_session_id := System.getActiveConsoleSessionId():
-					sessions = [int(console_session_id)]
+			if not session_ids:
+				if console_session_id := System.getActiveConsoleSessionId():  # type: ignore[possibly-missing-attribute]
+					session_ids = [int(console_session_id)]
 					desktops = ["winlogon"]
-			for sessionId in sessions:
+			for sessionId in session_ids:
 				try:
 					if RUNNING_ON_WINDOWS:
 						for desktop in desktops:
@@ -1398,7 +1403,7 @@ class Opsiclientd(EventListener, threading.Thread):
 							timeout=timeout,
 						)
 						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
-						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
+						runCommandInSession(command=notifierCommand, sessionId=f":{sessionId}", waitForProcessEnding=False)  # ty: ignore[invalid-argument-type]
 				except Exception as err:
 					logger.error(
 						"Failed to start popup message notifier app in session %r on desktop %r: %s", sessionId, desktop, err, exc_info=True
