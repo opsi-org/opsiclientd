@@ -8,7 +8,6 @@ Application state.
 """
 
 from __future__ import annotations
-from opsi.system.session import get_display_sessions
 
 import json
 import os
@@ -17,9 +16,9 @@ from pathlib import Path
 from typing import Any
 
 import psutil
-from opsi_legacy import System
 from opsi.logging import get_logger
 from opsi.opsi.service.model.type import to_bool, to_string
+from opsi.system.session import get_display_sessions
 
 from opsiclientd.Config import OPSI_SETUP_USER_NAME, Config
 from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_WINDOWS
