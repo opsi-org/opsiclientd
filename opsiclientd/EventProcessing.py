@@ -13,7 +13,6 @@ import datetime
 import filecmp
 import os
 import re
-import shlex
 import shutil
 import sys
 import tempfile
@@ -29,9 +28,8 @@ import psutil
 from opsi.logging import LOG_INFO, get_logger, log_context, logging_config
 from opsi.opsi.service.model.object import Product, ProductOnClient
 from opsi.opsi.service.model.type import to_int, to_string, to_string_list, to_string_lower
-from opsi.process import ProcessError, run_command, run_script
+from opsi.process import Process, ProcessError, run_command, run_script
 from opsi.system.environment import chdir
-from opsi.system.session import get_display_sessions
 from opsi_legacy import System
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject, MessageSubjectProxy, ProgressSubjectProxy
 
@@ -54,15 +52,7 @@ from opsiclientd.utils import (
 	get_version_from_mach_binary,
 )
 
-if RUNNING_ON_WINDOWS:
-	from opsiclientd.windows import runCommandInSession
-else:
-	from opsi_legacy.System import runCommandInSession
-
-
 if TYPE_CHECKING:
-	from subprocess import Popen
-
 	from opsiclientd.Events.Basic import Event
 	from opsiclientd.Opsiclientd import Opsiclientd
 
@@ -193,29 +183,8 @@ class EventProcessingThread(threading.Thread):
 					raise RuntimeError("Event processing currently not cancelable")
 				self._should_cancel = True
 
-	def getSessionId(self) -> int | None:
-		sessions = get_display_sessions()
-
-		if RUNNING_ON_WINDOWS:
-			if self.isLoginEvent:
-				user_sessions = [session for session in sessions if session.user == self.event.eventInfo["User"]]
-				if user_sessions:
-					session_id = user_sessions[0].id
-					logger.info("Using session id of user '%s': %s", self.event.eventInfo["User"], session_id)
-					return int(session_id)
-			for session in sessions:  # try to find active session first, then fallback to active console session
-				if session.win_state == "active":
-					session_id = session.id
-					logger.info("Using active session id: %s", session_id)
-					return int(session_id)
-
-			session_id = System.getActiveConsoleSessionId()
-			logger.info("Using active console session id: %s", session_id)
-			return session_id
-
-		session_id = min((int(session.id) for session in sessions)) if sessions else None
-		logger.info("Using active session id: %s", session_id)
-		return session_id  # seems like this is ignored for non-windows
+	def getSessionId(self) -> str | None:
+		return self.opsiclientd.getSessionId(username=str(self.event.eventInfo["User"]) if self.isLoginEvent else None)
 
 	def setStatusMessage(self, message: str) -> None:
 		logger.debug("Setting status message to: %s", message)
@@ -341,58 +310,18 @@ class EventProcessingThread(threading.Thread):
 			logger.error("Failed to write log to service: %s", err, exc_info=True)
 			raise
 
-	def runCommandInSession(
-		self,
-		command: str | list[str],
-		sessionId: int | None = None,
-		desktop: str | None = None,
-		waitForProcessEnding: bool = False,
-		timeoutSeconds: int = 0,
-		noWindow: bool = False,
-	) -> tuple[Popen | int | None, int | None]:
-		if sessionId is None:
-			sessionId = self.getSessionId()
-
-		if not desktop or (to_string_lower(desktop) == "current"):
-			if self.isLoginEvent:
-				desktop = "default"
-			else:
-				logger.debug("Getting current active desktop name")
-				assert self.opsiclientd
-				desktop = to_string_lower(self.opsiclientd.getCurrentActiveDesktopName(sessionId))
-				logger.debug("Got current active desktop name: %s", desktop)
-				if desktop == "screen-saver":
-					logger.debug("Current active desktop is screen-saver, using default desktop")
-					desktop = "default"
-
-		if not desktop:
-			desktop = "winlogon"
-
-		processId = None
-		try:
-			process, _hThread, processId, _dwThreadId = runCommandInSession(
-				command=command,
-				sessionId=sessionId if RUNNING_ON_WINDOWS else f":{sessionId}",  # ty: ignore[invalid-argument-type]
-				desktop=desktop,
-				waitForProcessEnding=waitForProcessEnding,
-				timeoutSeconds=timeoutSeconds,
-				noWindow=noWindow,
-				shell=False,
-			)
-		except Exception as err:
-			logger.error(err, exc_info=True)
-
-		return process, processId
-
 	def startNotifierApplication(
 		self,
 		command: str,
 		notifierId: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin"],
-		sessionId: int | None = None,
+		sessionId: str | None = None,
 		desktop: str | None = None,
-	) -> tuple[Popen | int | None, int | None]:
+	) -> Process | None:
 		if sessionId is None:
 			sessionId = self.getSessionId()
+			if sessionId is None:
+				logger.error("Failed to start notifier application: no active session found")
+				return None
 
 		logger.notice("Starting notifier application in session '%s' on desktop '%s'", sessionId, desktop)
 		try:
@@ -400,18 +329,15 @@ class EventProcessingThread(threading.Thread):
 			command, _elevation_required = self.opsiclientd.getNotifierCommand(
 				command=command, notifier_id=notifierId, port=self.notificationServerPort, desktop=desktop
 			)
-			process, pid = self.runCommandInSession(
-				sessionId=sessionId,
-				# Call process directly without shell for posix, keep string structure for windows
-				command=command if RUNNING_ON_WINDOWS else shlex.split(command),
-				desktop=desktop,
-				waitForProcessEnding=False,
+			process = self.opsiclientd.runCommandInSession(
+				sessionId=sessionId, command=command, desktop=desktop, waitForProcessEnding=False
 			)
-			logger.debug("Starting notifier with pid %s", pid)
-			return process, pid
+			if process:
+				logger.debug("Started notifier with pid %s", process.pid)
+			return process
 		except Exception as err:
 			logger.error("Failed to start notifier application '%s': %s", command, err)
-		return None, None
+		return None
 
 	def closeProcessWindows(self, processId: int) -> None:
 		try:
@@ -421,7 +347,7 @@ class EventProcessingThread(threading.Thread):
 			raise RuntimeError(f"opsiclientd_rpc command not defined: {err}") from err
 
 		# TODO: collect exit codes to avoid Zombie Process
-		self.runCommandInSession(command=command, waitForProcessEnding=False, noWindow=True)
+		self.opsiclientd.runCommandInSession(command=command, sessionId=self.getSessionId(), waitForProcessEnding=False, noWindow=True)
 
 	def setActionProcessorInfo(self) -> None:
 		action_processor_filename = config.get("action_processor", "filename")
@@ -1148,23 +1074,6 @@ class EventProcessingThread(threading.Thread):
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl", "<deprecated>")
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive", "<deprecated>")
 
-			# action processor desktop can be one of current / winlogon / default
-			desktop = self.event.eventConfig.actionProcessorDesktop
-
-			# Choose desktop for action processor
-			if not desktop or (to_string_lower(desktop) == "current"):
-				if self.isLoginEvent:
-					desktop = "default"
-				else:
-					desktop = to_string_lower(self.opsiclientd.getCurrentActiveDesktopName(self.getSessionId()))
-					if desktop == "screen-saver":
-						logger.debug("Current active desktop is screen-saver, using default desktop")
-						desktop = "default"
-
-			if not desktop:
-				# Default desktop is winlogon
-				desktop = "winlogon"
-
 			depotServerUsername = ""
 			depotServerPassword = ""
 			try:
@@ -1185,6 +1094,45 @@ class EventProcessingThread(threading.Thread):
 				self.updateActionProcessor()
 				if RUNNING_ON_WINDOWS:
 					self.umountDepotShare()
+
+			# Get session and desktop
+			sessionId = self.getSessionId()
+			# action processor desktop can be one of current / winlogon / default
+			desktop = self.event.eventConfig.actionProcessorDesktop
+			if self.isLoginEvent:
+				desktop = "default"
+
+			# Choose desktop for action processor
+			if RUNNING_ON_WINDOWS:
+				if not sessionId:
+					raise RuntimeError("No active display session found")
+
+				if not desktop or (to_string_lower(desktop) == "current"):
+					desktop = to_string_lower(self.opsiclientd.getCurrentActiveDesktopName(sessionId))
+					if desktop.lower().replace("-", "") == "screensaver":
+						logger.debug("Current active desktop is %r, using default desktop", desktop)
+						desktop = "default"
+
+				if not desktop:
+					# Default desktop is winlogon
+					desktop = "winlogon"
+
+			if self.event.eventConfig.preActionProcessorCommand:
+				try:
+					logger.notice(
+						"Starting pre action processor command '%s' in session '%s' on desktop '%s'",
+						self.event.eventConfig.preActionProcessorCommand,
+						sessionId,
+						desktop,
+					)
+					self.opsiclientd.runCommandInSession(
+						command=self.event.eventConfig.preActionProcessorCommand,
+						sessionId=sessionId,
+						desktop=desktop,
+						waitForProcessEnding=True,
+					)
+				except Exception as err:
+					logger.error("Failed to run pre action processor command: %s", err, exc_info=True)
 
 			# Run action processor
 			serviceSession = "none"
@@ -1220,7 +1168,7 @@ class EventProcessingThread(threading.Thread):
 					r' "%global.host_id%" "%global.opsi_host_key%" "%control_server.port%"'
 					r' "%global.log_file%" "%global.log_level%" "%depot_server.url%"'
 					f' "{config.getDepotDrive()}" "{depotServerUsername}" "{depotServerPassword}"'
-					f' "{self.getSessionId()}" "{desktop}" '
+					f' "{sessionId}" "{desktop}" '
 					f' "{actionProcessorCommand}" "{self.event.eventConfig.actionProcessorTimeout}"'
 					f' "{actionProcessorUserName}" "{actionProcessorUserPassword}"'
 					f' "{str(createEnvironment).lower()}"'
@@ -1230,20 +1178,11 @@ class EventProcessingThread(threading.Thread):
 
 			command = config.replace(command)
 
-			if self.event.eventConfig.preActionProcessorCommand:
-				logger.notice(
-					"Starting pre action processor command '%s' in session '%s' on desktop '%s'",
-					self.event.eventConfig.preActionProcessorCommand,
-					self.getSessionId(),
-					desktop,
-				)
-				self.runCommandInSession(
-					command=self.event.eventConfig.preActionProcessorCommand, desktop=desktop, waitForProcessEnding=True
-				)
-
 			if RUNNING_ON_WINDOWS:
-				logger.notice("Starting action processor in session '%s' on desktop '%s'", self.getSessionId(), desktop)
-				self.runCommandInSession(command=command, desktop=desktop, waitForProcessEnding=True, noWindow=True)
+				logger.notice("Starting action processor in session '%s' on desktop '%s'", sessionId, desktop)
+				self.opsiclientd.runCommandInSession(
+					command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=True, noWindow=True
+				)
 			else:
 				(username, password) = (None, None)
 				new_cmd = []
@@ -1277,23 +1216,30 @@ class EventProcessingThread(threading.Thread):
 					self.setStatusMessage(_("Action processor is running"))
 
 					with chdir(Path(tmpdir)):
-						runCommandInSession(
+						self.opsiclientd.runCommandInSession(
 							command=command,
-							sessionId=f":{self.getSessionId()}",  # ty: ignore[invalid-argument-type]
+							sessionId=sessionId,
 							waitForProcessEnding=True,
 							timeoutSeconds=self.event.eventConfig.actionProcessorTimeout,
 						)
 
 			if self.event.eventConfig.postActionProcessorCommand:
-				logger.notice(
-					"Starting post action processor command '%s' in session '%s' on desktop '%s'",
-					self.event.eventConfig.postActionProcessorCommand,
-					self.getSessionId(),
-					desktop,
-				)
-				self.runCommandInSession(
-					command=self.event.eventConfig.postActionProcessorCommand, desktop=desktop, waitForProcessEnding=True
-				)
+				sessionId = self.getSessionId()
+				try:
+					logger.notice(
+						"Starting post action processor command '%s' in session '%s' on desktop '%s'",
+						self.event.eventConfig.postActionProcessorCommand,
+						sessionId,
+						desktop,
+					)
+					self.opsiclientd.runCommandInSession(
+						command=self.event.eventConfig.postActionProcessorCommand,
+						sessionId=sessionId,
+						desktop=desktop,
+						waitForProcessEnding=True,
+					)
+				except Exception as err:
+					logger.error("Failed to start post action processor command: %s", err)
 
 			self.setStatusMessage(_("Actions completed"))
 		finally:
@@ -1374,20 +1320,18 @@ class EventProcessingThread(threading.Thread):
 			choiceSubject.setChoices([_("Start now")])
 			choiceSubject.setCallbacks([self.startActionCallback])
 		self._notificationServer.addSubject(choiceSubject)
-		notifierPids: list[int] = []
-		notifierHandles: list[Popen | int] = []
+		notifier_processes: list[Process] = []
 		try:
 			if self.event.eventConfig.actionNotifierCommand:
 				desktops = [self.event.eventConfig.actionNotifierDesktop]
 				if RUNNING_ON_WINDOWS and self.event.eventConfig.actionNotifierDesktop == "all":
 					desktops = ["winlogon", "default"]
 				for desktop in desktops:
-					notifier_process, notifier_pid = self.startNotifierApplication(
+					notifier_process = self.startNotifierApplication(
 						command=self.event.eventConfig.actionNotifierCommand, notifierId="action", desktop=desktop
 					)
-					if notifier_process and notifier_pid:
-						notifierPids.append(notifier_pid)
-						notifierHandles.append(notifier_process)
+					if notifier_process:
+						notifier_processes.append(notifier_process)
 
 			timeout = int(self.event.eventConfig.actionWarningTime)
 			endTime = time.time() + timeout
@@ -1440,16 +1384,16 @@ class EventProcessingThread(threading.Thread):
 				if self._notificationServer:
 					self._notificationServer.requestEndConnections()
 					self._notificationServer.removeSubject(choiceSubject)
-				if notifierPids:
-					try:
-						time.sleep(3)
-						for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
-							if hasattr(notifierHandle, "poll"):
-								notifierHandle.poll()  # ty: ignore[call-non-callable]
-							System.terminateProcess(processId=notifierPid)
-					except Exception:
-						pass
-
+				if notifier_processes:
+					# Wait a bit for notifiers to end
+					for _sec in range(3):
+						if not any(p.is_running() for p in notifier_processes):
+							break
+						time.sleep(1)
+					for notifier_process in notifier_processes:
+						if notifier_process.is_running():
+							logger.info("Stopping notifier with pid %s", notifier_process.pid)
+							notifier_process.stop()
 			except Exception as err:
 				logger.error(err, exc_info=True)
 
@@ -1614,8 +1558,7 @@ class EventProcessingThread(threading.Thread):
 						self._notificationServer.addSubject(choiceSubject)
 
 						failed_to_start_notifier = False
-						notifierPids: list[int] = []
-						notifierHandles: list[Popen | int] = []
+						notifier_processes: list[Process] = []
 						desktops = [self.event.eventConfig.shutdownNotifierDesktop]
 
 						if RUNNING_ON_WINDOWS and self.event.eventConfig.shutdownNotifierDesktop == "all":
@@ -1628,12 +1571,11 @@ class EventProcessingThread(threading.Thread):
 							shutdownNotifierCommand = shutdownNotifierCommand.replace("shutdown.ini", "shutdown_select.ini")
 
 						for desktop in desktops:
-							notifier_handle, notifier_pid = self.startNotifierApplication(
+							notifier_process = self.startNotifierApplication(
 								command=shutdownNotifierCommand, notifierId=notifierId, desktop=desktop
 							)
-							if notifier_handle and notifier_pid:
-								notifierPids.append(notifier_pid)
-								notifierHandles.append(notifier_handle)
+							if notifier_process:
+								notifier_processes.append(notifier_process)
 							else:
 								logger.error("Failed to start shutdown notifier, shutdown will not be executed")
 								failed_to_start_notifier = True
@@ -1667,15 +1609,16 @@ class EventProcessingThread(threading.Thread):
 							if self._notificationServer:
 								self._notificationServer.requestEndConnections()
 								self._notificationServer.removeSubject(choiceSubject)
-							if notifierPids:
-								try:
-									time.sleep(3)
-									for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
-										if hasattr(notifierHandle, "poll"):
-											notifierHandle.poll()  # ty: ignore[call-non-callable]
-										System.terminateProcess(processId=notifierPid)
-								except Exception:
-									pass
+							if notifier_processes:
+								# Wait a bit for notifiers to end
+								for _sec in range(3):
+									if not any(p.is_running() for p in notifier_processes):
+										break
+									time.sleep(1)
+								for notifier_process in notifier_processes:
+									if notifier_process.is_running():
+										logger.info("Stopping notifier with pid %s", notifier_process.pid)
+										notifier_process.stop()
 						except Exception as err:
 							logger.error(err, exc_info=True)
 
@@ -1931,8 +1874,7 @@ class EventProcessingThread(threading.Thread):
 		with log_context({"instance": f"event processing {self.event.eventConfig.getId()}"}):
 			assert self.opsiclientd
 			timelineEventId = None
-			notifierPids: list[int] = []
-			notifierHandles: list[Popen | int] = []
+			notifier_processes: list[Process] = []
 
 			try:
 				if self.event.eventConfig.workingWindow:
@@ -1985,12 +1927,11 @@ class EventProcessingThread(threading.Thread):
 						if RUNNING_ON_WINDOWS and self.event.eventConfig.eventNotifierDesktop == "all":
 							desktops = ["winlogon", "default"]
 						for desktop in desktops:
-							notifier_handle, notifier_pid = self.startNotifierApplication(
+							notifier_process = self.startNotifierApplication(
 								command=self.event.eventConfig.eventNotifierCommand, notifierId=notifierId, desktop=desktop
 							)
-							if notifier_handle and notifier_pid:
-								notifierPids.append(notifier_pid)
-								notifierHandles.append(notifier_handle)
+							if notifier_process:
+								notifier_processes.append(notifier_process)
 
 					if self.event.eventConfig.useCachedConfig:
 						if self.opsiclientd.getCacheService().configCacheCompleted():
@@ -2100,18 +2041,16 @@ class EventProcessingThread(threading.Thread):
 
 			self.setStatusMessage("")
 			self.stopNotificationServer()
-			if notifierPids:
-				try:
-					time.sleep(3)
-					for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
-						if psutil.pid_exists(notifierPid) and hasattr(notifierHandle, "poll"):
-							notifierHandle.poll()  # ty: ignore[call-non-callable]
-						time.sleep(0.1)
-						if psutil.pid_exists(notifierPid):
-							logger.trace("killing notifier with pid %s", notifierPid)
-							System.terminateProcess(processId=notifierPid)
-				except Exception as error:
-					logger.error("Could not kill notifier: %s", error, exc_info=True)
+			if notifier_processes:
+				# Wait a bit for notifiers to end
+				for _sec in range(3):
+					if not any(p.is_running() for p in notifier_processes):
+						break
+					time.sleep(1)
+				for notifier_process in notifier_processes:
+					if notifier_process.is_running():
+						logger.info("Stopping notifier with pid %s", notifier_process.pid)
+						notifier_process.stop()
 
 			self.opsiclientd.setBlockLogin(False)
 			self.running = False

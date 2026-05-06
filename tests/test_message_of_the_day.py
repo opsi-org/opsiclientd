@@ -47,7 +47,7 @@ def test_motd_update_without_valid_until(default_config: Config, tmp_path: Path,
 	def get_display_sessions() -> list[DisplaySession]:
 		if not user_logged_in:
 			return []
-		return [DisplaySession(id=1, desktop="default", user="testuser"), DisplaySession(id=2, desktop="default", user="testuser2")]
+		return [DisplaySession(id="1", user="testuser"), DisplaySession(id="2", user="testuser2")]
 
 	ocd = FakeOpsiclientd()
 	controlServer = get_control_interface(ocd)
@@ -86,7 +86,7 @@ def test_motd_update_valid_until(default_config: Config, tmp_path: Path, user_lo
 	def get_display_sessions() -> list[DisplaySession]:
 		if not user_logged_in:
 			return []
-		return [DisplaySession(id=1, desktop="default", user="testuser"), DisplaySession(id=2, desktop="default", user="testuser2")]
+		return [DisplaySession(id="1", user="testuser"), DisplaySession(id="2", user="testuser2")]
 
 	ocd = FakeOpsiclientd()
 	controlServer = get_control_interface(ocd)

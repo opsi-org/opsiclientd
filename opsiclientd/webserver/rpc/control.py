@@ -15,7 +15,6 @@ import platform
 import re
 import shlex
 import socket
-import subprocess
 import sys
 import threading
 import time
@@ -57,9 +56,9 @@ from opsiclientd.Timeline import Timeline
 from opsiclientd.webserver.rpc.interface import Interface
 
 if is_windows():
-	from opsiclientd.windows import runCommandInSession
+	pass
 else:
-	from opsi_legacy.System import runCommandInSession
+	pass
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd
@@ -362,37 +361,15 @@ class ControlInterface(PipeControlInterface):
 
 		return data
 
-	def runCommand(self, command: str, sessionId: int | None = None, desktop: str | None = None, use_subprocess: bool = False) -> str:
+	def runCommand(self, command: str, sessionId: int | str | None = None, desktop: str | None = None) -> str:
 		command = to_string(command)
 		if not command:
 			raise ValueError("No command given")
 
-		if sessionId:
-			sessionId = to_int(sessionId)
-		else:
-			sessionId = System.getActiveSessionId()
-			if sessionId is None:
-				sessionId = System.getActiveConsoleSessionId()
-
-		if desktop:
-			desktop = to_string(desktop)
-		else:
-			desktop = self.opsiclientd.getCurrentActiveDesktopName()
-
 		logger.notice("rpc runCommand: executing command '%s' in session %d on desktop '%s'", command, sessionId, desktop)
-
-		if use_subprocess:
-			proc = subprocess.Popen(  # ty: ignore[no-matching-overload]
-				command,
-				session_id=sessionId,
-				session_env=(desktop == "default"),
-				session_elevated=(desktop == "winlogon"),
-				session_desktop=desktop,
-			)
-			logger.info("Process started with pid %s", proc.pid)
-		else:
-			runCommandInSession(command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
-
+		self.opsiclientd.runCommandInSession(
+			command=command, sessionId=None if sessionId is None else str(sessionId), desktop=desktop, waitForProcessEnding=False
+		)
 		return f"command '{command}' executed"
 
 	def execute(
@@ -451,8 +428,8 @@ class ControlInterface(PipeControlInterface):
 	def processActionRequests(self, product_ids: list[str] | None = None, visibilty: str | None = None) -> None:
 		return self._processActionRequests(product_ids=product_ids, visibility=visibilty)
 
-	def setStatusMessage(self, sessionId: int, message: str) -> None:
-		sessionId = to_int(sessionId)
+	def setStatusMessage(self, sessionId: str, message: str) -> None:
+		sessionId = str(sessionId)
 		message = to_string(message)
 		try:
 			ept = self.opsiclientd.getEventProcessingThread(sessionId)
@@ -488,19 +465,19 @@ class ControlInterface(PipeControlInterface):
 	def isInstallationPending(self) -> bool:
 		return to_bool(self.opsiclientd.isInstallationPending())
 
-	def getCurrentActiveDesktopName(self, sessionId: int | None = None) -> str | None:
-		desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
+	def getCurrentActiveDesktopName(self, sessionId: int | str | None = None) -> str | None:
+		desktop = self.opsiclientd.getCurrentActiveDesktopName(None if sessionId is None else str(sessionId))
 		logger.notice("rpc getCurrentActiveDesktopName: current active desktop name is %s", desktop)
 		return desktop
 
-	def setCurrentActiveDesktopName(self, sessionId: int, desktop: str) -> None:
-		sessionId = to_int(sessionId)
-		desktop = to_string(desktop)
+	def setCurrentActiveDesktopName(self, sessionId: int | str, desktop: str) -> None:
+		sessionId = str(sessionId)
+		desktop = str(desktop)
 		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop
 		logger.notice("rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'", sessionId, desktop)
 
-	def switchDesktop(self, desktop: str, sessionId: int | None = None) -> None:
-		self.opsiclientd.switchDesktop(desktop, sessionId)
+	def switchDesktop(self, desktop: str, sessionId: int | str | None = None) -> None:
+		self.opsiclientd.switchDesktop(desktop, None if sessionId is None else str(sessionId))
 
 	def getConfig(self) -> dict[str, str | int | float | bool | list[str] | dict[str, str]]:
 		return self.opsiclientd.config.getDict()
@@ -772,34 +749,17 @@ class ControlInterface(PipeControlInterface):
 			]
 
 			if system == "windows":
-				try:
-					subprocess.check_output(["powershell", "-command", "$PSVersionTable"])
-				except subprocess.CalledProcessError as error:
-					logger.error("Cannot execute PowerShell. It may be missing from the system PATH: %s", error)
-					raise
-
 				arg_string = ",".join([f"'\"{arg}\"'" for arg in arg_list])
-				ps_script = f'Start-Process -Verb runas -FilePath "{opsi_script}" -ArgumentList {arg_string} -Wait'
-				command = [
-					"powershell",
-					"-ExecutionPolicy",
-					"bypass",
-					"-WindowStyle",
-					"hidden",
-					"-command",
-					ps_script,
-				]
+				proc = run_script(
+					f'Start-Process -Verb runas -FilePath "{opsi_script}" -ArgumentList {arg_string} -Wait', interpreter="powershell"
+				)
 			else:
-				command = [str(opsi_script)] + arg_list
-
-			logger.info("Executing: %s\n", command)
-			result = subprocess.run(command, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, stdin=subprocess.PIPE, text=True, check=True)
-			logger.info("Command exit code: %s", result.returncode)
+				proc = run_command([str(opsi_script)] + arg_list)
 
 			with open(opsi_script_logfile, "r") as log:
 				log_content = log.read()
 
-		return {"exit_code": result.returncode, "stdout": result.stdout, "stderr": result.stderr, "log_content": log_content}
+		return {"exit_code": proc.exit_code, "stdout": proc.get_stdout_text(), "stderr": proc.get_stderr_text(), "log_content": log_content}
 
 	def runAsOpsiSetupUser(
 		self,

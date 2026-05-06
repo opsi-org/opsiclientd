@@ -15,7 +15,6 @@ import platform
 import re
 import shlex
 import shutil
-import subprocess
 import sys
 import tempfile
 import threading
@@ -29,7 +28,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Generator, Literal
 
 import opsi_legacy
-from opsi.process import run_command
+from opsi.process import Process, run_command, run_script
 
 sys.modules["OPSI"] = opsi_legacy
 import psutil
@@ -37,9 +36,9 @@ from opsi import __version__ as python_opsi_version
 from opsi.crypt.secret import SecretAlphabet, generate_secret
 from opsi.logging import get_logger, log_context, secret_filter
 from opsi.opsi.package import OpsiPackage
-from opsi.opsi.service.model.type import to_bool, to_int, to_string
+from opsi.opsi.service.model.type import to_bool, to_string, to_string_lower
 from opsi.system.file.operation import get_link_target, link
-from opsi.system.session import get_display_sessions
+from opsi.system.session import WindowsDisplaySessionState, get_display_sessions
 from opsi_legacy import System
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject
 
@@ -66,10 +65,8 @@ from opsiclientd.webserver import Webserver
 
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.UserLogin import LoginDetector
-	from opsiclientd.windows import runCommandInSession
 else:
 	from opsi.process import get_subprocess_environment
-	from opsi_legacy.System import runCommandInSession
 
 if TYPE_CHECKING:
 	from opsiclientd.nonfree.CacheService import CacheService
@@ -163,7 +160,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self.eventLock = threading.Lock()
 		self._eptListLock = threading.Lock()
 		self._blockLogin = True
-		self._currentActiveDesktopName: dict[int, str] = {}
+		self._currentActiveDesktopName: dict[str, str] = {}
 		self._gui_waiter: WaitForGUI | None = None
 
 		self._isRebootTriggered = False
@@ -372,11 +369,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error(err)
 
 			if RUNNING_ON_WINDOWS:
-				subprocess.Popen(
-					"net stop opsiclientd & net start opsiclientd",
-					shell=True,
-					creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,  # ty: ignore[unresolved-attribute]  # only windows
-				)
+				run_script("net stop opsiclientd & net start opsiclientd", detach=True, wait=False)
 			else:
 				logger.notice("Executing: %s", self._argv)
 				os.chdir(os.path.dirname(self._argv[0]))
@@ -907,17 +900,87 @@ class Opsiclientd(EventListener, threading.Thread):
 		with self._eptListLock:
 			return self._eventProcessingThreads
 
-	def getEventProcessingThread(self, sessionId: int) -> EventProcessingThread:
+	def getEventProcessingThread(self, sessionId: str) -> EventProcessingThread:
 		with self._eptListLock:
 			for ept in self._eventProcessingThreads:
-				if int(ept.getSessionId() or -1) == int(sessionId):
+				if ept.getSessionId() == sessionId:
 					return ept
 		raise LookupError(f"Event processing thread for session {sessionId} not found")
 
 	def processProductActionRequests(self, event: Event) -> None:
 		logger.error("processProductActionRequests not implemented")
 
-	def getCurrentActiveDesktopName(self, sessionId: int | None = None) -> str | None:
+	def getSessionId(self, username: str | None = None) -> str | None:
+		sessions = get_display_sessions()
+
+		if RUNNING_ON_WINDOWS:
+			if username:
+				user_sessions = [session for session in sessions if session.user == username]
+				if user_sessions:
+					session_id = user_sessions[0].id
+					logger.info("Using session id of user '%s': %s", username, session_id)
+					return session_id
+
+			# Try to find active session first, then fallback to active console session
+			for session in sessions:
+				if session.windows_state == WindowsDisplaySessionState.ACTIVE:
+					session_id = session.id
+					logger.info("Using active session id: %s", session_id)
+					return session_id
+
+		console_sessions = [s for s in sessions if s.is_current_console_session]
+		if console_sessions:
+			session_id = console_sessions[0].id
+			logger.info("Using active console session id: %s", session_id)
+			return session_id
+
+		logger.info("No active session found")
+		return None
+
+	def runCommandInSession(
+		self,
+		command: str | list[str],
+		sessionId: str | None,
+		desktop: str | None = None,
+		waitForProcessEnding: bool = False,
+		timeoutSeconds: int = 0,
+		noWindow: bool = False,
+		elevated: bool = True,
+	) -> Process | None:
+		if RUNNING_ON_WINDOWS:
+			if sessionId is None:
+				sessionId = self.getSessionId()
+				if not sessionId:
+					logger.error("Failed to run command in session: no active session found")
+					return None
+
+			if not desktop or (to_string_lower(desktop) == "current"):
+				desktop = to_string_lower(self.getCurrentActiveDesktopName(sessionId))
+				if desktop.lower().replace("-", "") == "screensaver":
+					logger.debug("Current active desktop is %r, using default desktop", desktop)
+					desktop = "default"
+
+			if not desktop:
+				# Default desktop is winlogon
+				desktop = "winlogon"
+		else:
+			desktop = None
+			elevated = False
+
+		try:
+			return run_command(
+				command,
+				session_id=sessionId,
+				session_desktop=desktop,
+				session_elevated=elevated,
+				wait=waitForProcessEnding,
+				timeout=timeoutSeconds,
+				hide_window=noWindow,
+			)
+		except Exception as err:
+			logger.error(err, exc_info=True)
+
+	def getCurrentActiveDesktopName(self, sessionId: str | None = None) -> str | None:
 		if not RUNNING_ON_WINDOWS:
 			return None
 
@@ -926,18 +989,14 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise RuntimeError("opsiclientd_rpc command not defined")
 
 		if sessionId is None:
-			sessions = get_display_sessions()
-			if sessions:
-				sessionId = sessions[0].id
-			else:
-				sessionId = System.getActiveConsoleSessionId()
-
-		assert sessionId
+			sessionId = self.getSessionId()
+			if sessionId is None:
+				raise RuntimeError("No active session found to get current active desktop name")
 
 		rpc = f'setCurrentActiveDesktopName("{sessionId}", System.getActiveDesktopName())'
 		cmd = opsiclientd_rpc + ' "' + rpc.replace('"', '\\"') + '"'
 		try:
-			runCommandInSession(
+			self.runCommandInSession(
 				command=cmd, sessionId=sessionId, desktop="winlogon", waitForProcessEnding=True, timeoutSeconds=60, noWindow=True
 			)
 		except Exception as err:
@@ -951,25 +1010,25 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.debug("Returning current active dektop name '%s' for session %s", desktop, sessionId)
 		return desktop
 
-	def switchDesktop(self, desktop: str, sessionId: int | None = None) -> None:
+	def switchDesktop(self, desktop: str, sessionId: str | None = None) -> None:
+		if not RUNNING_ON_WINDOWS:
+			return
+
 		opsiclientd_rpc = config.get("opsiclientd_rpc", "command")
 		if not opsiclientd_rpc:
 			raise RuntimeError("opsiclientd_rpc command not defined")
 
 		desktop = to_string(desktop)
 		if sessionId is None:
-			sessions = get_display_sessions()
-			if sessions:
-				sessionId = sessions[0].id
-			else:
-				sessionId = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
-		sessionId = to_int(sessionId)
+			sessionId = self.getSessionId()
+			if sessionId is None:
+				raise RuntimeError("No active session found to switch desktop")
 
 		rpc = f"noop(System.switchDesktop('{desktop}'))"
 		cmd = f'{opsiclientd_rpc} "{rpc}"'
 
 		try:
-			runCommandInSession(
+			self.runCommandInSession(
 				command=cmd, sessionId=sessionId, desktop=desktop, waitForProcessEnding=True, timeoutSeconds=60, noWindow=True
 			)
 		except Exception as err:
@@ -1098,8 +1157,6 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.info("Message of the day is disabled")
 			return []
 
-		sessions = get_display_sessions()
-		logger.debug("Found sessions: %s", sessions)
 		host_id = config.get("global", "host_id")
 		messages_shown: list[str] = []
 
@@ -1128,6 +1185,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		user_message_valid_until = int(user_message_valid_until) if user_message_valid_until else 0
 
 		utc_timestamp = int(datetime.now(tz=timezone.utc).timestamp())
+		sessions = get_display_sessions()
+		logger.debug("Found sessions: %s", sessions)
 		if sessions:
 			# Show user message
 			if not user_message:
@@ -1250,48 +1309,34 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setChoices([_("Close")])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
-			session_ids = sessions or [session.id for session in get_display_sessions()]
-			desktops = desktops or ["default", "winlogon"]
-			if not session_ids:
-				if console_session_id := System.getActiveConsoleSessionId():  # type: ignore[possibly-missing-attribute]
-					session_ids = [int(console_session_id)]
-					desktops = ["winlogon"]
-			for sessionId in session_ids:
-				try:
-					if RUNNING_ON_WINDOWS:
-						for desktop in desktops:
-							notifierCommand, elevation_required = self.getNotifierCommand(
-								command=config.get("opsiclientd_notifier", "command"),
-								notifier_id=notifier_id,
-								port=self._popupNotificationServer.port,
-								link_handling=link_handling,
-								timeout=displaySeconds,
-								desktop=desktop,
-							)
-							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
-							proc = subprocess.Popen(  # ty: ignore[no-matching-overload]
-								notifierCommand,
-								session_id=sessionId,
-								session_env=(desktop == "default"),
-								session_elevated=elevation_required,
-								session_desktop=desktop,
-							)
-							logger.info("Process started with pid %s", proc.pid)
-					else:
+			for session in get_display_sessions():
+				for desktop in (desktops or ["default", "winlogon"]) if RUNNING_ON_WINDOWS else [None]:
+					try:
 						notifierCommand, elevation_required = self.getNotifierCommand(
 							command=config.get("opsiclientd_notifier", "command"),
 							notifier_id=notifier_id,
 							port=self._popupNotificationServer.port,
-							link_handling=link_handling,
 							timeout=displaySeconds,
+							desktop=desktop,
 						)
-						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
-						# sessionId is int for windows and str for posix
-						runCommandInSession(command=notifierCommand, sessionId=f":{sessionId}", waitForProcessEnding=False)  # ty: ignore[invalid-argument-type]
-				except Exception as err:
-					logger.error(
-						"Failed to start popup message notifier app in session %r on desktop %r: %s", sessionId, desktop, err, exc_info=True
-					)
+						logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, session.id, desktop)
+						process = self.runCommandInSession(
+							command=notifierCommand,
+							sessionId=session.id,
+							desktop=desktop,
+							waitForProcessEnding=False,
+							elevated=elevation_required,
+						)
+						if process:
+							logger.debug("Started notifier with pid %s", process.pid)
+					except Exception as err:
+						logger.error(
+							"Failed to start popup message notifier app in session %r on desktop %r: %s",
+							session.id,
+							desktop,
+							err,
+							exc_info=True,
+						)
 
 			# last popup decides end time (even if unlimited)
 			if self._popupClosingThread and self._popupClosingThread.is_alive():
@@ -1369,45 +1414,34 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start notification server: %s", err)
 				raise
 
-			session_ids = [session.id for session in get_display_sessions()]
-			desktops = ["default", "winlogon"]
-			if not session_ids:
-				if console_session_id := System.getActiveConsoleSessionId():  # type: ignore[possibly-missing-attribute]
-					session_ids = [int(console_session_id)]
-					desktops = ["winlogon"]
-			for sessionId in session_ids:
-				try:
-					if RUNNING_ON_WINDOWS:
-						for desktop in desktops:
-							notifierCommand, elevation_required = self.getNotifierCommand(
-								command=config.get("opsiclientd_notifier", "command"),
-								notifier_id=notifier_id,
-								port=self._dialogNotificationServer.port,
-								timeout=timeout,
-								desktop=desktop,
-							)
-							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
-							proc = subprocess.Popen(  # ty: ignore[no-matching-overload]
-								notifierCommand,
-								session_id=sessionId,
-								session_env=(desktop == "default"),
-								session_elevated=elevation_required,
-								session_desktop=desktop,
-							)
-							logger.info("Process started with pid %s", proc.pid)
-					else:
+			for session in get_display_sessions():
+				for desktop in ["default", "winlogon"] if RUNNING_ON_WINDOWS else [None]:
+					try:
 						notifierCommand, elevation_required = self.getNotifierCommand(
 							command=config.get("opsiclientd_notifier", "command"),
 							notifier_id=notifier_id,
 							port=self._dialogNotificationServer.port,
 							timeout=timeout,
+							desktop=desktop,
 						)
-						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
-						runCommandInSession(command=notifierCommand, sessionId=f":{sessionId}", waitForProcessEnding=False)  # ty: ignore[invalid-argument-type]
-				except Exception as err:
-					logger.error(
-						"Failed to start popup message notifier app in session %r on desktop %r: %s", sessionId, desktop, err, exc_info=True
-					)
+						logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, session.id, desktop)
+						process = self.runCommandInSession(
+							command=notifierCommand,
+							sessionId=session.id,
+							desktop=desktop,
+							waitForProcessEnding=False,
+							elevated=elevation_required,
+						)
+						if process:
+							logger.debug("Started notifier with pid %s", process.pid)
+					except Exception as err:
+						logger.error(
+							"Failed to start dialog notifier app in session %r on desktop %r: %s",
+							session.id,
+							desktop,
+							err,
+							exc_info=True,
+						)
 
 		if not self._dialogResultEvent.wait(timeout):
 			logger.info("Dialog timed out")
