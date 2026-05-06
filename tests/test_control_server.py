@@ -377,14 +377,20 @@ def test_run_opsiscript_content(opsiclientd_auth: tuple[str, str]) -> None:  # n
 				"script_content": '[Actions]\\nMessage \\"Hello, World!\\"\\nMessage \\"This is a multi-line opsi script.\\"',
 			}
 
+			class MockProcess:
+				exit_code = 0
+
+				def get_stdout_text(self) -> str:
+					return "Mocked stdout"
+
+				def get_stderr_text(self) -> str:
+					return "Mocked stderr"
+
 			with use_logging_config(stderr_level=LOG_INFO):
 				with (
-					patch("subprocess.run") as mock_run,
+					patch("opsiclientd.webserver.rpc.control.run_command", return_value=MockProcess()),
 					patch("builtins.open", mock_open(read_data="[1] Mocked log content")),
 				):
-					mock_run.return_value.returncode = 0
-					mock_run.return_value.stdout = "Mocked stdout"
-					mock_run.return_value.stderr = "Mocked stderr"
 					response = client.jsonrpc20(path="/opsiclientd", method="runOpsiScriptContent", params=params, id=2)
 			assert "error" not in response
 			assert response["id"] == 2

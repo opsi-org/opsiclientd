@@ -9,20 +9,20 @@ jsonrpc
 
 from __future__ import annotations
 
-import asyncio
 import time
 import urllib.parse
 import warnings
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from inspect import iscoroutinefunction
 from typing import Any, AsyncGenerator, Literal
 
 from fastapi import HTTPException
 from fastapi.requests import Request
 from fastapi.responses import Response
+from opsi.compression import compress, decompress
 from opsi.logging import get_logger
 from opsi.opsi.service.model.object import deserialize, serialize
-from opsi.compression import compress, decompress
 from opsi.serialization import json_decode, json_encode, msgpack_decode, msgpack_encode
 from starlette.concurrency import run_in_threadpool
 
@@ -233,8 +233,8 @@ async def execute_rpc(request: JSONRPC20Request | JSONRPCRequest, interface: Int
 				keywords = {str(key): await run_in_threadpool(deserialize, value) for key, value in kwargs.items()}
 		params = await run_in_threadpool(deserialize, params)
 
-	method = getattr(interface, method_name)
-	if asyncio.iscoroutinefunction(method):
+	method: Any = getattr(interface, method_name)
+	if iscoroutinefunction(method):
 		result = await method(*params, **keywords)
 	else:
 		result = await run_in_threadpool(method, *params, **keywords)
