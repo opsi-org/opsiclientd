@@ -23,7 +23,7 @@ from pathlib import Path
 from types import MethodType
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
-
+from opsi.system.session import get_display_sessions
 import psutil
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
@@ -533,10 +533,16 @@ class ControlInterface(PipeControlInterface):
 					file.write(cert.public_bytes(encoding=serialization.Encoding.PEM))
 
 	def getActiveSessions(self) -> list[dict[str, str | int | bool | None]]:
-		sessions = System.getActiveSessionInformation()
-		for session in sessions:
-			session["LogonDomain"] = session.get("DomainName")
-		return sessions
+		return [
+			{
+				"SessionId": session.id,
+				"UserName": session.user,
+				"DomainName": session.domain,
+				"LogonDomain": session.domain,
+				"ProtocolName": session.windows_protocol.value if session.windows_protocol else None,
+				"StateName": session.windows_state.value if session.windows_state else None,
+			} for session in get_display_sessions()
+		]
 
 	def getBackendInfo(self) -> dict[str, Any]:
 		return self.service_client.backend_info()  # ty: ignore[unresolved-attribute]

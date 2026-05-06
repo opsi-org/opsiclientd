@@ -30,6 +30,7 @@ import win32security
 from opsi.logging import get_logger, secret_filter
 from opsi.opsi.service.model.type import to_bool
 from opsi.process import run_command, run_script
+from opsi.system.session import WindowsDisplaySessionProtocol, get_display_sessions
 from opsi_legacy import System
 
 from opsiclientd import config
@@ -282,11 +283,12 @@ class OpsiclientdNT(Opsiclientd):
 	def loginUser(self, domain: str, username: str, password: str) -> bool:
 		secret_filter.add_secrets(password)
 		assert self._controlPipe
-		for session_id in System.getActiveSessionIds(protocol="console"):  # ty: ignore[unknown-argument]
-			desktop = self.getCurrentActiveDesktopName(session_id)
-			if desktop and desktop.lower() != "winlogon":
-				System.lockSession(session_id)
-			break
+		for session in get_display_sessions():
+			if session.windows_protocol == WindowsDisplaySessionProtocol.CONSOLE and session.user:
+				desktop = self.getCurrentActiveDesktopName(session.id)
+				if desktop and desktop.lower() != "winlogon":
+					System.lockSession(session.id)
+				break
 
 		for seconds in range(20):
 			cpc = self._controlPipe.credentialProviderConnected(login_capable=True)

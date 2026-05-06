@@ -170,7 +170,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorUserPassword = ""
 
 		self._statusApplicationProcess = None
-		self._blockLoginNotifierPid = None
+		self._blockLoginNotifierProcess: Process | None = None
 
 		self._popupNotificationServer: NotificationServer | None = None
 		self._popupNotificationLock = threading.Lock()
@@ -390,7 +390,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					title="Blocking login", description="User login blocked", category="block_login", durationEvent=True
 				)
 
-			if not self._blockLoginNotifierPid and config.get("global", "block_login_notifier"):
+			if not self._blockLoginNotifierProcess and config.get("global", "block_login_notifier"):
 				if handleNotifier and RUNNING_ON_WINDOWS:
 					logger.info("Starting block login notifier app")
 					# Start block login notifier on physical console
@@ -401,12 +401,9 @@ class Opsiclientd(EventListener, threading.Thread):
 							notifierCommand, _elevation_required = self.getNotifierCommand(
 								command=config.get("global", "block_login_notifier"), notifier_id="block_login", desktop=desktop
 							)
-							self._blockLoginNotifierPid = System.runCommandInSession(
-								command=notifierCommand,
-								sessionId=sessionId,
-								desktop=desktop,
-								waitForProcessEnding=False,
-							)[2]
+							self._blockLoginNotifierProcess = self.runCommandInSession(
+								command=notifierCommand, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False, elevated=True
+							)
 							break
 						except Exception as err:
 							logger.error("Failed to start block login notifier app: %s", err)
@@ -416,17 +413,13 @@ class Opsiclientd(EventListener, threading.Thread):
 				timeline.setEventEnd(eventId=self._blockLoginEventId)
 				self._blockLoginEventId = None
 
-			if handleNotifier and self._blockLoginNotifierPid:
+			if handleNotifier and self._blockLoginNotifierProcess and self._blockLoginNotifierProcess.is_running():
 				try:
-					logger.info("Terminating block login notifier app (pid %s)", self._blockLoginNotifierPid)
-					System.terminateProcess(processId=self._blockLoginNotifierPid)
+					logger.info("Terminating block login notifier app (pid %s)", self._blockLoginNotifierProcess.pid)
+					self._blockLoginNotifierProcess.stop()
 				except Exception as err:
-					log = logger.warning
-					if isinstance(err, OSError) and getattr(err, "errno", None) == 87:
-						# Process already terminated
-						log = logger.debug
-					log("Failed to terminate block login notifier app: %s", err)
-				self._blockLoginNotifierPid = None
+					logger.warning("Failed to terminate block login notifier app: %s", err)
+				self._blockLoginNotifierProcess = None
 
 		if changed and self._controlPipe:
 			try:

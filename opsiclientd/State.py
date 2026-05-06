@@ -8,6 +8,7 @@ Application state.
 """
 
 from __future__ import annotations
+from opsi.system.session import get_display_sessions
 
 import json
 import os
@@ -77,8 +78,8 @@ class State:
 		name = to_string(name)
 		if name == "user_logged_in":
 			if RUNNING_ON_WINDOWS:
-				for session in System.getActiveSessionInformation():
-					if session["UserName"] != OPSI_SETUP_USER_NAME:
+				for session in get_display_sessions():
+					if session.user and session.user != OPSI_SETUP_USER_NAME:
 						return True
 			elif RUNNING_ON_LINUX:
 				for proc in psutil.process_iter():
