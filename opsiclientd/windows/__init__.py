@@ -1,5 +1,5 @@
 # opsiclientd is part of the desktop management solution opsi http://www.opsi.org
-# Copyright (c) 2010-2025 uib GmbH <info@uib.de>
+# Copyright (c) 2010-2026 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0-only
 
@@ -7,7 +7,6 @@
 opsiclientd.windows
 """
 
-import shlex
 import threading
 import time
 from types import ModuleType
@@ -16,8 +15,6 @@ from typing import Any, Callable
 import win32com.client
 import win32com.server.policy
 from opsi.logging import get_logger
-from opsi.opsi.service.model.type import to_bool, to_int, to_string, to_string_lower
-from opsi_legacy.System.Windows import createDesktop, getActiveSessionId, getUserToken, terminateProcess, win32con, win32event, win32process
 
 # from Sens.h
 SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
