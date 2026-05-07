@@ -58,7 +58,7 @@ from opsiclientd.notification_server import NotificationServer
 from opsiclientd.OpsiService import PermanentServiceConnection
 from opsiclientd.setup import setup
 from opsiclientd.State import State
-from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_WINDOWS
+from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_MACOS, RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 from opsiclientd.utils import get_registry_value
 from opsiclientd.webserver import Webserver
@@ -958,7 +958,9 @@ class Opsiclientd(EventListener, threading.Thread):
 				desktop = "winlogon"
 		else:
 			desktop = None
-			elevated = False
+			if RUNNING_ON_MACOS:
+				sessionId = None
+				elevated = False
 
 		try:
 			return run_command(
@@ -1096,7 +1098,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		elevation_required = True
 		alt_command = config.get("opsiclientd_notifier", "alt_command")
 		if notifier_id in config.get("opsiclientd_notifier", "alt_ids") and alt_command:
-			elevation_required = desktop != "default"
+			if RUNNING_ON_WINDOWS:
+				elevation_required = desktop != "default"
+			else:
+				elevation_required = False
 			if elevation_required and link_handling == "browser":
 				# Click on link would start elevated browser
 				link_handling = "no"
