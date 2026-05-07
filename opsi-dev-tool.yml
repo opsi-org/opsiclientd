@@ -40,8 +40,9 @@ pyinstaller:
   hidden_imports:
     all:
       - csv
-      # opsi_legacy.Util.Ping needed for dynamic depot selection
+      # opsi_legacy.Util.Ping / opsi.network needed for dynamic depot selection
       - opsi_legacy.Util.Ping
+      - opsi.network
     windows:
       - pythoncom
       - win32com
