@@ -1178,7 +1178,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		user_message_valid_until = int(user_message_valid_until) if user_message_valid_until else 0
 
 		utc_timestamp = int(datetime.now(tz=timezone.utc).timestamp())
-		sessions = get_display_sessions()
+		sessions = [s for s in get_display_sessions() if s.user]
 		logger.debug("Found sessions: %s", sessions)
 		if sessions:
 			# Show user message
