@@ -1304,6 +1304,9 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			for session in get_display_sessions():
 				for desktop in (desktops or ["default", "winlogon"]) if RUNNING_ON_WINDOWS else [None]:
+					if desktop == "default" and not session.user:
+						logger.info("Skipping desktop %s in session %s because no user is logged in", desktop, session.id)
+						continue
 					try:
 						notifierCommand, elevation_required = self.getNotifierCommand(
 							command=config.get("opsiclientd_notifier", "command"),
@@ -1409,6 +1412,9 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			for session in get_display_sessions():
 				for desktop in ["default", "winlogon"] if RUNNING_ON_WINDOWS else [None]:
+					if desktop == "default" and not session.user:
+						logger.info("Skipping desktop %s in session %s because no user is logged in", desktop, session.id)
+						continue
 					try:
 						notifierCommand, elevation_required = self.getNotifierCommand(
 							command=config.get("opsiclientd_notifier", "command"),

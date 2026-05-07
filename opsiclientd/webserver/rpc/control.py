@@ -23,7 +23,7 @@ from pathlib import Path
 from types import MethodType
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
-from opsi.system.session import get_display_sessions
+
 import psutil
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
@@ -42,6 +42,7 @@ from opsi.opsi.service.model.type import to_bool, to_host_id, to_int, to_product
 from opsi.process import ProcessError, run_command, run_script
 from opsi.system.file.temp import TempDir
 from opsi.system.info import is_windows
+from opsi.system.session import get_display_sessions
 from opsi_legacy import System
 from opsi_legacy.Util.Log import truncateLogData
 
@@ -543,6 +544,7 @@ class ControlInterface(PipeControlInterface):
 				"StateName": session.windows_state.value if session.windows_state else None,
 			}
 			for session in get_display_sessions()
+			if session.user
 		]
 
 	def getBackendInfo(self) -> dict[str, Any]:
