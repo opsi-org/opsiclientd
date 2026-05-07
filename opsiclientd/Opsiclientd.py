@@ -936,7 +936,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		sessionId: str | None,
 		desktop: str | None = None,
 		waitForProcessEnding: bool = False,
-		timeoutSeconds: int = 0,
+		timeoutSeconds: float = 0.0,
 		noWindow: bool = False,
 		elevated: bool = True,
 	) -> Process | None:
