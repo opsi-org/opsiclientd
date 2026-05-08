@@ -962,6 +962,9 @@ class Opsiclientd(EventListener, threading.Thread):
 				sessionId = None
 				elevated = False
 
+		if not sessionId:
+			elevated = False
+
 		try:
 			return run_command(
 				command,
