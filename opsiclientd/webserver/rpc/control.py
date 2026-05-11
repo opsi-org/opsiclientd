@@ -369,7 +369,7 @@ class ControlInterface(PipeControlInterface):
 
 		logger.notice("rpc runCommand: executing command '%s' in session %d on desktop '%s'", command, sessionId, desktop)
 		self.opsiclientd.runCommandInSession(
-			command=command, sessionId=None if sessionId is None else str(sessionId), desktop=desktop, waitForProcessEnding=False
+			command=command, session_id=None if sessionId is None else str(sessionId), session_desktop=desktop, wait=False
 		)
 		return f"command '{command}' executed"
 

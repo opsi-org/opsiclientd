@@ -329,9 +329,7 @@ class EventProcessingThread(threading.Thread):
 			command, _elevation_required = self.opsiclientd.getNotifierCommand(
 				command=command, notifier_id=notifierId, port=self.notificationServerPort, desktop=desktop
 			)
-			process = self.opsiclientd.runCommandInSession(
-				sessionId=sessionId, command=command, desktop=desktop, waitForProcessEnding=False
-			)
+			process = self.opsiclientd.runCommandInSession(session_id=sessionId, command=command, session_desktop=desktop, wait=False)
 			if process:
 				logger.debug("Started notifier with pid %s", process.pid)
 			return process
@@ -347,7 +345,7 @@ class EventProcessingThread(threading.Thread):
 			raise RuntimeError(f"opsiclientd_rpc command not defined: {err}") from err
 
 		# TODO: collect exit codes to avoid Zombie Process
-		self.opsiclientd.runCommandInSession(command=command, sessionId=self.getSessionId(), waitForProcessEnding=False, noWindow=True)
+		self.opsiclientd.runCommandInSession(command=command, session_id=self.getSessionId(), wait=False, hide_window=True)
 
 	def setActionProcessorInfo(self) -> None:
 		action_processor_filename = config.get("action_processor", "filename")
@@ -1127,9 +1125,9 @@ class EventProcessingThread(threading.Thread):
 					)
 					self.opsiclientd.runCommandInSession(
 						command=self.event.eventConfig.preActionProcessorCommand,
-						sessionId=sessionId,
-						desktop=desktop,
-						waitForProcessEnding=True,
+						session_id=sessionId,
+						session_desktop=desktop,
+						wait=True,
 					)
 				except Exception as err:
 					logger.error("Failed to run pre action processor command: %s", err, exc_info=True)
@@ -1181,7 +1179,7 @@ class EventProcessingThread(threading.Thread):
 			if RUNNING_ON_WINDOWS:
 				logger.notice("Starting action processor in session '%s' on desktop '%s'", sessionId, desktop)
 				self.opsiclientd.runCommandInSession(
-					command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=True, noWindow=True
+					command=command, session_id=sessionId, session_desktop=desktop, wait=True, hide_window=True
 				)
 			else:
 				(username, password) = (None, None)
@@ -1218,9 +1216,9 @@ class EventProcessingThread(threading.Thread):
 					with chdir(Path(tmpdir)):
 						self.opsiclientd.runCommandInSession(
 							command=command,
-							sessionId=sessionId,
-							waitForProcessEnding=True,
-							timeoutSeconds=self.event.eventConfig.actionProcessorTimeout,
+							session_id=sessionId,
+							wait=True,
+							timeout=self.event.eventConfig.actionProcessorTimeout,
 						)
 
 			if self.event.eventConfig.postActionProcessorCommand:
@@ -1234,9 +1232,9 @@ class EventProcessingThread(threading.Thread):
 					)
 					self.opsiclientd.runCommandInSession(
 						command=self.event.eventConfig.postActionProcessorCommand,
-						sessionId=sessionId,
-						desktop=desktop,
-						waitForProcessEnding=True,
+						session_id=sessionId,
+						session_desktop=desktop,
+						wait=True,
 					)
 				except Exception as err:
 					logger.error("Failed to start post action processor command: %s", err)

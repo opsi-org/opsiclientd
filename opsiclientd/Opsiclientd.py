@@ -402,7 +402,11 @@ class Opsiclientd(EventListener, threading.Thread):
 								command=config.get("global", "block_login_notifier"), notifier_id="block_login", desktop=desktop
 							)
 							self._blockLoginNotifierProcess = self.runCommandInSession(
-								command=notifierCommand, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False, elevated=True
+								command=notifierCommand,
+								session_id=sessionId,
+								session_desktop=desktop,
+								wait=False,
+								session_elevated=True,
 							)
 							break
 						except Exception as err:
@@ -933,47 +937,59 @@ class Opsiclientd(EventListener, threading.Thread):
 	def runCommandInSession(
 		self,
 		command: str | list[str],
-		sessionId: str | None,
-		desktop: str | None = None,
-		waitForProcessEnding: bool = False,
-		timeoutSeconds: float = 0.0,
-		noWindow: bool = False,
-		elevated: bool = True,
+		*,
+		session_id: str | None,
+		session_desktop: str | None = None,
+		session_elevated: bool = True,
+		wait: bool = False,
+		timeout: float = 0.0,
+		hide_window: bool = False,
 	) -> Process | None:
+		"""
+		Execute a command, optionally in a user session and on a specific desktop.
+		When running a command in a session, the process can access the user's desktop to display windows.
+		You can specify whether the process runs with the permissions of the session's user or elevated system/root permissions.
+		On Windows, an active session is always assumed to exist. If no session_id is provided, the command runs in the active session.
+		If no desktop is specified or "current" is selected, the command runs on the session's active desktop, defaulting to the winlogon desktop if needed.
+		On Linux, if no session_id is provided, the command runs without a graphical session and as root.
+		If wait is True, this function waits for the command to finish and returns the Process object. Otherwise, it returns immediately after starting the process.
+		If timeout is greater than 0 the process will be terminated if it is still running after the specified time in seconds.
+		If hide_window is True, the process will be started with a hidden window (Windows only).
+		"""
 		if RUNNING_ON_WINDOWS:
-			if sessionId is None:
-				sessionId = self.getSessionId()
-				if not sessionId:
+			if session_id is None:
+				session_id = self.getSessionId()
+				if not session_id:
 					logger.error("Failed to run command in session: no active session found")
 					return None
 
-			if not desktop or (to_string_lower(desktop) == "current"):
-				desktop = to_string_lower(self.getCurrentActiveDesktopName(sessionId))
-				if desktop.lower().replace("-", "") == "screensaver":
-					logger.debug("Current active desktop is %r, using default desktop", desktop)
-					desktop = "default"
+			if not session_desktop or (to_string_lower(session_desktop) == "current"):
+				session_desktop = to_string_lower(self.getCurrentActiveDesktopName(session_id))
+				if session_desktop.lower().replace("-", "") == "screensaver":
+					logger.debug("Current active desktop is %r, using default desktop", session_desktop)
+					session_desktop = "default"
 
-			if not desktop:
+			if not session_desktop:
 				# Default desktop is winlogon
-				desktop = "winlogon"
+				session_desktop = "winlogon"
 		else:
-			desktop = None
+			session_desktop = None
 			if RUNNING_ON_MACOS:
-				sessionId = None
-				elevated = False
+				session_id = None
+				session_elevated = False
 
-		if not sessionId:
-			elevated = False
+		if not session_id:
+			session_elevated = False
 
 		try:
 			return run_command(
 				command,
-				session_id=sessionId,
-				session_desktop=desktop,
-				session_elevated=elevated,
-				wait=waitForProcessEnding,
-				timeout=timeoutSeconds,
-				hide_window=noWindow,
+				session_id=session_id,
+				session_desktop=session_desktop,
+				session_elevated=session_elevated,
+				wait=wait,
+				timeout=timeout,
+				hide_window=hide_window,
 			)
 		except Exception as err:
 			logger.error(err, exc_info=True)
@@ -994,9 +1010,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		rpc = f'setCurrentActiveDesktopName("{sessionId}", System.getActiveDesktopName())'
 		cmd = opsiclientd_rpc + ' "' + rpc.replace('"', '\\"') + '"'
 		try:
-			self.runCommandInSession(
-				command=cmd, sessionId=sessionId, desktop="winlogon", waitForProcessEnding=True, timeoutSeconds=60, noWindow=True
-			)
+			self.runCommandInSession(command=cmd, session_id=sessionId, session_desktop="winlogon", wait=True, timeout=60, hide_window=True)
 		except Exception as err:
 			logger.error(err)
 
@@ -1026,9 +1040,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		cmd = f'{opsiclientd_rpc} "{rpc}"'
 
 		try:
-			self.runCommandInSession(
-				command=cmd, sessionId=sessionId, desktop=desktop, waitForProcessEnding=True, timeoutSeconds=60, noWindow=True
-			)
+			self.runCommandInSession(command=cmd, session_id=sessionId, session_desktop=desktop, wait=True, timeout=60, hide_window=True)
 		except Exception as err:
 			logger.error(err)
 
@@ -1326,10 +1338,10 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, session.id, desktop)
 						process = self.runCommandInSession(
 							command=notifierCommand,
-							sessionId=session.id,
-							desktop=desktop,
-							waitForProcessEnding=False,
-							elevated=elevation_required,
+							session_id=session.id,
+							session_desktop=desktop,
+							wait=False,
+							session_elevated=elevation_required,
 						)
 						if process:
 							logger.debug("Started notifier with pid %s", process.pid)
@@ -1434,10 +1446,10 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, session.id, desktop)
 						process = self.runCommandInSession(
 							command=notifierCommand,
-							sessionId=session.id,
-							desktop=desktop,
-							waitForProcessEnding=False,
-							elevated=elevation_required,
+							session_id=session.id,
+							session_desktop=desktop,
+							wait=False,
+							session_elevated=elevation_required,
 						)
 						if process:
 							logger.debug("Started notifier with pid %s", process.pid)
