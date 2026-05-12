@@ -1024,11 +1024,11 @@ class EventProcessingThread(threading.Thread):
 				# Wait for windows installer before Running Action Processor
 				try:
 					logger.notice("Getting windows installer status")
-					self.setStatusMessage(_("Waiting for TrustedInstaller"))
+					self.setStatusMessage(_("Waiting for Windows updates to finish"))
 					if self.opsiclientd.isWindowsInstallerBusy():
 						logger.notice("Windows installer is running, waiting until upgrade process is finished")
 						waitEventId = timeline.addEvent(
-							title="Waiting for TrustedInstaller",
+							title="Waiting for Windows updates to finish",
 							description="Windows installer is running, waiting until upgrade process is finished",
 							category="wait",
 							durationEvent=True,
