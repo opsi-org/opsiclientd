@@ -784,8 +784,9 @@ class Config:
 					logger.info("%d. alternative depot is %s", index, depot.id)
 
 				try:
+					client_id = self.get("global", "host_id")
 					clientConfig = {
-						"clientId": self.get("global", "host_id"),
+						"clientId": client_id,
 						"opsiHostKey": self.get("global", "opsi_host_key"),
 						"ipAddress": None,
 						"netmask": None,
@@ -811,7 +812,10 @@ class Config:
 
 					logger.info("Passing client configuration to depot selection algorithm: %s", clientConfig)
 
-					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()  # ty: ignore[unresolved-attribute]
+					if hasattr(configService, "depot_getDepotSelectionAlgorithm"):
+						depotSelectionAlgorithm = configService.depot_getDepotSelectionAlgorithm(client_id)  # ty: ignore[call-non-callable]
+					else:
+						depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()  # ty: ignore[unresolved-attribute]
 					logger.trace("depotSelectionAlgorithm:\n%s", depotSelectionAlgorithm)
 
 					currentLocals = locals()
