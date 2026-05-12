@@ -12,15 +12,15 @@ import os
 import shutil
 import threading
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from typing import Any, Sequence
 
 from opsi.crypt.hash import compute_file_hash
-from opsi.opsi.package import PackageContentFileEntry, parse_package_content_file
+from opsi.logging import get_logger
+from opsi.opsi.package import PackageContentFileEntry, PackageContentFileEntryType, parse_package_content_file
+from opsi.opsi.service.model.type import to_string, to_string_list
 from opsi.system.environment import chdir
 from opsi_legacy.Util.Message import ProgressSubject
 from opsi_legacy.Util.Repository import Repository
-from opsi.logging import get_logger
-from opsi.opsi.service.model.type import to_string, to_string_list
 
 logger = get_logger()
 
@@ -46,7 +46,7 @@ class DepotToLocalDirectorySynchronizer:
 		self._sourceDepot.setBandwidth(dynamicBandwidth=dynamicBandwidth, maxBandwidth=maxBandwidth)
 		self._continue_event = continue_event
 
-	def _synchronizeDirectories(self, source: str, destination: str, progressSubject: Optional[ProgressSubject] = None) -> None:
+	def _synchronizeDirectories(self, source: str, destination: str, progressSubject: ProgressSubject | None = None) -> None:
 		source = to_string(source)
 		destination = to_string(destination)
 		logger.debug("Syncing directory %s to %s", source, destination)
@@ -80,7 +80,7 @@ class DepotToLocalDirectorySynchronizer:
 				continue
 			if not self._fileInfo or relSource not in self._fileInfo:
 				continue
-			if self._fileInfo[relSource].type == "d":
+			if self._fileInfo[relSource].type == PackageContentFileEntryType.DIRECTORY:
 				self._synchronizeDirectories(sourcePath, destinationPath, progressSubject)
 			else:
 				logger.debug(
@@ -89,7 +89,7 @@ class DepotToLocalDirectorySynchronizer:
 					destinationPath,
 					self._fileInfo[relSource],
 				)
-				if self._fileInfo[relSource].type == "l":
+				if self._fileInfo[relSource].type == PackageContentFileEntryType.SYMLINK:
 					target = self._fileInfo[relSource].target
 					if target:
 						self._linkFiles[relSource] = target
@@ -97,7 +97,7 @@ class DepotToLocalDirectorySynchronizer:
 				size = 0
 				localSize = 0
 				exists = False
-				if self._fileInfo[relSource].type == "f":
+				if self._fileInfo[relSource].type == PackageContentFileEntryType.FILE:
 					size = self._fileInfo[relSource].size
 					exists = os.path.exists(destinationPath)
 					if exists and os.path.isdir(destinationPath):
@@ -196,7 +196,7 @@ class DepotToLocalDirectorySynchronizer:
 					logger.error(error)
 					raise RuntimeError(error)
 
-	def synchronize(self, productProgressObserver: Optional[Any] = None, overallProgressObserver: Optional[Any] = None) -> None:
+	def synchronize(self, productProgressObserver: Any | None = None, overallProgressObserver: Any | None = None) -> None:
 		if not self._productIds:
 			logger.info("Getting product dirs of depot '%s'", self._sourceDepot)
 			for item in self._sourceDepot.content():
