@@ -906,7 +906,7 @@ class EventProcessingThread(threading.Thread):
 				add_params = []
 				if includeProductIds or excludeProductIds:
 					add_params.append(f"{param_prefix}processproducts {','.join(productIds)}")
-				if not self.event.eventConfig.blockLogin:
+				if RUNNING_ON_WINDOWS and not self.event.eventConfig.blockLogin:
 					add_params.append(f"{param_prefix}normalwindow")
 				additionalParams = " ".join(add_params)
 
