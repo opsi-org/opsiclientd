@@ -290,7 +290,7 @@ class DepotToLocalDirectorySynchronizer:
 							else:
 								shutil.copyfile(linkSource, linkDestination)
 						else:
-							if os.path.exists(linkDestination):
+							if os.path.islink(linkDestination) or os.path.exists(linkDestination):
 								if os.path.isdir(linkDestination) and not os.path.islink(linkDestination):
 									shutil.rmtree(linkDestination)
 								else:
