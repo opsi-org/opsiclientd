@@ -772,7 +772,7 @@ class EventProcessingThread(threading.Thread):
 				return
 
 			logger.notice("User login scripts found, executing")
-			additionalParams = f"/usercontext {self.event.eventInfo.get('User')}"
+			additionalParams = f"/usercontext {self.event.eventInfo.get('User')} /normalwindow"
 			self.runActions(productInfo, additionalParams)
 
 		except Exception as err:
@@ -902,14 +902,13 @@ class EventProcessingThread(threading.Thread):
 								f"Event '{self.event.eventConfig.getId()}' uses cached products but product caching is not done"
 							)
 
-				additionalParams = ""
+				param_prefix = "/" if RUNNING_ON_WINDOWS else "-"
+				add_params = []
 				if includeProductIds or excludeProductIds:
-					if RUNNING_ON_LINUX or RUNNING_ON_DARWIN:
-						additionalParams = "-processproducts " + ",".join(productIds)
-					elif RUNNING_ON_WINDOWS:
-						additionalParams = "/processproducts " + ",".join(productIds)
-					else:
-						logger.error("Unknown operating system - skipping processproducts parameter for action processor call")
+					add_params.append(f"{param_prefix}processproducts {','.join(productIds)}")
+				if not self.event.eventConfig.blockLogin:
+					add_params.append(f"{param_prefix}normalwindow")
+				additionalParams = " ".join(add_params)
 
 				if productInfo:
 					depot_id = config.get("depot_server", "depot_id")
