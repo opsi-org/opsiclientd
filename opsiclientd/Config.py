@@ -933,7 +933,7 @@ class Config:
 			if smart_cache is False:
 				logger.info("SmartCache WAN is disabled")
 				# Is set here so that the configs can be overwritten
-				self.setProductCachingMode(False)
+				self.setSmartCacheActive(False)
 
 		if (
 			"clientconfig.smart_cache.sync_completed_action" in config_states
@@ -984,12 +984,12 @@ class Config:
 		if smart_cache is True:
 			logger.info("SmartCache WAN is enabled")
 			# Is set here so that the configs can not be overwritten
-			self.setProductCachingMode(True, sync_completed_action=smart_cache_sync_completed_action)
+			self.setSmartCacheActive(True, sync_completed_action=smart_cache_sync_completed_action)
 
 		logger.notice("Got config from service")
 		logger.debug("Config is now:\n %s", json.dumps(serialize(self.getDict()), indent=4))
 
-	def setProductCachingMode(self, activated: bool, sync_completed_action: Literal["none", "process", "reboot"] | None = None) -> None:
+	def setSmartCacheActive(self, activated: bool, sync_completed_action: Literal["none", "process", "reboot"] | None = None) -> None:
 		start_event = "event_gui_startup" if RUNNING_ON_WINDOWS else "event_opsiclientd_start"
 		if activated:
 			self.set("event_net_connection", "active", False)
