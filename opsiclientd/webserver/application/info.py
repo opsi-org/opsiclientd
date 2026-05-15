@@ -7,6 +7,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
 from opsi.logging import get_logger
 
+from opsiclientd import __version__
 from opsiclientd.Config import Config
 from opsiclientd.Timeline import Timeline
 
@@ -14,7 +15,7 @@ INFO_PAGE = """<!DOCTYPE html>
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
-	<title>%(hostname)s opsi client daemon info</title>
+	<title>opsiclientd - info</title>
 	<link rel="stylesheet" type="text/css" href="/static/opsiclientd.css" />
 	%(head)s
 	<script type="text/javascript">
@@ -24,7 +25,7 @@ INFO_PAGE = """<!DOCTYPE html>
 	</script>
 </head>
 <body onload="onPageLoad();" onresize="onResize();">
-	<a href="/"><p id="title">opsi client daemon info</p></a>
+	<a href="/"><p id="title">opsiclientd %(version)s on host %(hostname)s info</p></a>
 	<div id="infopage-timeline-box">
 		<p id="infopage-timeline-title">Timeline</p>
 		<div class="timeline-default" id="opsiclientd-timeline" style="height: 400px; border: 1px solid #aaaaaa"></div>
@@ -46,6 +47,7 @@ def index_page() -> HTMLResponse:
 		% {
 			"head": timeline.getHtmlHead(),
 			"hostname": config.get("global", "host_id"),
+			"version": __version__,
 		}
 	)
 

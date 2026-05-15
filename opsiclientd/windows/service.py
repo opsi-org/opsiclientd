@@ -15,7 +15,6 @@ import time
 from typing import TYPE_CHECKING, Any, Iterable, Sequence
 
 import servicemanager
-
 import win32event
 import win32service
 import win32serviceutil
@@ -34,7 +33,7 @@ logger = get_logger()
 class OpsiclientdService(win32serviceutil.ServiceFramework):
 	_svc_name_ = "opsiclientd"
 	_svc_display_name_ = "opsiclientd"
-	_svc_description_ = "opsi client daemon"
+	_svc_description_ = "opsiclientd"
 
 	def __init__(self, args: Iterable[str]) -> None:
 		"""

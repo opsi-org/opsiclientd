@@ -9,7 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from opsi.logging import get_logger
 from starlette.status import HTTP_308_PERMANENT_REDIRECT
 
-from opsiclientd.webserver.application import get_opsiclientd
+from opsiclientd import __version__
+from opsiclientd.Config import Config
 
 INDEX_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -18,11 +19,11 @@ INDEX_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
-	<title>opsi client daemon</title>
+	<title>opsiclientd</title>
 	<link rel="stylesheet" type="text/css" href="/static/opsiclientd.css" />
 </head>
 <body>
-	<a href="/"><p id="title">opsiclientd on host %(hostname)s</p></a>
+	<a href="/"><p id="title">opsiclientd %(version)s on host %(hostname)s</p></a>
 	<div class="mainpage-link-box">
 		<ul>
 			<li><a target="_blank" href="/info">info page</a></li>
@@ -37,12 +38,13 @@ INDEX_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 logger = get_logger()
+config = Config()
 router = APIRouter()
 
 
 @router.get("/")
 def index_page() -> HTMLResponse:
-	return HTMLResponse(INDEX_PAGE % {"hostname": get_opsiclientd().config.get("global", "host_id")})
+	return HTMLResponse(INDEX_PAGE % {"hostname": config.get("global", "host_id"), "version": __version__})
 
 
 @router.get("/favicon.ico")
@@ -51,7 +53,7 @@ def favicon() -> RedirectResponse:
 
 
 def setup(app: FastAPI) -> None:
-	static_dir = get_opsiclientd().config.get("control_server", "static_dir")
+	static_dir = config.get("control_server", "static_dir")
 	logger.info("Mounting static dir %r as /static", static_dir)
 	app.mount("/static", StaticFiles(directory=static_dir))
 	app.include_router(router)

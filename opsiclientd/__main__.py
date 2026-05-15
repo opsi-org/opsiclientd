@@ -4,7 +4,7 @@
 # License: AGPL-3.0-only
 
 """
-opsi client daemon (opsiclientd)
+opsiclientd (opsiclientd)
 """
 
 import os
