@@ -920,6 +920,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			# Try to find active session first, then fallback to active console session
 			for session in sessions:
+				logger.info("Found session '%s' with state %s, %s", session.id, session.windows_state, session.windows_protocol)
 				if session.windows_state == WindowsDisplaySessionState.ACTIVE:
 					session_id = session.id
 					logger.info("Using active session id: %s", session_id)
