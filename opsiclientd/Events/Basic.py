@@ -128,7 +128,7 @@ class EventGenerator(threading.Thread):
 			if self._stopped:
 				return None
 			return self.createEvent()
-		if self._generatorConfig.interval > 0:
+		elif self._generatorConfig.interval > 0:
 			logger.debug("Waiting for interval %d", self._generatorConfig.interval)
 			self._event.wait(self._generatorConfig.interval)
 			if self._stopped:
