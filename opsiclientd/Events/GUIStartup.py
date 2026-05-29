@@ -45,8 +45,10 @@ class GUIStartupEventGenerator(EventGenerator):
 		while not self._stopped:
 			console_sessions = [s for s in get_display_sessions() if s.is_current_console_session]
 			if console_sessions:
-				logger.debug("Console session found: %s", console_sessions[0])
+				logger.info("Console session found: %s", console_sessions[0])
 				return self.createEvent()
+
+			logger.debug("No console session found, retrying in 3 second...")
 
 			for _i in range(3):
 				if self._stopped:
