@@ -1133,7 +1133,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					break
 			if not skin_file:
 				skin_file = os.path.join("notifier", f"{notifier_id}.ini")
-				command = f"{command} -s {skin_file}"
+				command = f"{command} -s {skin_file.replace('\\', '\\\\')}"
 
 			# Lazarus notifier does not support all IDs
 			if notifier_id == "motd":
