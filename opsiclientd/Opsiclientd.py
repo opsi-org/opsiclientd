@@ -394,8 +394,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				if handleNotifier and RUNNING_ON_WINDOWS:
 					logger.info("Starting block login notifier app")
 					# Start block login notifier on physical console
-					sessionId = System.getActiveConsoleSessionId()
-					while True:
+					console_sessions = [s for s in get_display_sessions() if s.is_current_console_session]
+					if console_sessions:
 						try:
 							desktop = "winlogon"
 							notifierCommand, _elevation_required = self.getNotifierCommand(
@@ -403,15 +403,14 @@ class Opsiclientd(EventListener, threading.Thread):
 							)
 							self._blockLoginNotifierProcess = self.runCommandInSession(
 								command=notifierCommand,
-								session_id=sessionId,
+								session_id=console_sessions[0].id,
 								session_desktop=desktop,
 								wait=False,
 								session_elevated=True,
 							)
-							break
 						except Exception as err:
 							logger.error("Failed to start block login notifier app: %s", err)
-							break
+
 		else:
 			if self._blockLoginEventId:
 				timeline.setEventEnd(eventId=self._blockLoginEventId)

@@ -12,16 +12,11 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any
 
-import psutil
 from opsi.logging import logger
+from opsi.system.session import get_display_sessions
 
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.Basic import Event, EventGenerator
-from opsiclientd.SystemCheck import (
-	RUNNING_ON_DARWIN,
-	RUNNING_ON_LINUX,
-	RUNNING_ON_WINDOWS,
-)
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd
@@ -38,13 +33,6 @@ class GUIStartupEventConfig(EventConfig):
 class GUIStartupEventGenerator(EventGenerator):
 	def __init__(self, opsiclientd: Opsiclientd, eventConfig: GUIStartupEventConfig) -> None:
 		EventGenerator.__init__(self, opsiclientd, eventConfig)
-		self.gui_process_names = []
-		if RUNNING_ON_WINDOWS:
-			self.gui_process_names = ["LogonUI.exe", "Explorer.exe"]
-		elif RUNNING_ON_LINUX:
-			self.gui_process_names = ["Xorg", "Xwayland"]
-		elif RUNNING_ON_DARWIN:
-			self.gui_process_names = ["WindowServer"]
 
 	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> GUIStartupEvent | None:
 		eventConfig = self.getEventConfig()
@@ -54,15 +42,12 @@ class GUIStartupEventGenerator(EventGenerator):
 		return GUIStartupEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 	def getNextEvent(self) -> GUIStartupEvent | None:
-		gui_process_names_lower = [n.lower() for n in self.gui_process_names]
 		while not self._stopped:
-			for proc in psutil.process_iter():
-				try:
-					if proc.name().lower() in [n.lower() for n in gui_process_names_lower]:
-						logger.debug("Process '%s' is running", proc.name())
-						return self.createEvent()
-				except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-					pass
+			console_sessions = [s for s in get_display_sessions() if s.is_current_console_session]
+			if console_sessions:
+				logger.debug("Console session found: %s", console_sessions[0])
+				return self.createEvent()
+
 			for _i in range(3):
 				if self._stopped:
 					break
