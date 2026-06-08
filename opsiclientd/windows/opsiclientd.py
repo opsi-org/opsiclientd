@@ -46,6 +46,28 @@ if os.name != "nt":
 logger = get_logger()
 
 
+def _log_registry_key_recursively(root_key: Any, sub_key: str, depth: int = 0) -> None:
+	import win32process
+
+	access = winreg.KEY_READ  # ty: ignore[unresolved-attribute]
+	if win32process.IsWow64Process():
+		access |= winreg.KEY_WOW64_64KEY  # ty: ignore[unresolved-attribute]
+
+	try:
+		with winreg.OpenKeyEx(root_key, sub_key, 0, access) as key:  # ty: ignore[unresolved-attribute]
+			logger.info("%sRegistry key: %s", "  " * depth, sub_key)
+
+			for value_index in range(winreg.QueryInfoKey(key)[1]):  # ty: ignore[unresolved-attribute]
+				value_name, value, value_type = winreg.EnumValue(key, value_index)  # ty: ignore[unresolved-attribute]
+				logger.info("%sRegistry value: %s=%r (type=%s)", "  " * (depth + 1), value_name or "(Default)", value, value_type)
+
+			for key_index in range(winreg.QueryInfoKey(key)[0]):  # ty: ignore[unresolved-attribute]
+				child_key = f"{sub_key}\\{winreg.EnumKey(key, key_index)}"  # ty: ignore[unresolved-attribute]
+				_log_registry_key_recursively(root_key, child_key, depth + 1)
+	except Exception as err:
+		logger.info("%sFailed to read registry key %s: %s", "  " * depth, sub_key, err)
+
+
 def opsiclientd_factory() -> OpsiclientdNT:
 	windowsVersion = sys.getwindowsversion()  # ty: ignore[unresolved-attribute]
 	if windowsVersion.major == 5:  # NT5: XP
@@ -134,67 +156,67 @@ class OpsiclientdNT(Opsiclientd):
 
 		checks = (
 			(
-				r"\SOFTWARE\Microsoft\Updates",
+				r"SOFTWARE\Microsoft\Updates",
 				"UpdateExeVolatile",
 				CheckType.VALUE_NOT_ZERO,
 			),
 			(
-				r"\SYSTEM\CurrentControlSet\Control\Session Manager",
+				r"SYSTEM\CurrentControlSet\Control\Session Manager",
 				"PendingFileRenameOperations",
 				CheckType.VALUE_EXISTS,
 			),
 			(
-				r"\SYSTEM\CurrentControlSet\Control\Session Manager",
+				r"SYSTEM\CurrentControlSet\Control\Session Manager",
 				"PendingFileRenameOperations2",
 				CheckType.VALUE_EXISTS,
 			),
 			(
-				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired",
+				r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired",
 				None,
 				CheckType.KEY_EXISTS,
 			),
 			(
-				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Services\Pending",
+				r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Services\Pending",
 				None,
 				CheckType.ANY_SUB_KEY_EXISTS,
 			),
 			(
-				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\PostRebootReporting",
+				r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\PostRebootReporting",
 				None,
 				CheckType.KEY_EXISTS,
 			),
 			(
-				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+				r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
 				"DVDRebootSignal",
 				CheckType.VALUE_EXISTS,
 			),
 			(
-				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending",
+				r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending",
 				None,
 				CheckType.KEY_EXISTS,
 			),
 			(
-				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootInProgress",
+				r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootInProgress",
 				None,
 				CheckType.KEY_EXISTS,
 			),
 			(
-				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\PackagesPending",
+				r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\PackagesPending",
 				None,
 				CheckType.KEY_EXISTS,
 			),
 			(
-				r"\SOFTWARE\Microsoft\ServerManager\CurrentRebootAttempts",
+				r"SOFTWARE\Microsoft\ServerManager\CurrentRebootAttempts",
 				None,
 				CheckType.KEY_EXISTS,
 			),
 			(
-				r"\SYSTEM\CurrentControlSet\Services\Netlogon",
+				r"SYSTEM\CurrentControlSet\Services\Netlogon",
 				"JoinDomain",
 				CheckType.VALUE_EXISTS,
 			),
 			(
-				r"\SYSTEM\CurrentControlSet\Services\Netlogon",
+				r"SYSTEM\CurrentControlSet\Services\Netlogon",
 				"AvoidSpnSet",
 				CheckType.VALUE_EXISTS,
 			),
@@ -213,7 +235,7 @@ class OpsiclientdNT(Opsiclientd):
 			any_sub_key_exists = False
 			reg_value = None
 			try:
-				with winreg.OpenKey(key=winreg.HKEY_LOCAL_MACHINE, sub_key=sub_key, access=access) as key:
+				with winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, sub_key, 0, access) as key:
 					key_exists = True
 					if check == CheckType.ANY_SUB_KEY_EXISTS:
 						number_of_sub_keys = winreg.QueryInfoKey(key)[0]
@@ -240,7 +262,7 @@ class OpsiclientdNT(Opsiclientd):
 				"Reboot check %r - %r - %r: key_exists=%r, value_exists=%r, value=%r, result=%r",
 				sub_key,
 				value_name,
-				check,
+				check.value,
 				key_exists,
 				value_exists,
 				reg_value,
@@ -249,6 +271,7 @@ class OpsiclientdNT(Opsiclientd):
 		return is_windows_reboot_pending
 
 	def isWindowsInstallerBusy(self) -> bool:
+
 		# since win11: ms_update_installer.isBusy is always False when TrustedInstaller is running, so we check the service instead
 		trusted_installer_running = False
 		for p in psutil.process_iter():
@@ -260,25 +283,11 @@ class OpsiclientdNT(Opsiclientd):
 				pass  # process terminated or access denied, ignore
 
 		logger.info("TrustedInstaller process running: %s", trusted_installer_running)
-		if not trusted_installer_running:
-			return False
 
-		keys = {}
-		for key in (
-			r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\TiRunning",
-			r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootInProgress",
-			r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending",
-			r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired",
-		):
-			key_name = key.rsplit("\\", 1)[-1]
-			keys[key_name] = False
-			try:
-				with winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, key, 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY):  # ty: ignore[unresolved-attribute]
-					keys[key_name] = True
-			except FileNotFoundError:
-				pass
-			logger.info("Windows CBS key %r exists: %r", key, keys[key_name])
-		return True
+		_log_registry_key_recursively(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing")  # ty: ignore[unresolved-attribute]
+		_log_registry_key_recursively(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update")  # ty: ignore[unresolved-attribute]
+
+		return trusted_installer_running
 
 	def loginUser(self, domain: str, username: str, password: str) -> bool:
 		secret_filter.add_secrets(password)
