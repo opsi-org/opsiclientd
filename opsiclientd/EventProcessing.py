@@ -25,11 +25,13 @@ from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlparse
 
 import psutil
+from opsi.crypt.ssl import read_certs_from_file
 from opsi.logging import LOG_INFO, get_logger, log_context, logging_config
 from opsi.opsi.service.model.object import Product, ProductOnClient
 from opsi.opsi.service.model.type import to_int, to_string, to_string_list, to_string_lower
 from opsi.process import Process, ProcessError, run_command, run_script
 from opsi.system.environment import chdir
+from opsi.system.network import mount_network_share
 from opsi_legacy import System
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject, MessageSubjectProxy, ProgressSubjectProxy
 
@@ -379,8 +381,11 @@ class EventProcessingThread(threading.Thread):
 		logger.notice("Mounting depot share %s", config.get("depot_server", "url"))
 		self.setStatusMessage(_("Mounting depot share %s") % config.get("depot_server", "url"))
 
-		mount_options = {}
 		(mount_username, mount_password) = config.getDepotserverCredentials(configService=self.service_client)
+		read_only = False
+		dir_mode = None
+		file_mode = None
+		ca_certs = None
 
 		if RUNNING_ON_WINDOWS:
 			url = urlparse(config.get("depot_server", "url"))
@@ -410,15 +415,11 @@ class EventProcessingThread(threading.Thread):
 				logger.error("Failed to add depot to trusted domains: %s", err)
 
 		elif RUNNING_ON_LINUX or RUNNING_ON_DARWIN:
-			mount_options["ro"] = ""
+			read_only = True
 			if RUNNING_ON_LINUX:
-				mount_options["dir_mode"] = "0700"
-				mount_options["file_mode"] = "0700"
-				# Currently for WebDAV and Linux only
-				mount_options["verify_server_cert"] = config.get("global", "verify_server_cert") or config.get(
-					"global", "verify_server_cert_by_ca"
-				)
-				mount_options["ca_cert_file"] = config.ca_cert_file
+				dir_mode = 0o700
+				file_mode = 0o700
+				ca_certs = read_certs_from_file(config.ca_cert_file)
 
 		depot_server_url = config.get("depot_server", "url")
 		if RUNNING_ON_WINDOWS:
@@ -437,7 +438,16 @@ class EventProcessingThread(threading.Thread):
 			except ValueError as error:
 				logger.info("Not an IP address '%s', using %s for depot mount: %s", depot_url_parsed.hostname, depot_server_url, error)
 		try:
-			System.mount(depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options)
+			mount_network_share(
+				url=depot_server_url,
+				mount_point=config.getDepotDrive(),
+				username=mount_username,
+				password=mount_password,
+				read_only=read_only,
+				dir_mode=dir_mode,
+				file_mode=file_mode,
+				ca_certs=ca_certs
+			)
 		except Exception as err:
 			logger.error("Failed to mount depot share: %s", err)
 			if RUNNING_ON_WINDOWS and "1219" in str(err):

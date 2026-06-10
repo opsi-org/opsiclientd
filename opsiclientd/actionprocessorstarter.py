@@ -15,12 +15,13 @@ import sys
 from ipaddress import IPv6Address, ip_address
 from urllib.parse import urlparse
 
+from opsi.logging import LOG_NONE, get_logger, log_context, logging_config, secret_filter
+from opsi.process import run_command
+from opsi.system.network import mount_network_share, unmount_network_share
 from opsi_legacy import System
 from opsi_legacy.Backend.JSONRPC import JSONRPCBackend
-from opsi.logging import LOG_NONE, get_logger, logging_config, log_context, secret_filter
 
 from opsiclientd import DEFAULT_FILE_LOG_FORMAT, DEFAULT_STDERR_LOG_FORMAT
-from opsi.process import run_command
 
 logger = get_logger()
 
@@ -154,7 +155,7 @@ def main() -> None:
 				set_status_message(be, sessionId, _("Mounting depot share %s") % depotRemoteUrl)
 
 				if runAsUser or depot_url.scheme not in ("smb", "cifs"):
-					System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
+					mount_network_share(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 				else:
 					try:
 						if isinstance(ip_address(depot_url.hostname or ""), IPv6Address):
@@ -171,7 +172,7 @@ def main() -> None:
 						# Can be a hostname
 						logger.debug("Failed to check ip format, using %s for depot mount: %s", depotRemoteUrl, err)
 
-					System.mount(depotRemoteUrl, depotDrive)
+					mount_network_share(depotRemoteUrl, depotDrive)
 				depotShareMounted = True
 
 			logger.notice("Starting action processor")
@@ -194,7 +195,7 @@ def main() -> None:
 		if depotShareMounted:
 			try:
 				logger.notice("Unmounting depot share")
-				System.umount(depotDrive)
+				unmount_network_share(depotDrive)
 			except Exception as err:
 				logger.debug("Caught exception in umount: %s", err)
 		if imp:

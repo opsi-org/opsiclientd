@@ -31,7 +31,7 @@ class FakeOpsiclientd(Opsiclientd):
 		addTimestamp: bool = True,
 		displaySeconds: int = 0,
 		link_handling: str = "no",
-		sessions: list[int] | None = None,
+		sessions: list[str] | None = None,
 		desktops: list[str] | None = None,
 	) -> None:
 		pass

@@ -1268,7 +1268,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		addTimestamp: bool = True,
 		displaySeconds: int = 0,
 		link_handling: str = "no",
-		sessions: list[int] | None = None,
+		sessions: list[str] | None = None,
 		desktops: list[str] | None = None,
 	) -> None:
 		if mode not in ("prepend", "append", "replace"):

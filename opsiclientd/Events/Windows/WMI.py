@@ -101,9 +101,7 @@ class WMIEventGenerator(EventGenerator):
 			for prop in wqlResult.properties:
 				value = getattr(wqlResult, prop)
 				if isinstance(value, tuple):
-					eventInfo[prop] = []
-					for val in value:
-						eventInfo[prop].append(val)
+					eventInfo[prop] = [v for v in value]
 				else:
 					eventInfo[prop] = value
 

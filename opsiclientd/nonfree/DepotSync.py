@@ -14,7 +14,7 @@ import threading
 from pathlib import Path
 from typing import Any, Sequence
 
-from opsi.crypt.hash import compute_file_hash
+from opsi.crypt.hash import hash_file
 from opsi.logging import get_logger
 from opsi.opsi.package import PackageContentFileEntry, PackageContentFileEntryType, parse_package_content_file
 from opsi.opsi.service.model.type import to_string, to_string_list
@@ -104,7 +104,7 @@ class DepotToLocalDirectorySynchronizer:
 						shutil.rmtree(destinationPath)
 						exists = False
 					if exists:
-						md5s = compute_file_hash(Path(destinationPath), "md5")
+						md5s = hash_file(Path(destinationPath), "md5")
 						logger.debug(
 							"Destination file '%s' already exists (size: %s, md5sum: %s)",
 							destinationPath,
@@ -138,7 +138,7 @@ class DepotToLocalDirectorySynchronizer:
 							with open(partialEndFile, "rb") as f2:
 								shutil.copyfileobj(f2, f1)
 
-						md5s = compute_file_hash(Path(destinationPath), "md5")
+						md5s = hash_file(Path(destinationPath), "md5")
 						if md5s != self._fileInfo[relSource].md5sum:
 							logger.info("MD5sum of composed file differs after downloading end part")
 							if os.path.exists(partialStartFile):
@@ -163,7 +163,7 @@ class DepotToLocalDirectorySynchronizer:
 							if os.path.exists(destinationPath):
 								os.remove(destinationPath)
 							os.rename(partialStartFile, destinationPath)
-							md5s = compute_file_hash(Path(destinationPath), "md5")
+							md5s = hash_file(Path(destinationPath), "md5")
 							if md5s != self._fileInfo[relSource].md5sum:
 								logger.info("MD5sum of composed file differs after downloading start part")
 								raise RuntimeError("MD5sum differs")
@@ -188,7 +188,7 @@ class DepotToLocalDirectorySynchronizer:
 						sourcePath, destinationPath, progressSubject=progressSubject, pauseEvent=self._continue_event
 					)
 
-				md5s = compute_file_hash(Path(destinationPath), "md5")
+				md5s = hash_file(Path(destinationPath), "md5")
 				if md5s != self._fileInfo[relSource].md5sum:
 					error = (
 						f"Failed to download '{item['name']}': MD5sum mismatch (local:{md5s} != remote:{self._fileInfo[relSource].md5sum})"
