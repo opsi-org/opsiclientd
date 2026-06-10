@@ -22,16 +22,16 @@ from typing import TYPE_CHECKING, Any, Type
 from urllib.parse import urlparse
 
 from opsi.crypt.secret import SecretAlphabet, generate_secret
+from opsi.logging import get_logger, log_context
+from opsi.opsi.package import PackageContentFileEntryType, parse_package_content_file
+from opsi.opsi.service.model.object import LocalbootProduct, ProductOnClient
+from opsi.opsi.service.model.type import to_bool, to_int, to_product_id_list
 from opsi_legacy import System
 from opsi_legacy.Backend.Backend import Backend, ExtendedConfigDataBackend
 from opsi_legacy.Backend.BackendManager import BackendExtender
 from opsi_legacy.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
-from opsi_legacy.Util.File.Opsi import PackageContentFile
 from opsi_legacy.Util.Message import ProgressSubjectProxy
 from opsi_legacy.Util.Repository import Repository, getRepository
-from opsi.logging import get_logger, log_context
-from opsi.opsi.service.model.object import LocalbootProduct, ProductOnClient
-from opsi.opsi.service.model.type import to_bool, to_int, to_product_id_list
 from packaging import version
 
 from opsiclientd.Config import Config
@@ -1463,13 +1463,12 @@ class ProductCacheService(threading.Thread):
 			package_content_file = f"{productId}/{productId}.files"
 			local_package_content_file = os.path.join(self._product_cache_dir, productId, f"{productId}.files")
 			repository.download(source=package_content_file, destination=local_package_content_file)
-			packageInfo = PackageContentFile(local_package_content_file).parse()
 			product_size = 0
 			file_count = 0
-			for value in packageInfo.values():
-				if "size" in value:
+			for entry in parse_package_content_file(Path(local_package_content_file)):
+				if entry.type == PackageContentFileEntryType.FILE:
 					file_count += 1
-					product_size += int(value["size"])
+					product_size += entry.size
 
 			logger.info("Product '%s' contains %d files with a total size of %0.2f MB", productId, file_count, product_size / 1_000_000)
 
