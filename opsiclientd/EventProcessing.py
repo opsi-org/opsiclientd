@@ -446,7 +446,7 @@ class EventProcessingThread(threading.Thread):
 				read_only=read_only,
 				dir_mode=dir_mode,
 				file_mode=file_mode,
-				ca_certs=ca_certs
+				ca_certs=ca_certs,
 			)
 		except Exception as err:
 			logger.error("Failed to mount depot share: %s", err)
@@ -1150,14 +1150,6 @@ class EventProcessingThread(threading.Thread):
 			except Exception:
 				pass
 
-			actionProcessorUserName = ""
-			actionProcessorUserPassword = ""
-			if not self.isLoginEvent:
-				actionProcessorUserName = self.opsiclientd._actionProcessorUserName
-				actionProcessorUserPassword = self.opsiclientd._actionProcessorUserPassword
-
-			createEnvironment = config.get("action_processor", "create_environment")
-
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace("%service_url%", self.service_client.base_url or "?")
 			actionProcessorCommand = actionProcessorCommand.replace("%service_session%", serviceSession)
@@ -1177,8 +1169,6 @@ class EventProcessingThread(threading.Thread):
 					f' "{config.getDepotDrive()}" "{depotServerUsername}" "{depotServerPassword}"'
 					f' "{sessionId}" "{desktop}" '
 					f' "{actionProcessorCommand}" "{self.event.eventConfig.actionProcessorTimeout}"'
-					f' "{actionProcessorUserName}" "{actionProcessorUserPassword}"'
-					f' "{str(createEnvironment).lower()}"'
 				)
 			else:
 				command = actionProcessorCommand

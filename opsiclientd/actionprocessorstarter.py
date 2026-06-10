@@ -7,101 +7,89 @@
 action processor starter helper for windows
 """
 
-import getpass
 import gettext
 import locale
 import os
 import sys
-from ipaddress import IPv6Address, ip_address
 from urllib.parse import urlparse
 
 from opsi.logging import LOG_NONE, get_logger, log_context, logging_config, secret_filter
+from opsi.opsi.service.client import ServiceClient, ServiceVerificationFlags
 from opsi.process import run_command
 from opsi.system.network import mount_network_share, unmount_network_share
-from opsi_legacy import System
-from opsi_legacy.Backend.JSONRPC import JSONRPCBackend
 
 from opsiclientd import DEFAULT_FILE_LOG_FORMAT, DEFAULT_STDERR_LOG_FORMAT
 
 logger = get_logger()
 
 
-def set_status_message(backend: JSONRPCBackend, session_id: str, message: str) -> None:
+def set_status_message(service_client: ServiceClient, session_id: str, message: str) -> None:
 	if session_id == "-1":
 		logger.debug("Not setting status message")
 		return
 	try:
-		backend.setStatusMessage(session_id, message)  # ty: ignore[unresolved-attribute]
+		service_client.jsonrpc(method="setStatusMessage", params=[session_id, message])
 	except Exception as err:
 		logger.warning("Failed to set status message: %s", err)
 
 
 def main() -> None:
-	if len(sys.argv) != 17:
+	if len(sys.argv) != 14:
 		print(
 			f"Usage: {os.path.basename(sys.argv[0])} <hostId> <hostKey> <controlServerPort>"
 			" <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword>"
 			" <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <actionProcessorTimeout>"
-			" <runAsUser> <runAsPassword> <createEnvironment>"
 		)
 		sys.exit(1)
 
 	(
-		hostId,
-		hostKey,
-		controlServerPort,
-		logFile,
-		logLevel,
-		depotRemoteUrl,
-		depotDrive,
-		depotServerUsername,
-		depotServerPassword,
-		sessionId,
-		actionProcessorDesktop,
-		actionProcessorCommand,
-		actionProcessorTimeout,
-		runAsUser,
-		runAsPassword,
-		createEnvironment,
+		host_id,
+		host_key,
+		control_server_port,
+		log_file,
+		log_level,
+		depot_remote_url,
+		depot_drive,
+		depot_server_username,
+		depot_server_password,
+		session_id,
+		action_processor_desktop,
+		action_processor_command,
+		action_processor_timeout,
 	) = sys.argv[1:]
 
-	if hostKey:
-		secret_filter.add_secrets(hostKey)
-	if depotServerPassword:
-		secret_filter.add_secrets(depotServerPassword)
-	if runAsPassword:
-		secret_filter.add_secrets(runAsPassword)
+	if host_key:
+		secret_filter.add_secrets(host_key)
+	if depot_server_password:
+		secret_filter.add_secrets(depot_server_password)
 
 	logging_config(
 		stderr_level=LOG_NONE,
 		stderr_format=DEFAULT_STDERR_LOG_FORMAT,
-		log_file=logFile,
-		file_level=int(logLevel),
+		log_file=log_file,
+		file_level=int(log_level),
 		file_format=DEFAULT_FILE_LOG_FORMAT,
 	)
 
-	log_instance = f"{os.path.basename(sys.argv[0]).rsplit('.', 1)[0]}_s{sessionId}"
+	log_instance = f"{os.path.basename(sys.argv[0]).rsplit('.', 1)[0]}_s{session_id}"
 	with log_context({"instance": log_instance}):
 		logger.debug(
 			"Called with arguments: %s",
 			", ".join(
 				(
-					hostId,
-					hostKey,
-					controlServerPort,
-					logFile,
-					logLevel,
-					depotRemoteUrl,
-					depotDrive,
-					depotServerUsername,
-					depotServerPassword,
-					sessionId,
-					actionProcessorDesktop,
-					actionProcessorCommand,
-					actionProcessorTimeout,
-					runAsUser,
-					runAsPassword,
-					createEnvironment,
+					host_id,
+					host_key,
+					control_server_port,
+					log_file,
+					log_level,
+					depot_remote_url,
+					depot_drive,
+					depot_server_username,
+					depot_server_password,
+					session_id,
+					action_processor_desktop,
+					action_processor_command,
+					action_processor_timeout,
 				)
 			),
 		)
@@ -128,88 +116,49 @@ def main() -> None:
 		except Exception as err:
 			logger.debug("Failed to load locale for %s from %s: %s", language, sp, err)
 
-		imp = None
-		depotShareMounted = False
-		be = None
-		depot_url = urlparse(depotRemoteUrl)
+		depot_share_mounted = False
+		service_client = None
+		depot_url = urlparse(depot_remote_url)
 
 		try:
-			be = JSONRPCBackend(username=hostId, password=hostKey, address=f"https://127.0.0.1:{controlServerPort}/opsiclientd")
-
-			if runAsUser:
-				if getpass.getuser().lower() != runAsUser.lower():
-					logger.info("Impersonating user '%s'", runAsUser)
-					imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
-					imp.start(
-						logonType="INTERACTIVE",
-						newDesktop=False,
-						createEnvironment=bool(runAsUser and createEnvironment.lower() in ("yes", "true", "1")),
-					)
-			elif depot_url.scheme in ("smb", "cifs"):
-				logger.info("Impersonating network account '%s'", depotServerUsername)
-				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
-				imp.start(logonType="NEW_CREDENTIALS")
+			service_client = ServiceClient(
+				address=f"https://127.0.0.1:{control_server_port}/opsiclientd",
+				username=host_id,
+				password=host_key,
+				verify=ServiceVerificationFlags.ACCEPT_ALL,
+			)
 
 			if (depot_url.hostname or "").lower() not in ("127.0.0.1", "localhost", "::1"):
-				logger.notice("Mounting depot share %s", depotRemoteUrl)
-				set_status_message(be, sessionId, _("Mounting depot share %s") % depotRemoteUrl)
-
-				if runAsUser or depot_url.scheme not in ("smb", "cifs"):
-					mount_network_share(
-						url=depotRemoteUrl, mount_point=depotDrive, username=depotServerUsername, password=depotServerPassword
-					)
-				else:
-					try:
-						if isinstance(ip_address(depot_url.hostname or ""), IPv6Address):
-							depotRemoteUrl = (
-								depotRemoteUrl.replace(
-									depot_url.hostname or "",
-									f"{(depot_url.hostname or '').replace(':', '-')}.ipv6-literal.net",
-								)
-								.replace("[", "")
-								.replace("]", "")
-							)
-							logger.notice("Using windows workaround to mount depot %s", depotRemoteUrl)
-					except ValueError as err:
-						# Can be a hostname
-						logger.debug("Failed to check ip format, using %s for depot mount: %s", depotRemoteUrl, err)
-
-					mount_network_share(
-						url=depotRemoteUrl, mount_point=depotDrive, username=depotServerUsername, password=depotServerPassword
-					)
-				depotShareMounted = True
+				logger.notice("Mounting depot share %s", depot_remote_url)
+				set_status_message(service_client, session_id, _("Mounting depot share %s") % depot_remote_url)
+				mount_network_share(
+					url=depot_remote_url, mount_point=depot_drive, username=depot_server_username, password=depot_server_password
+				)
+				depot_share_mounted = True
 
 			logger.notice("Starting action processor")
-			set_status_message(be, sessionId, _("Action processor is running"))
+			set_status_message(service_client, session_id, _("Action processor is running"))
 
-			if imp:
-				imp.runCommand(actionProcessorCommand, timeoutSeconds=int(actionProcessorTimeout))
-			else:
-				run_command(actionProcessorCommand, timeout=int(actionProcessorTimeout))
+			run_command(action_processor_command, timeout=int(action_processor_timeout))
 
 			logger.notice("Action processor ended")
-			set_status_message(be, sessionId, _("Action processor ended"))
+			set_status_message(service_client, session_id, _("Action processor ended"))
 		except Exception as err:
 			logger.error(err, exc_info=True)
 			error = f"Failed to process action requests: {err}"
 			logger.error(error)
-			if be:
-				set_status_message(be, sessionId, error)
+			if service_client:
+				set_status_message(service_client, session_id, error)
 
-		if depotShareMounted:
+		if depot_share_mounted:
 			try:
 				logger.notice("Unmounting depot share")
-				unmount_network_share(depotDrive)
+				unmount_network_share(depot_drive)
 			except Exception as err:
-				logger.debug("Caught exception in umount: %s", err)
-		if imp:
-			try:
-				imp.end()
-			except Exception as err:
-				logger.debug("Caught exception in end of impersonation: %s", err)
+				logger.error("Failed to unmount depot share: %s", err)
 
-		if be:
+		if service_client:
 			try:
-				be.backend_exit()
+				service_client.stop()
 			except Exception as err:
-				logger.debug("Caught exception in backend_exit: %s", err)
+				logger.error("Failed to stop service client: %s", err)

@@ -33,8 +33,7 @@ from opsi.process import Process, run_command, run_script
 sys.modules["OPSI"] = opsi_legacy
 import psutil
 from opsi import __version__ as python_opsi_version
-from opsi.crypt.secret import SecretAlphabet, generate_secret
-from opsi.logging import get_logger, log_context, secret_filter
+from opsi.logging import get_logger, log_context
 from opsi.opsi.package import OpsiPackage
 from opsi.opsi.service.model.type import to_bool, to_string, to_string_lower
 from opsi.system.file.operation import get_link_target, link
@@ -447,50 +446,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._gui_waiter.wait(timeout)
 		self._gui_waiter = None
 
-	def createActionProcessorUser(self, recreate: bool = True) -> None:
-		if not config.get("action_processor", "create_user"):
-			return
-
-		run_as_user = config.get("action_processor", "run_as_user")
-		if run_as_user.lower() == "system":
-			self._actionProcessorUserName = ""
-			self._actionProcessorUserPassword = ""
-			return
-
-		if "\\" in run_as_user:
-			logger.warning("Ignoring domain part of user to run action processor '%s'", run_as_user)
-			run_as_user = run_as_user.split("\\", -1)
-
-		if not recreate and self._actionProcessorUserName and self._actionProcessorUserPassword and System.existsUser(username=run_as_user):
-			return
-
-		self._actionProcessorUserName = run_as_user
-		logger.notice(f"Creating local user '{run_as_user}'")
-
-		self._actionProcessorUserPassword = generate_secret(
-			22, alphabet=(SecretAlphabet.ASCII_LETTERS, SecretAlphabet.DIGITS), required_chars="$!?/%"
-		)
-		secret_filter.add_secrets(self._actionProcessorUserPassword)
-
-		if System.existsUser(username=run_as_user):
-			System.deleteUser(username=run_as_user)
-		System.createUser(username=run_as_user, password=self._actionProcessorUserPassword, groups=[System.getAdminGroupName()])
-
-	def deleteActionProcessorUser(self) -> None:
-		if not config.get("action_processor", "delete_user"):
-			return
-
-		if not self._actionProcessorUserName:
-			return
-
-		if not System.existsUser(username=self._actionProcessorUserName):
-			return
-
-		logger.notice("Deleting local user '%s'", self._actionProcessorUserName)
-		System.deleteUser(username=self._actionProcessorUserName)
-		self._actionProcessorUserName = ""
-		self._actionProcessorUserPassword = ""
-
 	@contextmanager
 	def runCacheService(
 		self, allow_fail: bool = True
@@ -870,8 +825,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		try:
 			logger.debug("Creating new ept (ocd)")
 			eventProcessingThread = EventProcessingThread(self, event)
-
-			self.createActionProcessorUser(recreate=False)
 			with self._eptListLock:
 				self._eventProcessingThreads.append(eventProcessingThread)
 		finally:
@@ -885,12 +838,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		finally:
 			with self._eptListLock:
 				self._eventProcessingThreads.remove(eventProcessingThread)
-
-				if not self._eventProcessingThreads:
-					try:
-						self.deleteActionProcessorUser()
-					except Exception as err:
-						logger.warning(err)
 
 	def getEventProcessingThreads(self) -> list[EventProcessingThread]:
 		with self._eptListLock:

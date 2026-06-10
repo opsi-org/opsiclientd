@@ -263,10 +263,6 @@ class Config:
 				"remote_common_dir": "",
 				"filename": "",
 				"command": "",
-				"run_as_user": "SYSTEM",
-				"create_user": True,
-				"delete_user": True,
-				"create_environment": False,
 			},
 		}
 
@@ -377,9 +373,6 @@ class Config:
 			self._config["global"]["server_cert_dir"] = os.path.join(systemDrive, "opsi.org", "tls")
 			self._config["global"]["timeline_db"] = os.path.join(systemDrive, "opsi.org", "opsiclientd", "timeline.sqlite")
 			self._config["system"]["program_files_dir"] = System.getProgramFilesDir()
-
-			if sys.getwindowsversion()[0] == 5:
-				self._config["action_processor"]["run_as_user"] = "pcpatch"
 		else:
 			sslCertDir = os.path.join("/etc", "opsi-client-agent")
 
