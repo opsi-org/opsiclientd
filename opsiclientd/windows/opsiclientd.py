@@ -46,7 +46,7 @@ if os.name != "nt":
 logger = get_logger()
 
 
-def _log_registry_key_recursively(root_key: Any, sub_key: str, depth: int = 0) -> None:
+def _log_registry_key_recursively(root_key: Any, sub_key: str, *, max_depth: int = 0, depth: int = 0) -> None:
 	import win32process
 
 	access = winreg.KEY_READ  # ty: ignore[unresolved-attribute]
@@ -63,7 +63,8 @@ def _log_registry_key_recursively(root_key: Any, sub_key: str, depth: int = 0) -
 
 			for key_index in range(winreg.QueryInfoKey(key)[0]):  # ty: ignore[unresolved-attribute]
 				child_key = f"{sub_key}\\{winreg.EnumKey(key, key_index)}"  # ty: ignore[unresolved-attribute]
-				_log_registry_key_recursively(root_key, child_key, depth + 1)
+				if max_depth == 0 or depth < max_depth:
+					_log_registry_key_recursively(root_key, child_key, max_depth=max_depth, depth=depth + 1)
 	except Exception as err:
 		logger.info("%sFailed to read registry key %s: %s", "  " * depth, sub_key, err)
 
@@ -284,8 +285,16 @@ class OpsiclientdNT(Opsiclientd):
 
 		logger.info("TrustedInstaller process running: %s", trusted_installer_running)
 
-		_log_registry_key_recursively(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing")  # ty: ignore[unresolved-attribute]
-		_log_registry_key_recursively(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update")  # ty: ignore[unresolved-attribute]
+		_log_registry_key_recursively(
+			winreg.HKEY_LOCAL_MACHINE,  # ty: ignore[unresolved-attribute]
+			r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing",
+			max_depth=1,  # ty: ignore[unresolved-attribute]
+		)
+		_log_registry_key_recursively(
+			winreg.HKEY_LOCAL_MACHINE,  # ty: ignore[unresolved-attribute]
+			r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update",
+			max_depth=1,  # ty: ignore[unresolved-attribute]
+		)
 
 		return trusted_installer_running
 
