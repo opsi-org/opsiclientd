@@ -155,7 +155,9 @@ def main() -> None:
 				set_status_message(be, sessionId, _("Mounting depot share %s") % depotRemoteUrl)
 
 				if runAsUser or depot_url.scheme not in ("smb", "cifs"):
-					mount_network_share(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
+					mount_network_share(
+						url=depotRemoteUrl, mount_point=depotDrive, username=depotServerUsername, password=depotServerPassword
+					)
 				else:
 					try:
 						if isinstance(ip_address(depot_url.hostname or ""), IPv6Address):
@@ -172,7 +174,9 @@ def main() -> None:
 						# Can be a hostname
 						logger.debug("Failed to check ip format, using %s for depot mount: %s", depotRemoteUrl, err)
 
-					mount_network_share(depotRemoteUrl, depotDrive)
+					mount_network_share(
+						url=depotRemoteUrl, mount_point=depotDrive, username=depotServerUsername, password=depotServerPassword
+					)
 				depotShareMounted = True
 
 			logger.notice("Starting action processor")
