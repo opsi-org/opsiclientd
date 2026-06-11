@@ -288,12 +288,12 @@ class OpsiclientdNT(Opsiclientd):
 		_log_registry_key_recursively(
 			winreg.HKEY_LOCAL_MACHINE,  # ty: ignore[unresolved-attribute]
 			r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing",
-			max_depth=1,  # ty: ignore[unresolved-attribute]
+			max_depth=1,
 		)
 		_log_registry_key_recursively(
 			winreg.HKEY_LOCAL_MACHINE,  # ty: ignore[unresolved-attribute]
 			r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update",
-			max_depth=1,  # ty: ignore[unresolved-attribute]
+			max_depth=1,
 		)
 
 		return trusted_installer_running
