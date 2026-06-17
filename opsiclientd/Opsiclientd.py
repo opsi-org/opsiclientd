@@ -865,21 +865,17 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.info("Using session id of user '%s': %s", username, session_id)
 					return session_id
 
-			# Try to find active session first, then fallback to active console session
-			active_sessions = [s for s in sessions if s.windows_state == WindowsDisplaySessionState.ACTIVE]
-			if active_sessions:
-				logger.info("Using active session: '%s' with protocol %s", active_sessions[0].id, active_sessions[0].windows_protocol)
-				return active_sessions[0].id
+			for state in [WindowsDisplaySessionState.ACTIVE, WindowsDisplaySessionState.DISCONNECTED, WindowsDisplaySessionState.DOWN]:
+				sessions_in_state = [s for s in sessions if s.windows_state == state and int(s.id) > 0]
+				if sessions_in_state:
+					logger.info("Using %s session: '%s' with protocol %s", state.name.lower(), sessions_in_state[0].id, sessions_in_state[0].windows_protocol)
+					return sessions_in_state[0].id
 
 		console_sessions = [s for s in sessions if s.is_current_console_session]
 		if console_sessions:
 			session_id = console_sessions[0].id
 			logger.info("Using active console session id: %s", session_id)
 			return session_id
-
-		if len(sessions) >= 2:  # TODO: remove
-			logger.info("Using session id of second available session: %s", sessions[1].id)
-			return sessions[1].id
 
 		logger.info("No active session found")
 		return None
