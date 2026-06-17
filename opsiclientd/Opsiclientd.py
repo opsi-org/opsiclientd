@@ -855,7 +855,6 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def getSessionId(self, username: str | None = None) -> str | None:
 		sessions = get_display_sessions(only_usable=False)
-		logger.devel("Available sessions: %s", sessions)
 
 		if RUNNING_ON_WINDOWS:
 			if username:
@@ -865,7 +864,8 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.info("Using session id of user '%s': %s", username, session_id)
 					return session_id
 
-			for state in [WindowsDisplaySessionState.ACTIVE, WindowsDisplaySessionState.DISCONNECTED, WindowsDisplaySessionState.DOWN]:
+			# session has state DOWN during shutdown preparation. We might want to allow DISCONNECTED too
+			for state in [WindowsDisplaySessionState.ACTIVE, WindowsDisplaySessionState.DOWN]:
 				sessions_in_state = [s for s in sessions if s.windows_state == state and int(s.id) > 0]
 				if sessions_in_state:
 					logger.info("Using %s session: '%s' with protocol %s", state.name.lower(), sessions_in_state[0].id, sessions_in_state[0].windows_protocol)
