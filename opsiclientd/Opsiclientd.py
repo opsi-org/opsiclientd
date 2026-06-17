@@ -881,6 +881,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.info("Using active console session id: %s", session_id)
 			return session_id
 
+		if len(sessions) >= 2:  # TODO: remove
+			logger.info("Using session id of second available session: %s", sessions[1].id)
+			return sessions[1].id
+
 		logger.info("No active session found")
 		return None
 
