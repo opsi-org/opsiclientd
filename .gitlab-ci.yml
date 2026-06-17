@@ -94,6 +94,7 @@ lint-pytest:
     - uv sync --frozen
     - uv run ruff check opsiclientd tests
     - uv run ty check opsiclientd tests
+    - uv audit
     - opsi-dev-cli self upgrade
     - opsi-dev-cli -l info testing merge-coverage-files coverage_* .coverage
     - opsi-dev-cli -l info testing coverage-report
