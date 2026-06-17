@@ -854,7 +854,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.error("processProductActionRequests not implemented")
 
 	def getSessionId(self, username: str | None = None) -> str | None:
-		sessions = get_display_sessions()
+		sessions = get_display_sessions(only_usable=False)
 		logger.devel("Available sessions: %s", sessions)
 
 		if RUNNING_ON_WINDOWS:
