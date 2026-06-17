@@ -870,10 +870,6 @@ class Opsiclientd(EventListener, threading.Thread):
 			if active_sessions:
 				logger.info("Using active session: '%s' with protocol %s", active_sessions[0].id, active_sessions[0].windows_protocol)
 				return active_sessions[0].id
-			disconnected_sessions = [s for s in sessions if s.windows_state == WindowsDisplaySessionState.DISCONNECTED]
-			if disconnected_sessions:
-				logger.info("Using disconnected session: '%s' with protocol %s", disconnected_sessions[0].id, disconnected_sessions[0].windows_protocol)
-				return disconnected_sessions[0].id
 
 		console_sessions = [s for s in sessions if s.is_current_console_session]
 		if console_sessions:
