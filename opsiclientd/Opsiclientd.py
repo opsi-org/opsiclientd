@@ -855,6 +855,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def getSessionId(self, username: str | None = None) -> str | None:
 		sessions = get_display_sessions()
+		logger.devel("Available sessions: %s", sessions)
 
 		if RUNNING_ON_WINDOWS:
 			if username:
