@@ -854,7 +854,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.error("processProductActionRequests not implemented")
 
 	def getSessionId(self, username: str | None = None) -> str | None:
-		sessions = get_display_sessions(only_usable=False)
+		sessions = get_display_sessions()
 
 		if RUNNING_ON_WINDOWS:
 			if username:
@@ -866,7 +866,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			# session has state DOWN during shutdown preparation. We might want to allow DISCONNECTED too
 			for state in [WindowsDisplaySessionState.ACTIVE, WindowsDisplaySessionState.DOWN]:
-				sessions_in_state = [s for s in sessions if s.windows_state == state and int(s.id) > 0]
+				sessions_in_state = [s for s in sessions if s.windows_state == state]
 				if sessions_in_state:
 					logger.info("Using %s session: '%s' with protocol %s", state.name.lower(), sessions_in_state[0].id, sessions_in_state[0].windows_protocol)
 					return sessions_in_state[0].id
