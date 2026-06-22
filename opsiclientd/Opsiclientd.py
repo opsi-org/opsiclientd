@@ -864,13 +864,12 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.info("Using session id of user '%s': %s", username, session_id)
 					return session_id
 
-			# Try to find active session first, then fallback to active console session
-			for session in sessions:
-				logger.info("Found session '%s' with state %s, %s", session.id, session.windows_state, session.windows_protocol)
-				if session.windows_state == WindowsDisplaySessionState.ACTIVE:
-					session_id = session.id
-					logger.info("Using active session id: %s", session_id)
-					return session_id
+			# session has state DOWN during shutdown preparation. We might want to allow DISCONNECTED too
+			for state in [WindowsDisplaySessionState.ACTIVE, WindowsDisplaySessionState.DOWN]:
+				sessions_in_state = [s for s in sessions if s.windows_state == state]
+				if sessions_in_state:
+					logger.info("Using %s session: '%s' with protocol %s", state.name.lower(), sessions_in_state[0].id, sessions_in_state[0].windows_protocol)
+					return sessions_in_state[0].id
 
 		console_sessions = [s for s in sessions if s.is_current_console_session]
 		if console_sessions:
