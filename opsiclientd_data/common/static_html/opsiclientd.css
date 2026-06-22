@@ -201,7 +201,7 @@ div.mainpage-link-box {
 	height: calc(100% - 50px);
 	margin: 10px;
 	overflow: scroll;
-	/*line-height: 0.9;*/
+	line-height: 1.0;
 	background-color: black;
 	color: white;
 }
