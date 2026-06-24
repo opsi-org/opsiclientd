@@ -25,12 +25,9 @@ from urllib.parse import urlparse
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
-from opsi.opsi.service.client import MessagebusListener, ServiceClient, ServiceConnectionListener
 from opsi.exception import OpsiServiceAuthenticationError, OpsiServiceTimeoutError
-from opsi.logging import get_logger, log_context
-from opsi.logging import TRACE
+from opsi.logging import TRACE, get_logger, log_context
 from opsi.opsi.messagebus import (
-	process_file_transfer_message,
 	Error,
 	FileDownloadRequestMessage,
 	FileTransferMessage,
@@ -43,19 +40,19 @@ from opsi.opsi.messagebus import (
 	TerminalMessage,
 	TraceRequestMessage,
 	TraceResponseMessage,
+	get_terminal,
 	messagebus_timestamp,
-)
-from opsi.opsi.messagebus import (
+	process_file_transfer_message,
 	process_process_message,
 	process_terminal_message,
-	get_terminal,
-	stop_running_terminals,
 	stop_running_processes,
+	stop_running_terminals,
 )
+from opsi.opsi.service.client import MessagebusListener, ServiceClient, ServiceConnectionListener
+from opsi.opsi.service.model.type import to_product_id, to_string
 from opsi.system.certificate_store import install_ca, load_cas, remove_ca
 from opsi.system.file.lock import lock_file
 from opsi.system.network import get_fqdn
-from opsi.opsi.service.model.type import to_product_id, to_string
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
@@ -106,6 +103,10 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 		if subject_name == "uib opsi CA":
 			# uib opsi CA will not be installed into system cert store
 			continue
+
+		if allow_remove and "OPSI" not in subject_name.upper():
+			# Only OPSI CAs will be removed from system cert store, other CAs will be kept
+			allow_remove = False
 
 		ca_cert_fingerprint = ca_cert.fingerprint(hashes.SHA1()).hex().upper()
 		logger.debug("Handling CA '%s' (%s)", subject_name, ca_cert_fingerprint)
