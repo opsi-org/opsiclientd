@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from opsi.logging import LOG_INFO, use_logging_config
+from opsi.opsi.package import create_package_content_file
 from opsi.opsi.service.model.object import (
 	Config,
 	ConfigState,
@@ -26,7 +27,6 @@ from opsi.opsi.service.model.object import (
 	ProductOnClient,
 	ProductOnDepot,
 )
-from opsi.opsi.package import create_package_content_file
 
 from opsiclientd.Config import Config as OpsiclientdConfig
 from opsiclientd.nonfree.CacheService import ProductCacheService
@@ -300,6 +300,8 @@ def test_cache_product(tmp_path: Path) -> None:
 
 		product_cache_service._cacheProducts()
 		assert len(product_cache_service.last_errors) == 0
+
+		product_cache_service.trimProductCache(needed_products=[products[0].id, products[1].id])
 		product_ids_in_cache = sorted(d.name for d in product_cache_dir.iterdir())
 		assert product_ids_in_cache == sorted([products[0].id, products[1].id])
 
@@ -313,22 +315,14 @@ def test_cache_product(tmp_path: Path) -> None:
 
 		product_cache_service._cacheProducts()
 		assert len(product_cache_service.last_errors) == 0
+
+		product_cache_service.trimProductCache(needed_products=product_ids_setup)
 		product_ids_in_cache = sorted(d.name for d in product_cache_dir.iterdir())
 		assert product_ids_in_cache == sorted(product_ids_setup)
 
-		service_client.updated_pocs.clear()
-		product_ids_setup = [products[1].id]
-		available_disk_space = product_cache_service.min_free_disk_space + (product_size * 10)  # Enough space for 10 products
-		product_cache_target_size = product_size * 2
-		product_cache_max_size = product_size * 10
-
-		product_cache_service._cacheProducts()
-		assert len(product_cache_service.last_errors) == 0
-		product_ids_in_cache = sorted(d.name for d in product_cache_dir.iterdir())
-		assert product_ids_in_cache == sorted([products[0].id, products[1].id])
-
 		# Test product_cache_max_size with insufficient disk space
 		# All products are needed and cannot be removed to stay below the max size.
+		product_cache_service.clear_cache()
 		service_client.updated_pocs.clear()
 		product_ids_setup = [p.id for p in products]
 		available_disk_space = product_cache_service.min_free_disk_space + (product_size * 10)  # Enough space for 10 products
