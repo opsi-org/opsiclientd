@@ -1280,7 +1280,7 @@ class ProductCacheService(threading.Thread):
 								self._setProductCacheState(productId, "failure", str(err))
 							except Exception as err2:
 								logger.error(err2, exc_info=True)
-								self.last_errors.append(err)
+								self.last_errors.append(err2)
 
 							if isinstance(err, ProductCacheInsufficientCacheSpaceException):
 								break
@@ -1356,9 +1356,6 @@ class ProductCacheService(threading.Thread):
 		if not config.get("depot_server", "url"):
 			raise RuntimeError("Cannot cache product files: depot_server.url undefined")
 
-		depotServerUsername = ""
-		depotServerPassword = ""
-
 		url = urlparse(config.get("depot_server", "url"))
 		if str(url.scheme).startswith("webdav"):
 			depotServerUsername = config.get("global", "host_id")
@@ -1431,7 +1428,6 @@ class ProductCacheService(threading.Thread):
 		event_id = None
 		repository = None
 		exception = None
-		product_version = None
 		try:
 			repository = self._getRepository(productId)
 			masterDepotId = config.get("depot_server", "master_depot_id")
@@ -1594,6 +1590,7 @@ class ProductCacheService(threading.Thread):
 		if repository:
 			try:
 				repository.disconnect()
+				logger.info("Disconnected from repository")
 			except Exception as err:
 				logger.warning("Failed to disconnect from repository: %s", err)
 
@@ -1605,3 +1602,4 @@ class ProductCacheService(threading.Thread):
 
 		if exception is not None:
 			raise exception
+		logger.info("Finished _cacheProduct for product '%s'", productId)
