@@ -222,7 +222,8 @@ class Config:
 				"username": "pcpatch",
 			},
 			"cache_service": {
-				"product_cache_max_size": 6000000000,
+				"product_cache_target_size": 10_000_000_000,
+				"product_cache_max_size": 100_000_000_000,
 				"pause_on_metered": False,
 				"extension_config_dir": "",
 				"include_product_group_ids": [],
