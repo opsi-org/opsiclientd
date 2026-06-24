@@ -872,16 +872,27 @@ class EventProcessingThread(threading.Thread):
 						"   [%2s] product %-20s %s", len(productIds), productOnClient.productId + ":", productOnClient.actionRequest
 					)
 
+			try:
+				cache_service = self.opsiclientd.getCacheService()
+			except Exception as err:
+				logger.debug("Cache service not available: %s", err)
+				cache_service = None
+
 			if (not productIds) and bootmode == "BKSTD":
 				logger.notice("No product action requests set")
 				self.setStatusMessage(_("No product action requests set"))
 				state.set("pending_product_ids", [])
 				state.delete("installation_pending")  # to get rid of previous flag, TODO: remove in future
-				try:
-					if self.event.eventConfig.useCachedConfig:
-						self.opsiclientd.getCacheService().setConfigCacheObsolete()
-				except Exception as err:
-					logger.error(err)
+
+				if self.event.eventConfig.useCachedConfig:
+					if cache_service:
+						cache_service.setConfigCacheObsolete()
+					else:
+						logger.warning("Cache service not available, cannot set config cache obsolete")
+
+				if cache_service:
+					cache_service.trim_product_cache(needed_products=[])
+
 				try:
 					self.cleanup_temp_dir()
 				except Exception as err:
@@ -905,7 +916,11 @@ class EventProcessingThread(threading.Thread):
 				logger.notice("Start processing action requests")
 				if productIds:
 					if self.event.eventConfig.useCachedProducts:
-						if self.opsiclientd.getCacheService().productCacheCompleted(self.service_client, productIds):
+						if not cache_service:
+							raise RuntimeError(
+								f"Event '{self.event.eventConfig.getId()}' uses cached products but cache service is not available"
+							)
+						if cache_service.productCacheCompleted(self.service_client, productIds):
 							logger.notice("Event '%s' uses cached products and product caching is done", self.event.eventConfig.getId())
 						else:
 							raise RuntimeError(
@@ -949,27 +964,19 @@ class EventProcessingThread(threading.Thread):
 							break
 
 				self.processActionWarningTime(productInfo)
-				if not state.get("pending_product_ids", []):
-					state.set("pending_product_ids", productIds)
-				state.delete("installation_pending")  # to get rid of previous flag, TODO: remove in future
-				try:
-					try:
-						cache_service = self.opsiclientd.getCacheService()
-					except RuntimeError:
-						cache_service = None
-					if cache_service and not self.event.eventConfig.useCachedConfig:
-						# Event like on_demand that does not use cached config - changes are not reflected in cache
-						logger.info("Performing event that did not use cached config, setting config cache obsolete to suggest update")
-						cache_service.setConfigCacheObsolete()
-				except Exception as err:
-					logger.error(err)
+
+				logger.info("Setting pending product_ids before running actions: %s", productIds)
+				state.set("pending_product_ids", productIds)
+				# To get rid of previous flag, TODO: remove in future
+				state.delete("installation_pending")
+
+				if cache_service and not self.event.eventConfig.useCachedConfig:
+					# Event like on_demand that does not use cached config - changes are not reflected in cache
+					logger.info("Performing event that did not use cached config, setting config cache obsolete to suggest update")
+					cache_service.setConfigCacheObsolete()
 
 				self.runActions(productInfo, additionalParams=additionalParams)
 				try:
-					try:
-						cache_service = self.opsiclientd.getCacheService()
-					except RuntimeError:
-						cache_service = None
 					if (
 						cache_service
 						and self.event.eventConfig.useCachedConfig
@@ -983,19 +990,26 @@ class EventProcessingThread(threading.Thread):
 						logger.info("No more actions to perform, setting config cache obsolete")
 						cache_service.setConfigCacheObsolete()
 
-					pocs_with_action = self.service_client.productOnClient_getIdents(  # ty: ignore[unresolved-attribute]
+					new_product_ids = []
+					for poc in self.service_client.productOnClient_getIdents(  # ty: ignore[unresolved-attribute]
 						returnType="dict",
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),
 						actionRequest=["setup", "uninstall", "update", "once", "custom"],
-					)
-					logger.info("pocs_with_action: %r, productIds: %r", pocs_with_action, productIds)
-					# Still products with action request (or newly set ones) after runActions
-					state.set(
-						"pending_product_ids",
-						[poc["productId"] for poc in pocs_with_action if poc["productId"] in state.get("pending_product_ids", [])],
-					)
-					logger.notice("Setting pending product_ids: %s", state.get("pending_product_ids"))
+					):
+						new_product_ids.append(poc["productId"])
+
+					if cache_service:
+						cache_service.trim_product_cache(needed_products=new_product_ids)
+
+					logger.info("New product IDs with action request after runActions: %r", new_product_ids)
+
+					# Update pending_product_ids to only include products from the original list.
+					# This ensures that after a reboot, the "installation_pending" flag is set only
+					# when there are still uncompleted product actions from the previous run.
+					pending_product_ids = [pid for pid in new_product_ids if pid in productIds]
+					logger.info("Setting pending product_ids after running actions: %s", pending_product_ids)
+					state.set("pending_product_ids", pending_product_ids)
 				except Exception as err:
 					logger.error(err)
 		except Exception as err:

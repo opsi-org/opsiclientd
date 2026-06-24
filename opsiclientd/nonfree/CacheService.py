@@ -341,6 +341,12 @@ class CacheService(threading.Thread):
 		assert self._productCacheService
 		return self._productCacheService.clear_cache()
 
+	def trim_product_cache(self, needed_products: list[str] | None = None) -> None:
+		logger.notice("Trimming product cache, keeping products: %s", needed_products)
+		self.initializeProductCacheService()
+		assert self._productCacheService
+		return self._productCacheService.trimProductCache(needed_products=needed_products)
+
 
 class ConfigCacheServiceBackendExtension42(RPCProductDependencyMixin):
 	def accessControl_authenticated(self) -> bool:
@@ -1097,6 +1103,19 @@ class ProductCacheService(threading.Thread):
 		self._product_progress_observer = productProgressObserver
 		self._overall_progress_observer = overallProgressObserver
 
+	def trimProductCache(self, needed_products: list[str] | None = None) -> None:
+		cache_dir_size = self.get_cache_dir_size()
+		needed_space_target = cache_dir_size - self._product_cache_target_size
+		if needed_space_target <= 0:
+			return
+
+		logger.info(
+			"Product cache dir exceeds target size of %0.2f MB, trying to free %0.2f MB",
+			self._product_cache_target_size / 1_000_000,
+			needed_space_target / 1_000_000,
+		)
+		self._freeProductCacheSpace(needed_space=needed_space_target, needed_products=needed_products, strict=False)
+
 	def _freeProductCacheSpace(self, needed_space: int = 0, needed_products: list[str] | None = None, *, strict: bool = True) -> int:
 		"""
 		Free up space in the product cache directory by deleting old products.
@@ -1568,16 +1587,6 @@ class ProductCacheService(threading.Thread):
 			logger.notice("Product '%s' (%s) cached", productId, product_version)
 			self._setProductCacheState(productId, "completed", time.time())
 			self.update_cache_dir_sizes(product_id=productId, force=True)
-
-			cache_dir_size = self.get_cache_dir_size()
-			needed_space_target = cache_dir_size - self._product_cache_target_size
-			if needed_space_target > 0:
-				logger.info(
-					"Product cache dir exceeds target size of %0.2f MB, trying to free %0.2f MB",
-					self._product_cache_target_size / 1_000_000,
-					needed_space_target / 1_000_000,
-				)
-				self._freeProductCacheSpace(needed_space=needed_space_target, needed_products=neededProducts, strict=False)
 		except Exception as err:
 			logger.error("Failed to cache product %s: %s", productId, err, exc_info=True)
 			exception = err
