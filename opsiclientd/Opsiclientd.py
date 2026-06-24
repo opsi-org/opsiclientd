@@ -868,7 +868,12 @@ class Opsiclientd(EventListener, threading.Thread):
 			for state in [WindowsDisplaySessionState.ACTIVE, WindowsDisplaySessionState.DOWN]:
 				sessions_in_state = [s for s in sessions if s.windows_state == state]
 				if sessions_in_state:
-					logger.info("Using %s session: '%s' with protocol %s", state.name.lower(), sessions_in_state[0].id, sessions_in_state[0].windows_protocol)
+					logger.info(
+						"Using %s session: '%s' with protocol %s",
+						state.name.lower(),
+						sessions_in_state[0].id,
+						sessions_in_state[0].windows_protocol,
+					)
 					return sessions_in_state[0].id
 
 		console_sessions = [s for s in sessions if s.is_current_console_session]
