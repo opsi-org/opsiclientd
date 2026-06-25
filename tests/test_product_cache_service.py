@@ -60,6 +60,7 @@ def test_cache_product(tmp_path: Path) -> None:
 	product_cache_target_size = 1_000_000_000
 	product_cache_max_size = 1_000_000_000
 	available_disk_space = 1_000_000_000
+	min_free_disk_space = 100_000_000
 	product_data_size = 100_000_000
 	product_size = product_data_size
 
@@ -162,6 +163,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		self._product_cache_dir = product_cache_dir
 		self._product_cache_target_size = product_cache_target_size
 		self._product_cache_max_size = product_cache_max_size
+		self._min_free_disk_space = min_free_disk_space
 
 	service_client = MockService()
 
@@ -176,7 +178,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		# Test opsi-script only
 		service_client.updated_pocs.clear()
 		product_ids_setup = [products[0].id]
-		available_disk_space = product_cache_service.min_free_disk_space
+		available_disk_space = product_cache_service._min_free_disk_space
 
 		product_cache_service._cacheProducts()
 		# Nothing to do
@@ -186,7 +188,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		# Test with insufficient disk space
 		service_client.updated_pocs.clear()
 		product_ids_setup = [products[0].id, products[1].id]
-		available_disk_space = product_cache_service.min_free_disk_space
+		available_disk_space = product_cache_service._min_free_disk_space
 
 		product_cache_service._cacheProducts()
 		err_msg = (
@@ -206,7 +208,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		# Test with enough disk space
 		service_client.updated_pocs.clear()
 		product_ids_setup = [products[0].id, products[1].id]
-		available_disk_space = product_cache_service.min_free_disk_space + (product_size * 2)
+		available_disk_space = product_cache_service._min_free_disk_space + (product_size * 2)
 
 		product_cache_service._cacheProducts()
 		assert len(product_cache_service.last_errors) == 0
@@ -237,7 +239,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		# The product cached before must be removed from the cache.
 		service_client.updated_pocs.clear()
 		product_ids_setup = [products[2].id]  # opsi-script must be added automatically
-		available_disk_space = product_cache_service.min_free_disk_space + (product_size * 2)
+		available_disk_space = product_cache_service._min_free_disk_space + (product_size * 2)
 
 		product_cache_service._cacheProducts()
 		assert len(product_cache_service.last_errors) == 0
@@ -248,7 +250,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		# The product cached before must be kept in the cache.
 		service_client.updated_pocs.clear()
 		product_ids_setup = [products[1].id]
-		available_disk_space = product_cache_service.min_free_disk_space + (product_size * 3)
+		available_disk_space = product_cache_service._min_free_disk_space + (product_size * 3)
 
 		product_cache_service._cacheProducts()
 		assert len(product_cache_service.last_errors) == 0
@@ -258,7 +260,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		# Test with enough disk space for all products
 		service_client.updated_pocs.clear()
 		product_ids_setup = [p.id for p in products]
-		available_disk_space = product_cache_service.min_free_disk_space + (product_size * len(products))
+		available_disk_space = product_cache_service._min_free_disk_space + (product_size * len(products))
 
 		product_cache_service._cacheProducts()
 		assert len(product_cache_service.last_errors) == 0
@@ -268,7 +270,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		# Test similar product cache dir
 		service_client.updated_pocs.clear()
 		product_ids_setup = [products[0].id, products[1].id]
-		available_disk_space = product_cache_service.min_free_disk_space + (product_size * 10)  # Enough space for 10 products
+		available_disk_space = product_cache_service._min_free_disk_space + (product_size * 10)  # Enough space for 10 products
 		prod1_cache_dir = product_cache_dir / products[1].id
 		similar_cache_dir = product_cache_dir / f"{products[1].id}--rfc156094"
 		prod1_cache_dir.rename(similar_cache_dir)
@@ -294,7 +296,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		# The unneeded products cached before must be removed from the cache.
 		service_client.updated_pocs.clear()
 		product_ids_setup = [products[1].id]
-		available_disk_space = product_cache_service.min_free_disk_space + (product_size * 10)  # Enough space for 10 products
+		available_disk_space = product_cache_service._min_free_disk_space + (product_size * 10)  # Enough space for 10 products
 		product_cache_target_size = product_size * 2
 		product_cache_max_size = product_size * 10
 
@@ -309,7 +311,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		# The products needed for the current run must be cached even if the target size is exceeded.
 		service_client.updated_pocs.clear()
 		product_ids_setup = [p.id for p in products]
-		available_disk_space = product_cache_service.min_free_disk_space + (product_size * 10)  # Enough space for 10 products
+		available_disk_space = product_cache_service._min_free_disk_space + (product_size * 10)  # Enough space for 10 products
 		product_cache_target_size = product_size * 2
 		product_cache_max_size = product_size * len(products)
 
@@ -325,7 +327,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		product_cache_service.clear_cache()
 		service_client.updated_pocs.clear()
 		product_ids_setup = [p.id for p in products]
-		available_disk_space = product_cache_service.min_free_disk_space + (product_size * 10)  # Enough space for 10 products
+		available_disk_space = product_cache_service._min_free_disk_space + (product_size * 10)  # Enough space for 10 products
 		product_cache_target_size = product_size * 2
 		product_cache_max_size = product_size * 2
 

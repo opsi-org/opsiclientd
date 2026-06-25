@@ -224,6 +224,7 @@ class Config:
 			"cache_service": {
 				"product_cache_target_size": 10_000_000_000,
 				"product_cache_max_size": 100_000_000_000,
+				"min_free_disk_space": 5_000_000_000,
 				"pause_on_metered": False,
 				"extension_config_dir": "",
 				"include_product_group_ids": [],
@@ -368,6 +369,7 @@ class Config:
 			logger.debug("Running on windows: adapting paths to use system drive (%s)", systemDrive)
 			systemDrive += "\\"
 			self._config["cache_service"]["storage_dir"] = os.path.join(systemDrive, "opsi.org", "cache")
+			self._config["cache_service"]["min_free_disk_space"] = 10_000_000_000
 			self._config["global"]["config_file"] = os.path.join(baseDir, "opsiclientd", "opsiclientd.conf")
 			self._config["global"]["log_dir"] = os.path.join(systemDrive, "opsi.org", "log")
 			self._config["global"]["state_file"] = os.path.join(systemDrive, "opsi.org", "opsiclientd", "state.json")

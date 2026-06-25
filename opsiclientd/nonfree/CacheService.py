@@ -861,7 +861,7 @@ class ProductCacheService(threading.Thread):
 	_product_cache_dir: Path
 	_product_cache_target_size: int
 	_product_cache_max_size: int
-	min_free_disk_space = 10_000_000_000
+	_min_free_disk_space: int
 
 	def __init__(self, opsiclientd: Opsiclientd) -> None:
 		threading.Thread.__init__(self, name="ProductCacheService")
@@ -921,6 +921,7 @@ class ProductCacheService(threading.Thread):
 		self._product_cache_dir = self._storage_dir / "depot"
 		self._product_cache_target_size = to_int(config.get("cache_service", "product_cache_target_size"))
 		self._product_cache_max_size = to_int(config.get("cache_service", "product_cache_max_size"))
+		self._min_free_disk_space = to_int(config.get("cache_service", "min_free_disk_space"))
 		if self._product_cache_target_size > self._product_cache_max_size:
 			logger.warning(
 				"Product cache target size %0.2f MB exceeds max size %0.2f MB, using max size as target",
@@ -1536,14 +1537,14 @@ class ProductCacheService(threading.Thread):
 				new_disk_free_space / 1_000_000,
 				self._product_cache_target_size / 1_000_000,
 				self._product_cache_max_size / 1_000_000,
-				self.min_free_disk_space / 1_000_000,
+				self._min_free_disk_space / 1_000_000,
 			)
 
-			needed_space_disk = self.min_free_disk_space - new_disk_free_space
+			needed_space_disk = self._min_free_disk_space - new_disk_free_space
 			if needed_space_disk > 0:
 				logger.info(
 					"Free disk space will be below %0.2f MB, need to free %0.2f MB",
-					self.min_free_disk_space / 1_000_000,
+					self._min_free_disk_space / 1_000_000,
 					needed_space_disk / 1_000_000,
 				)
 
