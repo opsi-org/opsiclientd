@@ -192,9 +192,13 @@ def test_cache_product(tmp_path: Path) -> None:
 
 		product_cache_service._cacheProducts()
 		err_msg = (
-			"Failed to free enough product cache space: "
-			f"Needed space: {(product_size / 1_000_000):0.2f} MB, maximum freeable space: 0.00 MB, "
-			f"current product cache size: 0.00 MB, max product cache size: {(product_cache_max_size / 1_000_000):0.0f} MB ({products[0].id})"
+			"Failed to free enough product cache space:\n"
+			f"Needed products: {[products[0].id, products[1].id]}\n"
+			f"Needed space: {(product_size / 1_000_000):0.2f} MB\n"
+			"Deleteable products: []\n"
+			"Deleteable space: 0.00 MB\n"
+			"Current product cache size: 0.00 MB\n"
+			f"Max product cache size: {(product_cache_max_size / 1_000_000):0.0f} MB ({products[0].id})"
 		)
 		assert len(product_cache_service.last_errors) == 1
 		assert str(product_cache_service.last_errors[0]) == err_msg
@@ -203,7 +207,10 @@ def test_cache_product(tmp_path: Path) -> None:
 		assert service_client.updated_pocs[0].productId == products[0].id
 		assert service_client.updated_pocs[0].actionProgress == "caching"
 		assert service_client.updated_pocs[1].productId == products[0].id
-		assert service_client.updated_pocs[1].actionProgress == f"Cache failure: {err_msg}"
+		expected_action_progress = f"Cache failure: {err_msg}"
+		if len(expected_action_progress) > 250:
+			expected_action_progress = f"{expected_action_progress[:249]}\u2026"
+		assert service_client.updated_pocs[1].actionProgress == expected_action_progress
 
 		# Test with enough disk space
 		service_client.updated_pocs.clear()
@@ -334,10 +341,13 @@ def test_cache_product(tmp_path: Path) -> None:
 		product_cache_service._cacheProducts()
 		assert len(product_cache_service.last_errors) == 1
 		err_msg = (
-			"Failed to free enough product cache space: "
-			f"Needed space: {(product_size / 1_000_000):0.2f} MB, maximum freeable space: 0.00 MB, "
-			f"current product cache size: {(product_size * 2 / 1_000_000):0.2f} MB, "
-			f"max product cache size: {(product_cache_max_size / 1_000_000):0.0f} MB (prod2)"
+			"Failed to free enough product cache space:\n"
+			f"Needed products: {product_ids_setup}\n"
+			f"Needed space: {(product_size / 1_000_000):0.2f} MB\n"
+			"Deleteable products: []\n"
+			"Deleteable space: 0.00 MB\n"
+			f"Current product cache size: {(product_size * 2 / 1_000_000):0.2f} MB\n"
+			f"Max product cache size: {(product_cache_max_size / 1_000_000):0.0f} MB (prod2)"
 		)
 		assert str(product_cache_service.last_errors[0]) == err_msg
 
