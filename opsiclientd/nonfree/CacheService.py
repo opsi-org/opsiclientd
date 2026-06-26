@@ -1181,6 +1181,7 @@ class ProductCacheService(threading.Thread):
 
 			freed_space = 0
 			while freed_space < needed_space:
+				logger.info("Freed %0.2f MB, need %0.2f MB of product cache space", freed_space / 1_000_000, needed_space / 1_000_000)
 				if not deletable_products:
 					if strict:
 						raise ProductCacheInsufficientCacheSpaceException(
@@ -1191,7 +1192,7 @@ class ProductCacheService(threading.Thread):
 				delete_product = deletable_products.pop(0)
 				delete_dir = self._product_cache_dir / delete_product.product_id
 				if delete_dir.exists():
-					logger.notice("Deleting product cache directory '%s'", delete_dir)
+					logger.notice("Deleting product cache directory '%s' (%0.2f MB)", delete_dir, delete_product.size / 1_000_000)
 					shutil.rmtree(delete_dir)
 				else:
 					logger.warning("Product cache directory '%s' does not exist", delete_dir)
