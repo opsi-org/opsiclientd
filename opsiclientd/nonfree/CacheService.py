@@ -1127,6 +1127,7 @@ class ProductCacheService(threading.Thread):
 		if needed_space <= 0:
 			return 0
 		needed_products = to_product_id_list(needed_products or [])
+		needed_base_products = [product_id.split("--")[0] for product_id in needed_products]
 		self.update_cache_dir_sizes()
 		cache_dir_size = self.get_cache_dir_size()
 
@@ -1141,7 +1142,8 @@ class ProductCacheService(threading.Thread):
 			deletable_products: list[DeletableProduct] = []
 			for product_cache_dir in self._product_cache_dir.iterdir():
 				product_id = product_cache_dir.name
-				if product_id in needed_products:
+				base_product_id = product_id.split("--")[0]
+				if base_product_id in needed_base_products:
 					logger.trace("Product '%s' is needed, skipping", product_id)
 					continue
 
@@ -1155,18 +1157,20 @@ class ProductCacheService(threading.Thread):
 
 				deletable_products.append(deletable_product)
 
-			max_freeable_size = sum(p.size for p in deletable_products)
-			if max_freeable_size < needed_space:
-				if not strict:
-					needed_space = max_freeable_size
-				else:
-					raise ProductCacheInsufficientCacheSpaceException(
-						"Failed to free enough product cache space: "
-						f"Needed space: {(needed_space / 1_000_000):0.2f} MB, "
-						f"maximum freeable space: {(max_freeable_size / 1_000_000):0.2f} MB, "
-						f"current product cache size: {(cache_dir_size / 1_000_000):0.2f} MB, "
-						f"max product cache size: {(self._product_cache_max_size / 1_000_000):0.0f} MB",
-					)
+			deletable_space = sum(p.size for p in deletable_products)
+			info = (
+				f"Needed products: {needed_products}\n"
+				f"Needed space: {(needed_space / 1_000_000):0.2f} MB\n"
+				f"Deleteable products: {[p.product_id for p in deletable_products]}\n"
+				f"Deleteable space: {(deletable_space / 1_000_000):0.2f} MB\n"
+				f"Current product cache size: {(cache_dir_size / 1_000_000):0.2f} MB\n"
+				f"Max product cache size: {(self._product_cache_max_size / 1_000_000):0.0f} MB"
+			)
+			logger.info("Product cache space info:\n%s", info)
+			if deletable_space < needed_space:
+				if strict:
+					raise ProductCacheInsufficientCacheSpaceException(f"Failed to free enough product cache space:\n{info}")
+				needed_space = deletable_space
 
 			if needed_space <= 0:
 				logger.notice("No product cache space can be freed")
@@ -1518,6 +1522,7 @@ class ProductCacheService(threading.Thread):
 
 			logger.info(
 				"Product cache info:\n"
+				"  Needed products: %s\n"
 				"  Product to cache: %s\n"
 				"  Product size: %0.2f MB\n"
 				"  Current product cache dir size: %0.2f MB\n"
@@ -1528,6 +1533,7 @@ class ProductCacheService(threading.Thread):
 				"  Target product cache size: %0.2f MB\n"
 				"  Max product cache size: %0.2f MB\n"
 				"  Min free disk space: %0.2f MB\n",
+				neededProducts,
 				productId,
 				product_size / 1_000_000,
 				product_cache_dir_size / 1_000_000,
@@ -1548,15 +1554,15 @@ class ProductCacheService(threading.Thread):
 					needed_space_disk / 1_000_000,
 				)
 
-			needed_space_limit = new_total_cache_dir_size - self._product_cache_max_size
-			if needed_space_limit > 0:
+			needed_space_cache = new_total_cache_dir_size - self._product_cache_max_size
+			if needed_space_cache > 0:
 				logger.info(
 					"Product cache dir will exceed max size of %0.2f MB, need to free %0.2f MB",
 					self._product_cache_max_size / 1_000_000,
-					needed_space_limit / 1_000_000,
+					needed_space_cache / 1_000_000,
 				)
 
-			needed_space = max(needed_space_disk, needed_space_limit)
+			needed_space = max(needed_space_disk, needed_space_cache)
 			if needed_space > 0:
 				self._freeProductCacheSpace(needed_space=needed_space, needed_products=neededProducts)
 
