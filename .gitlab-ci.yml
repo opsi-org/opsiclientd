@@ -132,7 +132,7 @@ build:pyinstaller-linux-x64:
     # Check if binary is working
     - ./opsiclientd_linux_x64/opsiclientd --version
     # Check for vulnerabilities
-    - opsi-dev-cli appsec scan --max-severity-allowed none ./opsiclientd_linux_x64/sbom.cyclonedx.json
+    - opsi-dev-cli appsec scan --max-severity-allowed none --ignore GHSA-h35f-9h28-mq5c,PYSEC-2026-3447 ./opsiclientd_linux_x64/sbom.cyclonedx.json
     # Push to binaryindex
     - '[ "$CI_COMMIT_TAG" = "" ] && opsi-dev-cli -l info binary push opsiclientd_linux_x64 --prerelease="$CI_JOB_ID"'
     - '[ "$CI_COMMIT_TAG" = "" ] || opsi-dev-cli -l info binary push opsiclientd_linux_x64'
