@@ -1055,7 +1055,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		command: str,
 		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin", "dialog"],
 		port: int | None = None,
-		link_handling: str = "no",
+		link_handling: Literal["no", "internal", "browser"],
 		timeout: int | float | None = None,
 		desktop: str | None = None,
 	) -> tuple[str, bool]:
@@ -1218,7 +1218,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		mode: str = "prepend",
 		addTimestamp: bool = True,
 		displaySeconds: int = 0,
-		link_handling: str = "no",
+		link_handling: Literal["no", "internal", "browser"] = "no",
 		sessions: list[str] | None = None,
 		desktops: list[str] | None = None,
 	) -> None:
@@ -1283,6 +1283,7 @@ class Opsiclientd(EventListener, threading.Thread):
 							command=config.get("opsiclientd_notifier", "command"),
 							notifier_id=notifier_id,
 							port=self._popupNotificationServer.port,
+							link_handling=link_handling,
 							timeout=displaySeconds,
 							desktop=desktop,
 						)
