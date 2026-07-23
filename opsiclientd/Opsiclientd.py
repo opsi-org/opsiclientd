@@ -1055,7 +1055,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		command: str,
 		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin", "dialog"],
 		port: int | None = None,
-		link_handling: Literal["no", "internal", "browser"],
+		link_handling: Literal["no", "internal", "browser"] = "no",
 		timeout: int | float | None = None,
 		desktop: str | None = None,
 	) -> tuple[str, bool]:
