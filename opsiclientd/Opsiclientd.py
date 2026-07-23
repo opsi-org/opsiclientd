@@ -1279,6 +1279,13 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.info("Skipping desktop %s in session %s because no user is logged in", desktop, session.id)
 						continue
 					try:
+						logger.info(
+							"Getting notifier command for session %r on desktop %r (notifier_id=%r, link_handling=%r)",
+							session.id,
+							desktop,
+							notifier_id,
+							link_handling,
+						)
 						notifierCommand, elevation_required = self.getNotifierCommand(
 							command=config.get("opsiclientd_notifier", "command"),
 							notifier_id=notifier_id,
@@ -1287,7 +1294,13 @@ class Opsiclientd(EventListener, threading.Thread):
 							timeout=displaySeconds,
 							desktop=desktop,
 						)
-						logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, session.id, desktop)
+						logger.info(
+							"Running notifier command %r in session %r on desktop %r (elevation_required=%r)",
+							notifierCommand,
+							session.id,
+							desktop,
+							elevation_required,
+						)
 						process = self.runCommandInSession(
 							command=notifierCommand,
 							session_id=session.id,
