@@ -782,7 +782,12 @@ class EventProcessingThread(threading.Thread):
 				return
 
 			logger.notice("User login scripts found, executing")
-			additionalParams = f"/usercontext {self.event.eventInfo.get('User')} /normalwindow"
+			user = self.event.eventInfo.get("User")
+			if not user:
+				raise RuntimeError("User not found in event info")
+			# Be sure to escape backslashes in the username
+			user = re.sub(r"\\+", r"\\\\", str(user))
+			additionalParams = f'/usercontext "{user}" /normalwindow'
 			self.runActions(productInfo, additionalParams)
 
 		except Exception as err:
