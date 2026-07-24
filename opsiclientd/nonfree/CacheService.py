@@ -26,6 +26,7 @@ from opsi.logging import get_logger, log_context
 from opsi.opsi.package import PackageContentFileEntryType, parse_package_content_file
 from opsi.opsi.service.model.object import LocalbootProduct, ProductOnClient
 from opsi.opsi.service.model.type import to_bool, to_int, to_product_id_list
+from opsi.retry import Retry, RetryConfig
 from opsi_legacy import System
 from opsi_legacy.Backend.Backend import Backend, ExtendedConfigDataBackend
 from opsi_legacy.Backend.BackendManager import BackendExtender
@@ -1292,9 +1293,12 @@ class ProductCacheService(threading.Thread):
 					)
 
 					self.last_errors = []
+					retry_config = RetryConfig(on=ConnectionError, attempts=3, timeout=36000, wait_initial=10, wait_max=30)
 					for productId in productIds:
 						try:
-							self._cacheProduct(productId, productIds)
+							for attempt in Retry(retry_config):
+								with attempt:
+									self._cacheProduct(productId, productIds)
 						except Exception as err:
 							if isinstance(err, ProductCacheInsufficientCacheSpaceException):
 								err.product_id = productId
