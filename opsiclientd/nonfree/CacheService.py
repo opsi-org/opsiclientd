@@ -32,7 +32,7 @@ from opsi_legacy.Backend.Backend import Backend, ExtendedConfigDataBackend
 from opsi_legacy.Backend.BackendManager import BackendExtender
 from opsi_legacy.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
 from opsi_legacy.Util.Message import ProgressSubjectProxy
-from opsi_legacy.Util.Repository import Repository, getRepository
+from opsi_legacy.Util.Repository import Repository, RepositoryError, getRepository
 from packaging import version
 
 from opsiclientd.Config import Config
@@ -1293,7 +1293,13 @@ class ProductCacheService(threading.Thread):
 					)
 
 					self.last_errors = []
-					retry_config = RetryConfig(on=(ConnectionError, IOError, FileNotFoundError), attempts=3, timeout=36000, wait_initial=10, wait_max=30)
+					retry_config = RetryConfig(
+						on=(RepositoryError, ConnectionError, IOError, FileNotFoundError),
+						attempts=3,
+						timeout=36000,
+						wait_initial=10,
+						wait_max=30,
+					)
 					for productId in productIds:
 						try:
 							for attempt in Retry(retry_config):
