@@ -1100,6 +1100,9 @@ class ControlInterface(PipeControlInterface):
 
 		return self.opsiclientd.showDialog(title=title, message=message, timeout=timeout, buttons=[DialogButton(**b) for b in buttons])
 
+	def isServiceMessagebusConnected(self) -> bool:
+		return PermanentServiceConnection(self.opsiclientd).service_client.messagebus_connected
+
 
 @lru_cache
 def get_pipe_control_interface(opsiclientd: Opsiclientd) -> PipeControlInterface:
