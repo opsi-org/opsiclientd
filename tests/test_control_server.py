@@ -151,7 +151,7 @@ def test_log_viewer_auth(test_client: OpsiclientdTestClient, opsiclientd_auth: t
 
 		response = client.get("/log_viewer", auth=opsiclientd_auth)
 		assert response.status_code == 200
-		cookie = list(client.cookies.jar)[0]
+		cookie = next(iter(client.cookies.jar))
 		with client.websocket_connect("/log_viewer/ws", headers={"Cookie": f"{cookie.name}={cookie.value}"}):
 			pass
 

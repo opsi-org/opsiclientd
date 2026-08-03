@@ -195,10 +195,7 @@ class CacheService(threading.Thread):
 			return False
 
 		assert self._configCacheService
-		if not self._configCacheService.isWorking() and self._configCacheService.getState().get("config_cached", False):
-			return True
-
-		return False
+		return bool(not self._configCacheService.isWorking() and self._configCacheService.getState().get("config_cached", False))
 
 	def getConfigBackend(self) -> Backend:
 		self.initializeConfigCacheService()
@@ -522,7 +519,7 @@ class ConfigCacheService(threading.Thread):
 				self.setObsolete()
 			except Exception:
 				pass
-			raise err
+			raise
 
 	@property
 	def service_client(self) -> ServiceClient:

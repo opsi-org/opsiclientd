@@ -75,23 +75,7 @@ def main() -> None:
 	with log_context({"instance": log_instance}):
 		logger.debug(
 			"Called with arguments: %s",
-			", ".join(
-				(
-					host_id,
-					host_key,
-					control_server_port,
-					log_file,
-					log_level,
-					depot_remote_url,
-					depot_drive,
-					depot_server_username,
-					depot_server_password,
-					session_id,
-					action_processor_desktop,
-					action_processor_command,
-					action_processor_timeout,
-				)
-			),
+			f"{host_id}, {host_key}, {control_server_port}, {log_file}, {log_level}, {depot_remote_url}, {depot_drive}, {depot_server_username}, {depot_server_password}, {session_id}, {action_processor_desktop}, {action_processor_command}, {action_processor_timeout}",
 		)
 
 		language = "en"

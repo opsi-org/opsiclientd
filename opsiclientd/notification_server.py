@@ -278,7 +278,7 @@ class NotificationServer(SubjectsObserver, Thread):
 
 		self._ready.set()
 		if self._error:
-			logger.error(self._error, exc_info=True)
+			logger.error(self._error)
 			return
 
 		assert self._server

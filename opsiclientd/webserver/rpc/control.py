@@ -616,7 +616,7 @@ class ControlInterface(PipeControlInterface):
 			except Exception as err:
 				logger.warning("Failed to get open files for: %s", err, exc_info=True)
 
-		return [{"file_path": x[0], "process_name": x[1]} for x in sorted(list(file_list))]
+		return [{"file_path": x[0], "process_name": x[1]} for x in sorted(file_list)]
 
 	def runOpsiScriptAsOpsiSetupUser(
 		self,

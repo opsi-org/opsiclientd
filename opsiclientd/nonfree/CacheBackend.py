@@ -326,7 +326,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			try:
 				ObjectClass = eval(modification["objectClass"])
 				identValues = modification["ident"].split(ObjectClass.identSeparator)
-				identAttributes: tuple[str, ...] = tuple()
+				identAttributes: tuple[str, ...] = ()
 				if modification["objectClass"] == "AuditHardware":
 					identAttributes = tuple(["hardwareClass"] + sorted(ObjectClass.hardware_attributes[identValues[0]]))
 				elif modification["objectClass"] == "AuditHardwareOnHost":

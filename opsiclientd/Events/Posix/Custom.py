@@ -16,6 +16,6 @@ __all__ = ["CustomEvent", "CustomEventConfig", "CustomEventGenerator"]
 try:
 	from opsiclientd.nonfree.Events.Config import CustomEventConfig
 	from opsiclientd.nonfree.Events.Generator import CustomEvent, CustomEventGenerator
-except ImportError as error:
+except ImportError:
 	logger.critical("Unable to import from opsiclientd.nonfree, is this the full version?")
-	raise error
+	raise

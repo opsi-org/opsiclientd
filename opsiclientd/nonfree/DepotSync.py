@@ -117,7 +117,7 @@ class DepotToLocalDirectorySynchronizer:
 							continue
 
 				if progressSubject:
-					progressSubject.setMessage("Downloading file '%s'" % item["name"])
+					progressSubject.setMessage("Downloading file '{}'".format(item["name"]))
 
 				partialEndFile = f"{destinationPath}.opsi_sync_endpart"
 				partialStartFile = f"{destinationPath}.opsi_sync_startpart"
@@ -220,7 +220,7 @@ class DepotToLocalDirectorySynchronizer:
 				type="product_sync",
 				fireAlways=True,
 			)
-			productProgressSubject.setMessage("Synchronizing product %s" % self._productId)
+			productProgressSubject.setMessage(f"Synchronizing product {self._productId}")
 			if productProgressObserver:
 				productProgressSubject.attachObserver(productProgressObserver)
 			package_content_file = None
@@ -249,7 +249,7 @@ class DepotToLocalDirectorySynchronizer:
 					self._fileInfo[entry.filename] = entry
 					size += entry.size
 
-				productProgressSubject.setMessage("Synchronizing product %s (%.2fkByte)" % (self._productId, (size / 1000)))
+				productProgressSubject.setMessage(f"Synchronizing product {self._productId} ({size / 1000:.2f}kByte)")
 				productProgressSubject.setEnd(size)
 				productProgressSubject.setEndChangable(False)
 
@@ -299,7 +299,7 @@ class DepotToLocalDirectorySynchronizer:
 							logger.info("Symlink '%s' to '%s'", linkDestination, linkSource)
 							os.symlink(linkSource, linkDestination)
 			except Exception as error:
-				productProgressSubject.setMessage("Failed to sync product %s: %s" % (self._productId, error))
+				productProgressSubject.setMessage(f"Failed to sync product {self._productId}: {error}")
 				if package_content_file:
 					package_content_file.unlink(missing_ok=True)
 				raise

@@ -564,7 +564,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			yield
 		except Exception as err:
 			logger.error("Failed to start webserver: %s", err, exc_info=True)
-			raise err
+			raise
 		finally:
 			if self._webserver:
 				logger.info("Stopping webserver")
@@ -1025,14 +1025,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		System.shutdown(wait=waitSeconds)
 
 	def isRebootTriggered(self) -> bool:
-		if self._isRebootTriggered:
-			return True
-		return False
+		return bool(self._isRebootTriggered)
 
 	def isShutdownTriggered(self) -> bool:
-		if self._isShutdownTriggered:
-			return True
-		return False
+		return bool(self._isShutdownTriggered)
 
 	def clearRebootRequest(self) -> None:
 		pass

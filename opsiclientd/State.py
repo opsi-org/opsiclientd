@@ -13,7 +13,7 @@ import json
 import os
 import threading
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 import psutil
 from opsi.logging import get_logger
@@ -30,7 +30,7 @@ logger = get_logger()
 class State:
 	_instance: State | None = None
 
-	def __new__(cls, *args: Any, **kwargs: Any) -> State:
+	def __new__(cls, *args: Any, **kwargs: Any) -> Self:
 		if cls._instance is None:
 			cls._instance = super().__new__(cls, *args, **kwargs)
 		return cls._instance
@@ -88,9 +88,8 @@ class State:
 							return True
 					except (psutil.AccessDenied, psutil.NoSuchProcess):
 						pass
-			elif RUNNING_ON_DARWIN:
-				if Path("/dev/console").owner() != "root":
-					return True
+			elif RUNNING_ON_DARWIN and Path("/dev/console").owner() != "root":
+				return True
 			return False
 		if name == "products_cached":
 			return self._state.get("product_cache_service", {}).get("products_cached", default)

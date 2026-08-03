@@ -56,7 +56,7 @@ def test_inheritance() -> None:
 	load_config_file("tests/data/event_config/1.conf")
 
 	configs = getEventConfigs()
-	assert sorted(list(configs)) == sorted(
+	assert sorted(configs) == sorted(
 		[
 			"gui_startup",
 			"gui_startup{cache_ready}",

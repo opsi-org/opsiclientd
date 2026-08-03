@@ -94,16 +94,15 @@ class ActionGroup:
 							logger.debug(log)
 							self.sort_log.append(log)
 							self.actions.insert(pos_prd, self.actions.pop(pos_req))
-					elif dependency.requirementType == "after":
-						if pos_req < pos_prd:
-							log = (
-								f"Sort run #{run_number}: Moving {dependency.requiredProductId!r} ({pos_req}) "
-								f"after {action.product_id!r} ({pos_prd})"
-							)
-							logger.debug(log)
-							self.sort_log.append(log)
-							# Do not insert at pos_prd + 1, because pos_req < pos_prd and pop(pos_req)!
-							self.actions.insert(pos_prd, self.actions.pop(pos_req))
+					elif dependency.requirementType == "after" and pos_req < pos_prd:
+						log = (
+							f"Sort run #{run_number}: Moving {dependency.requiredProductId!r} ({pos_req}) "
+							f"after {action.product_id!r} ({pos_prd})"
+						)
+						logger.debug(log)
+						self.sort_log.append(log)
+						# Do not insert at pos_prd + 1, because pos_req < pos_prd and pop(pos_req)!
+						self.actions.insert(pos_prd, self.actions.pop(pos_req))
 			if actions == self.actions:
 				logger.debug("Sort run finished after %d iterations", run_number)
 				break
@@ -305,7 +304,7 @@ class RPCProductDependencyMixin(Protocol):
 							if not group_idx:
 								self.product_id_groups.append({action.product_id, dep_product.id})
 							else:
-								gidx = sorted(list(group_idx))
+								gidx = sorted(group_idx)
 								if len(gidx) > 1:
 									self.product_id_groups[gidx[0]].update(self.product_id_groups[gidx[1]])
 									del self.product_id_groups[gidx[1]]

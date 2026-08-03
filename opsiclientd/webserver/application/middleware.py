@@ -87,9 +87,8 @@ def get_session_id_from_headers(headers: Headers) -> str | None:
 	if cookies:
 		for cookie in cookies.split(";"):
 			cookie_l = cookie.strip().split("=", 1)
-			if len(cookie_l) == 2:
-				if cookie_l[0].strip().lower() == session_cookie_name:
-					return cookie_l[1].strip().lower()
+			if len(cookie_l) == 2 and cookie_l[0].strip().lower() == session_cookie_name:
+				return cookie_l[1].strip().lower()
 	return None
 
 
@@ -319,7 +318,7 @@ class BaseMiddleware:
 			error = err.detail
 
 		else:
-			logger.error(err, exc_info=True)
+			logger.error(err)
 			error = str(err)
 
 		headers = headers or {}

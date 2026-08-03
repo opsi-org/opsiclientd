@@ -30,7 +30,7 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 			preconditionId = section.split("_", 1)[1]
 			preconditions[preconditionId] = {}
 			try:
-				for key in options.keys():
+				for key in options:
 					if to_bool(options[key]):
 						# Only check if value in precondition is true
 						# false means: do not check state
@@ -56,7 +56,7 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 			}
 
 			try:
-				for key in options.keys():
+				for key in options:
 					if key.lower() == "active":
 						rawEventConfigs[eventConfigId]["active"] = str(options[key]).lower() not in ("0", "false", "off", "no")
 					elif key.lower() == "super":
@@ -78,7 +78,7 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 	newRawEventConfigs: dict[str, dict[str, Any]] = {}
 	while rawEventConfigs:
 		num_configs = len(rawEventConfigs)
-		for eventConfigId in sorted(list(rawEventConfigs)):
+		for eventConfigId in sorted(rawEventConfigs):
 			rawEventConfig = rawEventConfigs[eventConfigId]
 			if rawEventConfig["super"]:
 				if rawEventConfig["super"] in newRawEventConfigs:

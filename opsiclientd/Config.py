@@ -14,7 +14,7 @@ import os
 import platform
 import sys
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Self
 from urllib.parse import urlparse
 
 import netifaces  # ty: ignore[unresolved-import]
@@ -149,7 +149,7 @@ class Config:
 		"depot_server": {"drive": "/private/var/opsisetupadmin/opsi_depot"},
 	}
 
-	def __new__(cls, *args: Any, **kwargs: Any) -> Config:
+	def __new__(cls, *args: Any, **kwargs: Any) -> Self:
 		if cls._instance is None:
 			cls._instance = super().__new__(cls)
 		return cls._instance
@@ -389,9 +389,7 @@ class Config:
 	def has_option(self, section: str, option: str) -> bool:
 		if section not in self._config:
 			return False
-		if option not in self._config[section]:
-			return False
-		return True
+		return option in self._config[section]
 
 	def del_option(self, section: str, option: str) -> None:
 		del self._config[section][option]
@@ -485,17 +483,16 @@ class Config:
 				value = [x.strip() for x in value.split(",") if x.strip()]
 			value = to_list(value)
 
-		if RUNNING_ON_WINDOWS and (option.endswith("_dir") or option.endswith("_file")):
-			if ":" in value and ":\\" not in value:
-				logger.warning("Correcting path '%s' to '%s'", value, str(value).replace(":", ":\\"))
-				value = str(value).replace(":", ":\\")
+		if RUNNING_ON_WINDOWS and (option.endswith(("_dir", "_file"))) and ":" in value and ":\\" not in value:
+			logger.warning("Correcting path '%s' to '%s'", value, str(value).replace(":", ":\\"))
+			value = str(value).replace(":", ":\\")
 
-		if option.endswith("_dir") or option.endswith("_file"):
+		if option.endswith(("_dir", "_file")):
 			arch = "64" if "64" in platform.architecture()[0] else "32"
 			value = str(value).replace("%arch%", arch)
 
-		if section.startswith("event_") or section.startswith("precondition_"):
-			if option.endswith("_warning_time") or option.endswith("_user_cancelable"):
+		if section.startswith(("event_", "precondition_")):
+			if option.endswith(("_warning_time", "_user_cancelable")):
 				try:
 					value = int(str(value))
 				except ValueError:
@@ -508,7 +505,7 @@ class Config:
 				urls = value
 				if isinstance(urls, str):
 					urls = str(urls).split(",")
-				value = list(set([url.strip() for url in urls]))
+				value = list({url.strip() for url in urls})
 			else:
 				try:
 					if isinstance(self._config[section][option], bool):

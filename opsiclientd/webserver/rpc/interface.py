@@ -111,7 +111,7 @@ class Interface:
 
 			self._interface[method_name] = get_method_interface(function)
 
-		self._interface_list = [self._interface[name].as_dict() for name in sorted(list(self._interface.keys()))]
+		self._interface_list = [self._interface[name].as_dict() for name in sorted(self._interface.keys())]
 
 	@no_export
 	def get_interface(self) -> dict[str, MethodInterface]:

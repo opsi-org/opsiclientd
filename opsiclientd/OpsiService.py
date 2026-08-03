@@ -19,7 +19,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from traceback import TracebackException
 from types import TracebackType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 from urllib.parse import urlparse
 
 from cryptography import x509
@@ -200,7 +200,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 	opsiclientd: Opsiclientd | None = None
 	_instance: PermanentServiceConnection | None = None
 
-	def __new__(cls, *args, **kwargs) -> PermanentServiceConnection:
+	def __new__(cls, *args, **kwargs) -> Self:
 		if not cls._instance:
 			cls._instance = super().__new__(cls)
 		return cls._instance
@@ -315,7 +315,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		if self._temporary_service_client:
 			self._temporary_service_client.stop()
 
-	def __enter__(self) -> PermanentServiceConnection:
+	def __enter__(self) -> Self:
 		self.start()
 		return self
 
@@ -406,10 +406,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 	def connection_failed(self, service_client: ServiceClient, exception: Exception) -> None:
 		logger.error("Connection to opsi service %s failed: %s", service_client.base_url, exception)
-		if isinstance(exception, OpsiServiceTimeoutError):
-			if self._service_client._connect_timeout < 90:
-				logger.info("Connection timed out, increasing connect_timeout")
-				self._service_client._connect_timeout = int(self._service_client._connect_timeout * 1.5)
+		if isinstance(exception, OpsiServiceTimeoutError) and self._service_client._connect_timeout < 90:
+			logger.info("Connection timed out, increasing connect_timeout")
+			self._service_client._connect_timeout = int(self._service_client._connect_timeout * 1.5)
 		if isinstance(exception, OpsiServiceAuthenticationError) and not service_client.service_is_opsiclientd():
 			logger.debug("Authentication failed, trying to get FQDN from OS")
 			try:
@@ -444,7 +443,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 				if message.method.startswith("_"):
 					raise ValueError("Invalid method")
 				method = getattr(self.control_interface, message.method)
-				response.result = await self._loop.run_in_executor(None, method, *(message.params or tuple()))
+				response.result = await self._loop.run_in_executor(None, method, *(message.params or ()))
 			except Exception as err:
 				response.error = {
 					"code": 0,
@@ -474,15 +473,14 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					if terminal:
 						destination_dir = terminal.get_cwd()
 						message.destination_dir = str(destination_dir)
-			elif isinstance(message, FileDownloadRequestMessage):
-				if message.path:
-					message.path = replace_placeholders(
-						message.path,
-						{
-							"{OPSICLIENTD_LOG_FILE_PATH}": config.get("global", "log_file"),
-							"{OPSI_SCRIPT_LOG_FILE_PATH}": os.path.join(config.get("global", "log_dir"), "opsi-script", "opsi-script.log"),
-						},
-					)
+			elif isinstance(message, FileDownloadRequestMessage) and message.path:
+				message.path = replace_placeholders(
+					message.path,
+					{
+						"{OPSICLIENTD_LOG_FILE_PATH}": config.get("global", "log_file"),
+						"{OPSI_SCRIPT_LOG_FILE_PATH}": os.path.join(config.get("global", "log_dir"), "opsi-script", "opsi-script.log"),
+					},
+				)
 			await process_file_transfer_message(message=message, send_message=self._service_client.messagebus.async_send_message)
 		elif isinstance(message, ProcessMessage):
 			await process_process_message(message=message, send_message=self._service_client.messagebus.async_send_message)

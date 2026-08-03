@@ -13,7 +13,7 @@ import os
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -73,7 +73,7 @@ class OpsiclientdTestClient(TestClient):
 		self._username: str | None = None
 		self._password: str | None = None
 
-	def __enter__(self) -> OpsiclientdTestClient:
+	def __enter__(self) -> Self:
 		super().__enter__()
 		return self
 

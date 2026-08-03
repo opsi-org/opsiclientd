@@ -32,7 +32,7 @@ import os
 import sqlite3
 import threading
 import time
-from typing import Any
+from typing import Any, Self
 
 from opsi.logging import get_logger
 from opsi.opsi.service.model.type import to_bool, to_int, to_opsi_timestamp, to_string
@@ -129,7 +129,7 @@ class Timeline:
 
 	_instance: Timeline | None = None
 
-	def __new__(cls) -> Timeline:
+	def __new__(cls) -> Self:
 		if cls._instance is None:
 			cls._instance = super().__new__(cls)
 		return cls._instance

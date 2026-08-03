@@ -458,7 +458,7 @@ class EventProcessingThread(threading.Thread):
 					logger.notice("net use output:\n%s", process.get_output_text())
 				except Exception as err2:
 					logger.warning("Failed to list network connections: %s", err2)
-			raise err
+			raise
 
 		self._depotShareMounted = True
 
@@ -919,18 +919,17 @@ class EventProcessingThread(threading.Thread):
 					)
 
 				logger.notice("Start processing action requests")
-				if productIds:
-					if self.event.eventConfig.useCachedProducts:
-						if not cache_service:
-							raise RuntimeError(
-								f"Event '{self.event.eventConfig.getId()}' uses cached products but cache service is not available"
-							)
-						if cache_service.productCacheCompleted(self.service_client, productIds):
-							logger.notice("Event '%s' uses cached products and product caching is done", self.event.eventConfig.getId())
-						else:
-							raise RuntimeError(
-								f"Event '{self.event.eventConfig.getId()}' uses cached products but product caching is not done"
-							)
+				if productIds and self.event.eventConfig.useCachedProducts:
+					if not cache_service:
+						raise RuntimeError(
+							f"Event '{self.event.eventConfig.getId()}' uses cached products but cache service is not available"
+						)
+					if cache_service.productCacheCompleted(self.service_client, productIds):
+						logger.notice("Event '%s' uses cached products and product caching is done", self.event.eventConfig.getId())
+					else:
+						raise RuntimeError(
+							f"Event '{self.event.eventConfig.getId()}' uses cached products but product caching is not done"
+						)
 
 				param_prefix = "/" if RUNNING_ON_WINDOWS else "-"
 				add_params = []
@@ -1443,16 +1442,12 @@ class EventProcessingThread(threading.Thread):
 	def isRebootRequested(self) -> bool:
 		if self.event.eventConfig.reboot:
 			return True
-		if self.event.eventConfig.processShutdownRequests and self.opsiclientd and self.opsiclientd.isRebootRequested():
-			return True
-		return False
+		return bool(self.event.eventConfig.processShutdownRequests and self.opsiclientd and self.opsiclientd.isRebootRequested())
 
 	def isShutdownRequested(self) -> bool:
 		if self.event.eventConfig.shutdown:
 			return True
-		if self.event.eventConfig.processShutdownRequests and self.opsiclientd and self.opsiclientd.isShutdownRequested():
-			return True
-		return False
+		return bool(self.event.eventConfig.processShutdownRequests and self.opsiclientd and self.opsiclientd.isShutdownRequested())
 
 	def processShutdownRequests(self) -> None:
 		try:
@@ -1893,10 +1888,9 @@ class EventProcessingThread(threading.Thread):
 			notifier_processes: list[Process] = []
 
 			try:
-				if self.event.eventConfig.workingWindow:
-					if not self.inWorkingWindow():
-						logger.notice("We are not in the configured working window, stopping Event")
-						return
+				if self.event.eventConfig.workingWindow and not self.inWorkingWindow():
+					logger.notice("We are not in the configured working window, stopping Event")
+					return
 				logger.notice(
 					"============= EventProcessingThread for occurrcence of event '%s' started =============",
 					self.event.eventConfig.getId(),

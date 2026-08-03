@@ -122,7 +122,7 @@ def createEventGenerators(opsiclientd: Opsiclientd) -> None:
 			enabled_events[eventConfigId] = False
 			_EVENT_GENERATORS.pop(mainEventConfigId, None)
 
-	logger.notice("Configured events: %s", ", ".join(sorted(list(enabled_events))))
+	logger.notice("Configured events: %s", ", ".join(sorted(enabled_events)))
 	logger.notice("Enabled events: %s", ", ".join(sorted([evt_id for evt_id in enabled_events if enabled_events[evt_id]])))
 
 
