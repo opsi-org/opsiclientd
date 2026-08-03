@@ -14,7 +14,7 @@ import os
 import platform
 import sys
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, Self
+from typing import TYPE_CHECKING, Any, Literal, Self, cast
 from urllib.parse import urlparse
 
 import netifaces  # ty: ignore[unresolved-import]
@@ -152,7 +152,7 @@ class Config:
 	def __new__(cls, *args: Any, **kwargs: Any) -> Self:
 		if cls._instance is None:
 			cls._instance = super().__new__(cls)
-		return cls._instance
+		return cast(Self, cls._instance)
 
 	def __init__(self) -> None:
 		if getattr(self, "_initialized", False):

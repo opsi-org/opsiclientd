@@ -1125,10 +1125,10 @@ def get_cache_service_interface(opsiclientd: Opsiclientd) -> ControlInterface:
 		raise RuntimeError("Cache service not running")
 
 	backend = cache_service.getConfigBackend()
-	backend._interface = {}
-	backend._interface_list = []
-	backend._create_interface = MethodType(Interface._create_interface, backend)
-	backend.get_interface = MethodType(Interface.get_interface, backend)
-	backend.get_method_interface = MethodType(Interface.get_method_interface, backend)
+	backend._interface = {}  # ty: ignore[unresolved-attribute]
+	backend._interface_list = []  # ty: ignore[unresolved-attribute]
+	backend._create_interface = MethodType(Interface._create_interface, backend)  # ty: ignore[unresolved-attribute]
+	backend.get_interface = MethodType(Interface.get_interface, backend)  # ty: ignore[unresolved-attribute]
+	backend.get_method_interface = MethodType(Interface.get_method_interface, backend)  # ty: ignore[unresolved-attribute]
 	backend._create_interface()  # ty: ignore[unresolved-attribute]
 	return backend  # ty: ignore[invalid-return-type]

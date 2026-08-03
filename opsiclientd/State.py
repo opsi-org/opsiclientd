@@ -13,7 +13,7 @@ import json
 import os
 import threading
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, Self, cast
 
 import psutil
 from opsi.logging import get_logger
@@ -33,7 +33,7 @@ class State:
 	def __new__(cls, *args: Any, **kwargs: Any) -> Self:
 		if cls._instance is None:
 			cls._instance = super().__new__(cls, *args, **kwargs)
-		return cls._instance
+		return cast(Self, cls._instance)
 
 	def __init__(self) -> None:
 		if getattr(self, "_initialized", False):

@@ -17,7 +17,7 @@ from typing import Any
 
 
 def no_export(func: Callable) -> Callable:
-	func.no_export = True
+	func.no_export = True  # ty: ignore[unresolved-attribute]
 	return func
 
 

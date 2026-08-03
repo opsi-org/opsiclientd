@@ -19,7 +19,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from traceback import TracebackException
 from types import TracebackType
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Self, cast
 from urllib.parse import urlparse
 
 from cryptography import x509
@@ -203,7 +203,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 	def __new__(cls, *args, **kwargs) -> Self:
 		if not cls._instance:
 			cls._instance = super().__new__(cls)
-		return cls._instance
+		return cast(Self, cls._instance)
 
 	def __init__(self, opsiclientd: Opsiclientd | None = None) -> None:
 		if opsiclientd and not self.opsiclientd:

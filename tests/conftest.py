@@ -28,7 +28,7 @@ def emit(*args: Any, **kwargs: Any) -> None:
 	pass
 
 
-LogCaptureHandler.emit = emit  # ty: ignore[invalid-assignment]
+LogCaptureHandler.emit = emit
 
 
 @pytest.hookimpl()

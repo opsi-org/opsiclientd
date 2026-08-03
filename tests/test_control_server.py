@@ -233,8 +233,8 @@ def test_concurrency(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) ->
 	def run_rpc(rpc: dict[str, Any]) -> None:
 		thread = threading.current_thread()
 		res = requests.post(f"{opsiclientd_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
-		thread.status_code = res.status_code
-		thread.response = res.json()
+		thread.status_code = res.status_code  # ty: ignore[unresolved-attribute]
+		thread.response = res.json()  # ty: ignore[unresolved-attribute]
 
 	threads = []
 	for rpc in rpcs:
@@ -244,8 +244,8 @@ def test_concurrency(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) ->
 
 	for thread in threads:
 		thread.join()
-		assert thread.status_code == 200
-		response = thread.response
+		assert thread.status_code == 200  # ty: ignore[unresolved-attribute]
+		response = thread.response  # ty: ignore[unresolved-attribute]
 		if response["id"] == 3:
 			assert response["error"] is not None
 		else:
@@ -259,7 +259,9 @@ def test_log_reader_start_position(tmp_path: Path) -> None:
 	for num_tail_records in (5, 10, 19, 20, 21):
 		log_file = tmp_path / "opsiclientd.log"
 		with open(log_file, "w", encoding="utf-8", errors="replace") as file:
-			file.writelines(f"[5] [2021-01-02 11:12:13.456] [opsiclientd] log line {idx + 1}   (opsiclientd.py:123)\n" for idx in range(log_lines))
+			file.writelines(
+				f"[5] [2021-01-02 11:12:13.456] [opsiclientd] log line {idx + 1}   (opsiclientd.py:123)\n" for idx in range(log_lines)
+			)
 
 		lrt = LogReaderThread(filename=log_file, loop=None, websocket=None, num_tail_records=num_tail_records)  # ty: ignore
 		start_position = lrt._get_start_position()
@@ -382,7 +384,8 @@ def test_run_opsiscript_content(opsiclientd_auth: tuple[str, str]) -> None:  # n
 				return "Mocked stderr"
 
 		with (
-			use_logging_config(stderr_level=LOG_INFO), patch("opsiclientd.webserver.rpc.control.run_command", return_value=MockProcess()),
+			use_logging_config(stderr_level=LOG_INFO),
+			patch("opsiclientd.webserver.rpc.control.run_command", return_value=MockProcess()),
 			patch("builtins.open", mock_open(read_data="[1] Mocked log content")),
 		):
 			response = client.jsonrpc20(path="/opsiclientd", method="runOpsiScriptContent", params=params, id=2)
