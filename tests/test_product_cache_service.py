@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -92,7 +92,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		)
 
 	class MockService:
-		updated_pocs: list[ProductOnClient] = []
+		updated_pocs: ClassVar[list[ProductOnClient]] = []
 
 		# Mock the ServiceClient class
 		def productOnClient_updateObjects(self, productOnClients: list[ProductOnClient]) -> None:

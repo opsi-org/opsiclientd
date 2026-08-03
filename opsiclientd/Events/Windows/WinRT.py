@@ -128,7 +128,7 @@ class WinRTNetworkStatusMonitor(WinRTMonitor):
 					)
 					self._on_status_change(connected=connected, metered=is_metered)
 				except Exception as e:
-					logger.error("Error in WinRT handler: %s, assuming connected and not metered", e, exc_info=True)
+					logger.exception("Error in WinRT handler: %s, assuming connected and not metered", e)
 					self._on_status_change(connected=True, metered=False)
 
 		_on_network_status_change(None)

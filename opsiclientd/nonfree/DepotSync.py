@@ -211,7 +211,8 @@ class DepotToLocalDirectorySynchronizer:
 		if overallProgressObserver:
 			overallProgressSubject.attachObserver(overallProgressObserver)
 
-		for self._productId in self._productIds:
+		for product_id in self._productIds:
+			self._productId = product_id
 			if self._continue_event:
 				self._continue_event.wait()
 

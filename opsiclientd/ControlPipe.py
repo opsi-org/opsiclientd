@@ -97,7 +97,7 @@ class ClientConnection(threading.Thread):
 									)
 					time.sleep(0.5)
 			except Exception as err:
-				logger.error(err, exc_info=True)
+				logger.exception(err)
 			finally:
 				self.clientDisconnected()
 
@@ -135,7 +135,7 @@ class ClientConnection(threading.Thread):
 
 			return serialize_data(process_rpcs(self._controller._opsiclientdRpcInterface, rpc), "json")
 		except Exception as rpc_error:
-			logger.error(rpc_error, exc_info=True)
+			logger.exception(rpc_error)
 			return serialize_data(JSONRPCErrorResponse(id=0, error=str(rpc_error)), "json")
 
 	def executeRpc(
@@ -162,7 +162,7 @@ class ClientConnection(threading.Thread):
 					logger.info("Received response '%s' from client %s", response_json, self)
 					response = jsonrpc_response_from_data(response_json, "json")[0]
 					if method == "loginUser" and isinstance(response, (JSONRPCResponse, JSONRPC20Response)) and response.result:
-						self.login_user_executed = datetime.now()
+						self.login_user_executed = datetime.now().astimezone()
 						# Credential provider can only handle one successful login.
 						# Ensure, that the credential provider is not used for a
 						# second login if it keeps the pipe connection open.
@@ -172,7 +172,7 @@ class ClientConnection(threading.Thread):
 					if with_lock:
 						self.comLock.release()
 			except Exception as client_err:
-				logger.error(client_err, exc_info=True)
+				logger.exception(client_err)
 				return JSONRPCErrorResponse(id=rpc_id, error=str(client_err))
 
 
@@ -210,10 +210,10 @@ class ControlPipe(threading.Thread):
 							connection.daemon = True
 							connection.start()
 					except Exception as err1:
-						logger.error(err1, exc_info=True)
+						logger.exception(err1)
 						self.setup()
 			except Exception as err2:
-				logger.error(err2, exc_info=True)
+				logger.exception(err2)
 			self._running = False
 			self.teardown()
 

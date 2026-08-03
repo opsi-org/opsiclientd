@@ -54,7 +54,7 @@ class Webserver(Thread):
 				self._server.run()
 				logger.debug("Uvicorn server stopped")
 			except Exception as err:
-				logger.error("Webserver error: %s", err, exc_info=True)
+				logger.exception("Webserver error: %s", err)
 
 	def stop(self) -> None:
 		if self._server:

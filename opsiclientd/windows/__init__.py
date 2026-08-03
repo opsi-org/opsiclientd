@@ -11,7 +11,7 @@ import threading
 import time
 from collections.abc import Callable
 from types import ModuleType
-from typing import Any
+from typing import Any, ClassVar
 
 import win32com.client
 import win32com.server.policy
@@ -64,8 +64,16 @@ def importWmiAndPythoncom(importWmi: bool = True, importPythoncom: bool = True) 
 
 
 class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
-	_com_interfaces_ = [IID_ISensLogon]
-	_public_methods_ = ["Logon", "Logoff", "StartShell", "DisplayLock", "DisplayUnlock", "StartScreenSaver", "StopScreenSaver"]
+	_com_interfaces_: ClassVar[list[str]] = [IID_ISensLogon]
+	_public_methods_: ClassVar[list[str]] = [
+		"Logon",
+		"Logoff",
+		"StartShell",
+		"DisplayLock",
+		"DisplayUnlock",
+		"StartScreenSaver",
+		"StopScreenSaver",
+	]
 
 	def __init__(self, callback: Callable) -> None:
 		self._wrap_(self)  # ty: ignore[unresolved-attribute]

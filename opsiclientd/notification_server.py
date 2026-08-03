@@ -80,7 +80,7 @@ class NotificationServerClientConnection(Protocol):
 				logger.debug("Received RPC: %r", rpc)
 				rpcs.append(rpc)
 			except Exception as err:
-				logger.error("Invalid RPC data %r: %s", rpc_data, err, exc_info=True)
+				logger.exception("Invalid RPC data %r: %s", rpc_data, err)
 				continue
 		for rpc in rpcs:
 			self.process_rpc(rpc)
@@ -114,7 +114,7 @@ class NotificationServerClientConnection(Protocol):
 		try:
 			self.__process_rpc(rpc)
 		except Exception as err:
-			logger.error("Error processing RPC %r: %s", rpc, err, exc_info=True)
+			logger.exception("Error processing RPC %r: %s", rpc, err)
 
 	def process_rpc(self, rpc: NotificationRPC) -> None:
 		Thread(target=self._process_rpc, args=[rpc], daemon=True).start()
@@ -302,7 +302,7 @@ class NotificationServer(SubjectsObserver, Thread):
 				if self._should_stop:
 					logger.debug("Notification server stopping, ignoring error: %s", err, exc_info=True)
 				else:
-					logger.error("Notification server error: %s", err, exc_info=True)
+					logger.exception("Notification server error: %s", err)
 
 			self._stopped.set()
 			self._ready.clear()

@@ -291,25 +291,24 @@ class RPCProductDependencyMixin(Protocol):
 
 					dep_poc = get_product_on_client(product_id=dep_product.id, product_type=dep_product.getType(), client_id=client_id)
 
-					if dependency.requirementType:
+					if dependency.requirementType and dependency not in self.dependencies[product.id]:
 						# Only "hard" requirements should affect action order
-						if dependency not in self.dependencies[product.id]:
-							self.dependencies[product.id].append(dependency)
-							group_idx = set()
-							for product_id in action.product_id, dep_product.id:
-								for idx, product_group in enumerate(self.product_id_groups):
-									if product_id in product_group:
-										group_idx.add(idx)
-										break
-							if not group_idx:
-								self.product_id_groups.append({action.product_id, dep_product.id})
-							else:
-								gidx = sorted(group_idx)
-								if len(gidx) > 1:
-									self.product_id_groups[gidx[0]].update(self.product_id_groups[gidx[1]])
-									del self.product_id_groups[gidx[1]]
-								self.product_id_groups[gidx[0]].add(action.product_id)
-								self.product_id_groups[gidx[0]].add(dep_product.id)
+						self.dependencies[product.id].append(dependency)
+						group_idx = set()
+						for product_id in action.product_id, dep_product.id:
+							for idx, product_group in enumerate(self.product_id_groups):
+								if product_id in product_group:
+									group_idx.add(idx)
+									break
+						if not group_idx:
+							self.product_id_groups.append({action.product_id, dep_product.id})
+						else:
+							gidx = sorted(group_idx)
+							if len(gidx) > 1:
+								self.product_id_groups[gidx[0]].update(self.product_id_groups[gidx[1]])
+								del self.product_id_groups[gidx[1]]
+							self.product_id_groups[gidx[0]].add(action.product_id)
+							self.product_id_groups[gidx[0]].add(dep_product.id)
 
 					required_action = dependency.requiredAction
 					if not required_action:

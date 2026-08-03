@@ -127,7 +127,7 @@ class TerminalReaderThread(threading.Thread):
 				break
 			except Exception as err:
 				if not self.should_stop:
-					logger.error("Error in terminal reader thread: %s %s", err.__class__, err, exc_info=True)
+					logger.exception("Error in terminal reader thread: %s %s", err.__class__, err)
 					time.sleep(1)
 
 	def stop(self) -> None:

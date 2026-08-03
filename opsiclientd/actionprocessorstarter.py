@@ -128,7 +128,7 @@ def main() -> None:
 			logger.notice("Action processor ended")
 			set_status_message(service_client, session_id, _("Action processor ended"))
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 			error = f"Failed to process action requests: {err}"
 			logger.error(error)
 			if service_client:

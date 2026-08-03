@@ -301,7 +301,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				try:
 					check_signature(str(bin_dir))
 				except Exception as err:
-					logger.error("Could not verify signature!\n%s", err, exc_info=True)
+					logger.exception("Could not verify signature!\n%s", err)
 					logger.error("Not performing self_update")
 					raise RuntimeError("Invalid signature") from err
 
@@ -389,26 +389,30 @@ class Opsiclientd(EventListener, threading.Thread):
 					title="Blocking login", description="User login blocked", category="block_login", durationEvent=True
 				)
 
-			if not self._blockLoginNotifierProcess and config.get("global", "block_login_notifier"):
-				if handleNotifier and RUNNING_ON_WINDOWS:
-					logger.info("Starting block login notifier app")
-					# Start block login notifier on physical console
-					console_sessions = [s for s in get_display_sessions() if s.is_current_console_session]
-					if console_sessions:
-						try:
-							desktop = "winlogon"
-							notifierCommand, _elevation_required = self.getNotifierCommand(
-								command=config.get("global", "block_login_notifier"), notifier_id="block_login", desktop=desktop
-							)
-							self._blockLoginNotifierProcess = self.runCommandInSession(
-								command=notifierCommand,
-								session_id=console_sessions[0].id,
-								session_desktop=desktop,
-								wait=False,
-								session_elevated=True,
-							)
-						except Exception as err:
-							logger.error("Failed to start block login notifier app: %s", err)
+			if (
+				not self._blockLoginNotifierProcess
+				and config.get("global", "block_login_notifier")
+				and handleNotifier
+				and RUNNING_ON_WINDOWS
+			):
+				logger.info("Starting block login notifier app")
+				# Start block login notifier on physical console
+				console_sessions = [s for s in get_display_sessions() if s.is_current_console_session]
+				if console_sessions:
+					try:
+						desktop = "winlogon"
+						notifierCommand, _elevation_required = self.getNotifierCommand(
+							command=config.get("global", "block_login_notifier"), notifier_id="block_login", desktop=desktop
+						)
+						self._blockLoginNotifierProcess = self.runCommandInSession(
+							command=notifierCommand,
+							session_id=console_sessions[0].id,
+							session_desktop=desktop,
+							wait=False,
+							session_elevated=True,
+						)
+					except Exception as err:
+						logger.error("Failed to start block login notifier app: %s", err)
 
 		else:
 			if self._blockLoginEventId:
@@ -460,7 +464,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			yielded = True
 			yield self._cacheService
 		except Exception as err:
-			logger.error("Failed to start cache service: %s", err, exc_info=True)
+			logger.exception("Failed to start cache service: %s", err)
 			if not allow_fail:
 				raise
 			if not yielded:
@@ -491,13 +495,13 @@ class Opsiclientd(EventListener, threading.Thread):
 				self.login_detector = LoginDetector(self, EventConfig("login_detector"))
 				self.login_detector.start()
 			except Exception as error:
-				logger.error("Failed to start LoginDetector: %s", error, exc_info=True)
+				logger.exception("Failed to start LoginDetector: %s", error)
 
 		for event_generator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
 			try:
 				event_generator.createAndFireEvent()
 			except (ValueError, CannotCancelEventError) as err:
-				logger.error("Unable to fire DaemonStartupEvent from %s: %s", event_generator, err, exc_info=True)
+				logger.exception("Unable to fire DaemonStartupEvent from %s: %s", event_generator, err)
 
 		if getEventGenerators(generatorClass=GUIStartupEventGenerator):
 			# Wait until gui starts up
@@ -515,7 +519,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				try:
 					event_generator.createAndFireEvent()
 				except (ValueError, CannotCancelEventError) as err:
-					logger.error("Unable to fire DaemonShutdownEvent from %s: %s", event_generator, err, exc_info=True)
+					logger.exception("Unable to fire DaemonShutdownEvent from %s: %s", event_generator, err)
 			if RUNNING_ON_WINDOWS and isinstance(self.login_detector, LoginDetector):
 				logger.info("Stopping LoginDetector for message of the day")
 				if self.login_detector:
@@ -538,7 +542,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice("Control pipe started")
 			yield
 		except Exception as err:
-			logger.error("Failed to start control pipe: %s", err, exc_info=True)
+			logger.exception("Failed to start control pipe: %s", err)
 			raise
 		finally:
 			logger.info("Stopping control pipe")
@@ -561,7 +565,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			yield
 		except Exception as err:
-			logger.error("Failed to start webserver: %s", err, exc_info=True)
+			logger.exception("Failed to start webserver: %s", err)
 			raise
 		finally:
 			if self._webserver:
@@ -577,7 +581,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			try:
 				self._run()
 			except Exception as err:
-				logger.error(err, exc_info=True)
+				logger.exception(err)
 
 	def _run(self) -> None:
 		ensure_not_already_running("opsiclientd")
@@ -587,11 +591,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		try:
 			state.start()
 		except Exception as err:
-			logger.error("Failed to start state: %s", err, exc_info=True)
+			logger.exception("Failed to start state: %s", err)
 		try:
 			timeline.start()
 		except Exception as err:
-			logger.error("Failed to start timeline: %s", err, exc_info=True)
+			logger.exception("Failed to start timeline: %s", err)
 
 		config.readConfigFile()
 		try:
@@ -619,7 +623,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						except (psutil.AccessDenied, psutil.NoSuchProcess) as ps_err:
 							logger.info(ps_err)
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 
 		setup(full=False)
 
@@ -696,12 +700,12 @@ class Opsiclientd(EventListener, threading.Thread):
 							# Needed for some VPNs like OpenVPN to connect
 							self.sendSAS()
 						except Exception as error:
-							logger.error("Failed to send SAS: %s", error, exc_info=True)
+							logger.exception("Failed to send SAS: %s", error)
 
 					try:
 						self.updateMOTD()
 					except Exception as error:
-						logger.error("Failed to update message of the day: %s", error, exc_info=True)
+						logger.exception("Failed to update message of the day: %s", error)
 
 					try:
 						while not self._stopEvent.is_set():
@@ -720,7 +724,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						timeline.stop()
 		except Exception as err:
 			if not self._stopEvent.is_set():
-				logger.error(err, exc_info=True)
+				logger.exception(err)
 			self.setBlockLogin(False)
 		finally:
 			self._running = False
@@ -941,7 +945,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				hide_window=hide_window,
 			)
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 
 	def getCurrentActiveDesktopName(self, sessionId: str | None = None) -> str | None:
 		if not RUNNING_ON_WINDOWS:
@@ -1303,12 +1307,11 @@ class Opsiclientd(EventListener, threading.Thread):
 						if process:
 							logger.debug("Started notifier with pid %s", process.pid)
 					except Exception as err:
-						logger.error(
+						logger.exception(
 							"Failed to start popup message notifier app in session %r on desktop %r: %s",
 							session.id,
 							desktop,
 							err,
-							exc_info=True,
 						)
 
 			# last popup decides end time (even if unlimited)
@@ -1411,12 +1414,11 @@ class Opsiclientd(EventListener, threading.Thread):
 						if process:
 							logger.debug("Started notifier with pid %s", process.pid)
 					except Exception as err:
-						logger.error(
+						logger.exception(
 							"Failed to start dialog notifier app in session %r on desktop %r: %s",
 							session.id,
 							desktop,
 							err,
-							exc_info=True,
 						)
 
 		if not self._dialogResultEvent.wait(timeout):
@@ -1442,7 +1444,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self.closeDialog()
 
 	def collectLogfiles(self, types: list[str] | None = None, max_age_days: int | None = None, timeline_db: bool = True) -> Path:
-		now = datetime.now().timestamp()
+		now = datetime.now().astimezone().timestamp()
 		type_patterns = []
 		types = types or []
 		if not types:
@@ -1452,11 +1454,14 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		def collect_matching_files(path: Path, result_path: Path, patterns: list[re.Pattern], max_age_days: int | None) -> None:
 			for content in path.iterdir():
-				if content.is_file() and any(re.match(pattern, content.name) for pattern in patterns):
-					if not max_age_days or now - content.lstat().st_mtime < int(max_age_days) * 3600 * 24:
-						if not result_path.is_dir():
-							result_path.mkdir()
-						shutil.copy2(content, result_path)  # preserve metadata
+				if (
+					content.is_file()
+					and any(re.match(pattern, content.name) for pattern in patterns)
+					and (not max_age_days or now - content.lstat().st_mtime < int(max_age_days) * 3600 * 24)
+				):
+					if not result_path.is_dir():
+						result_path.mkdir()
+					shutil.copy2(content, result_path)  # preserve metadata
 
 				if content.is_dir():
 					collect_matching_files(content, result_path / content.name, patterns, max_age_days)

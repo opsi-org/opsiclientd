@@ -369,10 +369,9 @@ class BaseMiddleware:
 				del content["result"]
 			response = JSONResponse(status_code=status_code, content=content, headers=headers)
 
-		if not response:
-			if scope["request_headers"].get("accept") and "application/json" in scope["request_headers"].get("accept", ""):
-				logger.debug("Returning json response because of accept header")
-				response = JSONResponse(status_code=status_code, content={"error": error}, headers=headers)
+		if not response and scope["request_headers"].get("accept") and "application/json" in scope["request_headers"].get("accept", ""):
+			logger.debug("Returning json response because of accept header")
+			response = JSONResponse(status_code=status_code, content={"error": error}, headers=headers)
 
 		if not response:
 			logger.debug("Returning plaintext response")

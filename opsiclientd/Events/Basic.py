@@ -177,7 +177,7 @@ class EventGenerator(threading.Thread):
 						logger.info("Calling processEvent on listener %s", self._eventListener)
 						self._eventListener.processEvent(self._event)
 					except Exception as err:
-						logger.error(err, exc_info=True)
+						logger.exception(err)
 
 		logger.info("Starting FireEventThread for listeners: %s", self._eventListeners)
 		keep_lock = False
@@ -233,7 +233,7 @@ class EventGenerator(threading.Thread):
 					logger.notice("Event generator '%s' now deactivated after %d event occurrences", self, self._eventsOccured)
 			except Exception as err:
 				if not self._stopped:
-					logger.error("Failure in event generator '%s': %s", self, err, exc_info=True)
+					logger.exception("Failure in event generator '%s': %s", self, err)
 			try:
 				self.cleanup()
 			except Exception as err:

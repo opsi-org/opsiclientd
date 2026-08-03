@@ -37,7 +37,7 @@ def startup_log(message: str) -> None:
 		return
 	if os.path.isdir(os.path.dirname(STARTUP_LOG)):
 		with open(STARTUP_LOG, "a", encoding="utf-8") as file:
-			file.write(f"{datetime.now()} {message}\n")
+			file.write(f"{datetime.now().astimezone()} {message}\n")
 
 
 def run_as_system(command: str) -> None:

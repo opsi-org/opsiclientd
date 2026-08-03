@@ -93,8 +93,8 @@ class TransferSlotHeartbeat(threading.Thread):
 					raise ConnectionError("TransferSlotHeartbeat lost transfer slot (and did not get new one)")
 				wait_time = max(float(response["retention"]) - RETENTION_HEARTBEAT_INTERVAL_DIFF, MIN_HEARTBEAT_INTERVAL)
 				logger.debug("Waiting %s seconds before reaquiring slot", wait_time)
-				end = datetime.now() + timedelta(seconds=wait_time)
-				while not self.should_stop and datetime.now() < end:
+				end = datetime.now().astimezone() + timedelta(seconds=wait_time)
+				while not self.should_stop and datetime.now().astimezone() < end:
 					time.sleep(1.0)
 		finally:
 			if self.slot_id:
@@ -514,7 +514,7 @@ class ConfigCacheService(threading.Thread):
 
 			self.initBackends()
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 			try:
 				self.setObsolete()
 			except Exception:
@@ -618,7 +618,7 @@ class ConfigCacheService(threading.Thread):
 							self._syncConfigFromServer()
 					time.sleep(1)
 			except Exception as error:
-				logger.error(error, exc_info=True)
+				logger.exception(error)
 			logger.notice("Config cache service ended")
 			self._running = False
 
@@ -678,7 +678,7 @@ class ConfigCacheService(threading.Thread):
 
 					logger.notice("Config synced to server")
 				except Exception as err:
-					logger.error(err, exc_info=True)
+					logger.exception(err)
 					timeline.addEvent(
 						title="Failed to sync config to server",
 						description=f"Failed to sync config to server: {err}",
@@ -805,7 +805,7 @@ class ConfigCacheService(threading.Thread):
 						for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
 							eventGenerator.createAndFireEvent()
 				except Exception as err:
-					logger.error(err, exc_info=True)
+					logger.exception(err)
 					timeline.addEvent(
 						title="Failed to sync config from server",
 						description=f"Failed to sync config from server: {err}",
@@ -821,7 +821,7 @@ class ConfigCacheService(threading.Thread):
 				state.set("config_cache_service", self._state)
 
 		except Exception as err:
-			logger.error("Errors occurred while syncing config from server: %s", err, exc_info=True)
+			logger.exception("Errors occurred while syncing config from server: %s", err)
 
 		self._working = False
 
@@ -1069,7 +1069,7 @@ class ProductCacheService(threading.Thread):
 						sleep_time = self.start_caching_or_get_waiting_time()
 					time.sleep(sleep_time)
 			except Exception as err:
-				logger.error(err, exc_info=True)
+				logger.exception(err)
 
 			logger.notice("Product cache service ended")
 			self._running = False
@@ -1311,7 +1311,7 @@ class ProductCacheService(threading.Thread):
 							try:
 								self._setProductCacheState(productId, "failure", str(err))
 							except Exception as err2:
-								logger.error(err2, exc_info=True)
+								logger.exception(err2)
 								self.last_errors.append(err2)
 
 							if isinstance(err, ProductCacheInsufficientCacheSpaceException):
@@ -1336,7 +1336,7 @@ class ProductCacheService(threading.Thread):
 								for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
 									eventGenerator.createAndFireEvent()
 		except Exception as err:
-			logger.error("Failed to cache products: %s", err, exc_info=True)
+			logger.exception("Failed to cache products: %s", err)
 			timeline.addEvent(
 				title="Failed to cache products", description=f"Failed to cache products: {err}", category="product_caching", isError=True
 			)
@@ -1599,7 +1599,7 @@ class ProductCacheService(threading.Thread):
 			self._setProductCacheState(productId, "completed", time.time())
 			self.update_cache_dir_sizes(product_id=productId, force=True)
 		except Exception as err:
-			logger.error("Failed to cache product %s: %s", productId, err, exc_info=True)
+			logger.exception("Failed to cache product %s: %s", productId, err)
 			exception = err
 			timeline.addEvent(
 				title=f"Failed to cache product {productId}",

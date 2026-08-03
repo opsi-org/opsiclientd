@@ -112,7 +112,7 @@ class LogReaderThread(threading.Thread):
 			try:
 				self.send_buffer()
 			except Exception as err:
-				logger.error("Error sending log data: %s", err, exc_info=True)
+				logger.exception("Error sending log data: %s", err)
 
 	def parse_log_line(self, line: str) -> dict[str, str | int | float | dict[int, str] | None] | None:
 		match = self.record_start_regex.match(line)
@@ -127,7 +127,7 @@ class LogReaderThread(threading.Thread):
 		opsilevel = int(match.group(1))
 		lvl = OPSI_LEVEL_TO_LEVEL[opsilevel]
 		levelname = LEVEL_TO_NAME[lvl]
-		created = datetime.datetime.strptime(match.group(2), "%Y-%m-%d %H:%M:%S.%f")
+		created = datetime.datetime.strptime(match.group(2), "%Y-%m-%d %H:%M:%S.%f").astimezone()
 		return {
 			"created": created.timestamp(),
 			"context": context,
@@ -208,7 +208,7 @@ class LogReaderThread(threading.Thread):
 							self.send_buffer_if_needed(max_delay)
 						time.sleep(self.max_delay / 3)
 		except Exception as err:
-			logger.error("Error in log reader thread: %s", err, exc_info=True)
+			logger.exception("Error in log reader thread: %s", err)
 
 
 @log_viewer_router.get("/")

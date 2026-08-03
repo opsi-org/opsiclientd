@@ -524,7 +524,7 @@ class ControlInterface(PipeControlInterface):
 			try:
 				ca_certs.append(x509.load_pem_x509_certificate(match.group(1).encode("utf-8")))
 			except Exception as err:
-				logger.error(err, exc_info=True)
+				logger.exception(err)
 
 		if ca_certs:
 			if not os.path.isdir(os.path.dirname(config.ca_cert_file)):
@@ -590,7 +590,7 @@ class ControlInterface(PipeControlInterface):
 			domain = domain.strip().upper()
 			self.opsiclientd.loginUser(domain, username, password)
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 			raise
 
 	def loginOpsiSetupUser(self, admin: bool = True, recreate_user: bool = False) -> None:
@@ -800,7 +800,7 @@ class ControlInterface(PipeControlInterface):
 				if re.search(regex, part) and not part.startswith(('"', "'")):
 					parts[index] = re.sub(regex, '"\\1"' if index == 0 else "'\\1'", part, count=1)
 		else:
-			raise ValueError(f"Invalid command {command}, must be str or list[str]")
+			raise TypeError(f"Invalid command {command}, must be str or list[str]")
 		if not parts:
 			raise ValueError(f"Invalid command {command}")
 
@@ -824,7 +824,7 @@ class ControlInterface(PipeControlInterface):
 				shell_window_style="normal",
 			)
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 			raise
 
 	def _run_process_as_opsi_setup_user(
@@ -955,7 +955,7 @@ class ControlInterface(PipeControlInterface):
 					if remove_user:
 						self.opsiclientd.cleanup_opsi_setup_user()
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 			raise
 		finally:
 			self._run_as_opsi_setup_user_lock.release()

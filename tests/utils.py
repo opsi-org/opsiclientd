@@ -86,7 +86,7 @@ class OpsiclientdTestClient(TestClient):
 	@auth.setter
 	def auth(self, auth: AuthTypes) -> None:
 		if not isinstance(auth, tuple):
-			raise ValueError("Auth type not supported")
+			raise TypeError("Auth type not supported")
 
 		self._username = str(auth[0]) if auth[0] else None
 		self._password = str(auth[1]) if auth[1] else None

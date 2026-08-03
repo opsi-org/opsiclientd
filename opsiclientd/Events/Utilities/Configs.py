@@ -289,6 +289,6 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 				pprint.pformat(eventConfigs[eventConfigId], indent=4, width=300, compact=False),
 			)
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 
 	return eventConfigs

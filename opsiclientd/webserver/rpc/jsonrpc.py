@@ -281,7 +281,7 @@ async def process_rpcs(
 				num_results = len(response.result)
 		except Exception as err:
 			is_error = True
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 			response = await process_rpc_error(err, request)
 		end = time.time()
 
@@ -326,7 +326,7 @@ async def process_request(interface: Interface, request: Request, response: Resp
 
 		request_data = await request.body()
 		if not isinstance(request_data, bytes):
-			raise ValueError("Request data must be bytes")
+			raise TypeError("Request data must be bytes")
 		if request_data:
 			if request_compression:
 				request_data = await run_in_threadpool(decompress, request_data, request_compression)
@@ -345,7 +345,7 @@ async def process_request(interface: Interface, request: Request, response: Resp
 		logger.error(err)
 		raise
 	except Exception as err:
-		logger.error(err, exc_info=True)
+		logger.exception(err)
 		results = [await process_rpc_error(err)]
 		response.status_code = 400
 

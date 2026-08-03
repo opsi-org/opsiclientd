@@ -126,6 +126,6 @@ def main() -> None:
 			result = eval(f"service_client.{rpc}")
 			print(result)
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 			print(f"Error: {err}", file=sys.stderr)
 			sys.exit(1)

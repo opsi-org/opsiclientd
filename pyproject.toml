@@ -85,7 +85,18 @@ package = true
 line-length = 140
 
 [tool.ruff.lint]
-ignore = ["E402"]
+ignore = [
+	"E402",
+	"BLE001", # blind-except: catching broad Exception is intentional in this long-running daemon
+	"N999",   # invalid-module-name: CamelCase module names are part of the established public layout
+	"S102",   # exec-builtin: exec() is a deliberate feature of the RPC control interface
+	"S110",   # try-except-pass: intentionally ignored errors
+	"TRY401", # verbose-log-message: exception text is intentionally included in log messages
+]
+
+[tool.ruff.lint.flake8-bugbear]
+# fastapi.Query is designed to be used as a default argument value
+extend-immutable-calls = ["fastapi.Query"]
 
 [tool.ruff.format]
 indent-style = "tab"

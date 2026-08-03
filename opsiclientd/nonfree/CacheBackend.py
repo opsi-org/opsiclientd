@@ -351,7 +351,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					logger.debug("Modified object appended: %s", modification)
 					logger.trace(modification["object"].to_hash())
 			except Exception as modify_error:
-				logger.error("Failed to sync backend modification %s: %s", modification, modify_error, exc_info=True)
+				logger.exception("Failed to sync backend modification %s: %s", modification, modify_error)
 				continue
 
 		logger.info("modifiedObjects: %r", {m: len(modifiedObjects[m]) for m in modifiedObjects})
@@ -738,11 +738,5 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 					new_function = exec_locals[methodName]
 					setattr(self, methodName, MethodType(new_function, self))
-				except Exception as err:
-					logger.error("Failed to create method '%s': %s", methodName, err)
-				except Exception as err:
-					logger.error("Failed to create method '%s': %s", methodName, err)
-				except Exception as err:
-					logger.error("Failed to create method '%s': %s", methodName, err)
 				except Exception as err:
 					logger.error("Failed to create method '%s': %s", methodName, err)

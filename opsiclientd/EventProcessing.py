@@ -240,7 +240,7 @@ class EventProcessingThread(threading.Thread):
 			if self._notificationServer:
 				self._notificationServer.stop()
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 
 	def stopNotificationServer(self) -> None:
 		if not self._notificationServer:
@@ -293,7 +293,7 @@ class EventProcessingThread(threading.Thread):
 				try:
 					max_size = int(float(config.get("global", "max_log_transfer_size")) * 1_000_000)
 				except ValueError as err:
-					logger.error(err, exc_info=True)
+					logger.exception(err)
 				if max_size and size > max_size:
 					file.seek(size - max_size)
 					# Read to next newline character
@@ -309,7 +309,7 @@ class EventProcessingThread(threading.Thread):
 			finally:
 				logging_config(file_level=config.get("global", "log_level"))
 		except Exception as err:
-			logger.error("Failed to write log to service: %s", err, exc_info=True)
+			logger.exception("Failed to write log to service: %s", err)
 			raise
 
 	def startNotifierApplication(
@@ -590,7 +590,7 @@ class EventProcessingThread(threading.Thread):
 				logger.error("Failed to set action processor info: %s", err)
 
 		except Exception as err:
-			logger.error("Failed to update action processor: %s", err, exc_info=True)
+			logger.exception("Failed to update action processor: %s", err)
 
 	def updateActionProcessorUnified(self, actionProcessorRemoteDir: str, actionProcessorCommonDir: str) -> None:
 		actionProcessorFilename = config.get("action_processor", "filename")
@@ -621,12 +621,13 @@ class EventProcessingThread(threading.Thread):
 					shutil.copytree(source, os.path.join(actionProcessorLocalTmpDir, common), copy_function=copy2_check_size)
 				else:
 					copy2_check_size(source, os.path.join(actionProcessorLocalTmpDir, common))
-		if RUNNING_ON_WINDOWS:
+		if RUNNING_ON_WINDOWS and (
 			# saving current opsi-script skin (set during opsi-client-agent setup with optional corporate identity)
-			if os.path.exists(os.path.join(actionProcessorLocalDir, "skin")) and os.listdir(os.path.join(actionProcessorLocalDir, "skin")):
-				if os.path.exists(os.path.join(actionProcessorLocalTmpDir, "skin")):
-					shutil.rmtree(os.path.join(actionProcessorLocalTmpDir, "skin"))
-				shutil.move(os.path.join(actionProcessorLocalDir, "skin"), os.path.join(actionProcessorLocalTmpDir, "skin"))
+			os.path.exists(os.path.join(actionProcessorLocalDir, "skin")) and os.listdir(os.path.join(actionProcessorLocalDir, "skin"))
+		):
+			if os.path.exists(os.path.join(actionProcessorLocalTmpDir, "skin")):
+				shutil.rmtree(os.path.join(actionProcessorLocalTmpDir, "skin"))
+			shutil.move(os.path.join(actionProcessorLocalDir, "skin"), os.path.join(actionProcessorLocalTmpDir, "skin"))
 
 		if not os.path.exists(os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)):
 			raise RuntimeError(f"File '{os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)}' does not exist after copy")
@@ -791,7 +792,7 @@ class EventProcessingThread(threading.Thread):
 			self.runActions(productInfo, additionalParams)
 
 		except Exception as err:
-			logger.error("Failed to process login actions: %s", err, exc_info=True)
+			logger.exception("Failed to process login actions: %s", err)
 			self.setStatusMessage(_("Failed to process login actions: %s") % to_string(err))
 
 	def processProductActionRequests(self) -> None:
@@ -1015,7 +1016,7 @@ class EventProcessingThread(threading.Thread):
 				except Exception as err:
 					logger.error(err)
 		except Exception as err:
-			logger.error("Failed to process product action requests: %s", err, exc_info=True)
+			logger.exception("Failed to process product action requests: %s", err)
 			self.setStatusMessage(_("Failed to process product action requests: %s") % str(err))
 			timeline.addEvent(
 				title="Failed to process product action requests",
@@ -1068,7 +1069,7 @@ class EventProcessingThread(threading.Thread):
 							is_windows_reboot_pending = self.opsiclientd.isWindowsRebootPending()
 							logger.info("Windows reboot pending: %s", is_windows_reboot_pending)
 						except Exception as err:
-							logger.error("Failed to get windows reboot pending status: %s", err, exc_info=True)
+							logger.exception("Failed to get windows reboot pending status: %s", err)
 
 						wait_time = float(config.get("global", "post_trusted_installer_delay"))
 						logger.info("Windows installer finished, waiting %r s for potential reboot", wait_time)
@@ -1078,7 +1079,7 @@ class EventProcessingThread(threading.Thread):
 					else:
 						logger.notice("Windows installer not running")
 				except Exception as err:
-					logger.error("Failed to get windows installer status: %s", err, exc_info=True)
+					logger.exception("Failed to get windows installer status: %s", err)
 
 			self.setStatusMessage(_("Starting actions"))
 
@@ -1104,7 +1105,7 @@ class EventProcessingThread(threading.Thread):
 			except Exception:
 				if not self.event.eventConfig.useCachedProducts:
 					raise
-				logger.error("Failed to get depotserver credentials, continuing because event uses cached products", exc_info=True)
+				logger.exception("Failed to get depotserver credentials, continuing because event uses cached products")
 				depotServerUsername = "pcpatch"
 
 			if not RUNNING_ON_WINDOWS:
@@ -1155,7 +1156,7 @@ class EventProcessingThread(threading.Thread):
 						wait=True,
 					)
 				except Exception as err:
-					logger.error("Failed to run pre action processor command: %s", err, exc_info=True)
+					logger.exception("Failed to run pre action processor command: %s", err)
 
 			# Run action processor
 			serviceSession = "none"
@@ -1408,7 +1409,7 @@ class EventProcessingThread(threading.Thread):
 							logger.info("Stopping notifier with pid %s", notifier_process.pid)
 							notifier_process.stop()
 			except Exception as err:
-				logger.error(err, exc_info=True)
+				logger.exception(err)
 
 	def abortShutdownCallback(self, choiceSubject: ChoiceSubject) -> None:
 		logger.notice("Shutdown aborted by user")
@@ -1419,8 +1420,8 @@ class EventProcessingThread(threading.Thread):
 		if match:
 			self._shutdownWarningTime = self.event.eventConfig.shutdownWarningTimeAfterTimeSelect
 			hour = int(match.group(1))
-			now = datetime.datetime.now()
-			shutdown_time = datetime.datetime.now()
+			now = datetime.datetime.now().astimezone()
+			shutdown_time = datetime.datetime.now().astimezone()
 			if now.hour > hour:
 				shutdown_time += datetime.timedelta(days=1)
 			shutdown_time = shutdown_time.replace(hour=hour, minute=0, second=0)
@@ -1523,12 +1524,14 @@ class EventProcessingThread(threading.Thread):
 									loc_products = _("Products")
 									shutdownWarningMessage += f"\n{loc_products}: {product_list}"
 							except Exception as stateErr:
-								logger.error(stateErr, exc_info=True)
+								logger.exception(stateErr)
 						self._messageSubject.setMessage(shutdownWarningMessage)
 
 						choiceSubject = ChoiceSubject(id="choice")
 
-						def set_choices_and_callbacks(choice_subject: ChoiceSubject) -> None:
+						def set_choices_and_callbacks(
+							choice_subject: ChoiceSubject, shutdown_cancel_counter: int = shutdownCancelCounter
+						) -> None:
 							choices = []
 							if reboot:
 								choices.append(_("Reboot now"))
@@ -1537,9 +1540,9 @@ class EventProcessingThread(threading.Thread):
 							callbacks = [self.startShutdownCallback]
 
 							logger.info(
-								"Shutdown cancel counter: %s/%s", shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable
+								"Shutdown cancel counter: %s/%s", shutdown_cancel_counter, self.event.eventConfig.shutdownUserCancelable
 							)
-							if shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable:
+							if shutdown_cancel_counter < self.event.eventConfig.shutdownUserCancelable:
 								if self.event.eventConfig.shutdownUserSelectableTime:
 									hour = time.localtime().tm_hour
 									while len(choices) < 24:
@@ -1629,7 +1632,7 @@ class EventProcessingThread(threading.Thread):
 										logger.info("Stopping notifier with pid %s", notifier_process.pid)
 										notifier_process.stop()
 						except Exception as err:
-							logger.error(err, exc_info=True)
+							logger.exception(err)
 
 						self._messageSubject.setMessage("")
 
@@ -1668,7 +1671,9 @@ class EventProcessingThread(threading.Thread):
 									f" (max: {self.event.eventConfig.shutdownUserCancelable})."
 								)
 								if self._shutdownWarningRepetitionTime >= 0:
-									rep_at = datetime.datetime.now() + datetime.timedelta(seconds=self._shutdownWarningRepetitionTime)
+									rep_at = datetime.datetime.now().astimezone() + datetime.timedelta(
+										seconds=self._shutdownWarningRepetitionTime
+									)
 									message += (
 										f" Shutdown warning will be repeated in {self._shutdownWarningRepetitionTime:.0f}"
 										f" seconds at {rep_at.strftime('%H:%M:%S')}"
@@ -1680,7 +1685,9 @@ class EventProcessingThread(threading.Thread):
 								)
 
 							if self._shutdownWarningRepetitionTime >= 0:
-								rep_at = datetime.datetime.now() + datetime.timedelta(seconds=self._shutdownWarningRepetitionTime)
+								rep_at = datetime.datetime.now().astimezone() + datetime.timedelta(
+									seconds=self._shutdownWarningRepetitionTime
+								)
 								logger.info(
 									"Shutdown warning will be repeated in %d seconds at %s",
 									self._shutdownWarningRepetitionTime,
@@ -1705,7 +1712,7 @@ class EventProcessingThread(threading.Thread):
 		except EventProcessingCanceled:
 			raise
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 
 	def inWorkingWindow(self) -> bool:
 		start_str, end_str, now = (None, None, None)
@@ -1714,7 +1721,7 @@ class EventProcessingThread(threading.Thread):
 			start_str, end_str = self.event.eventConfig.workingWindow.split("-")
 			start = datetime.time(int(start_str.split(":")[0]), int(start_str.split(":")[1]))
 			end = datetime.time(int(end_str.split(":")[0]), int(end_str.split(":")[1]))
-			now = datetime.datetime.now().time()
+			now = datetime.datetime.now().astimezone().time()
 
 			logger.debug("Working window configuration: start=%s, end=%s, now=%s", start, end, now)
 
@@ -1733,7 +1740,7 @@ class EventProcessingThread(threading.Thread):
 			return False
 
 		except Exception as err:
-			logger.error("Working window processing failed (start=%s, end=%s, now=%s): %s", start_str, end_str, now, err, exc_info=True)
+			logger.exception("Working window processing failed (start=%s, end=%s, now=%s): %s", start_str, end_str, now, err)
 			return True
 
 	def cache_products(self, wait_for_ending: bool = False, fire_sync_completed_event: bool = True) -> None:
@@ -1763,7 +1770,7 @@ class EventProcessingThread(threading.Thread):
 				self._currentProgressSubjectProxy.reset()
 				self._overallProgressSubjectProxy.reset()
 			except Exception as err:
-				logger.error(err, exc_info=True)
+				logger.exception(err)
 
 	def sync_config(self, wait_for_ending: bool = False) -> None:
 		assert self.opsiclientd
@@ -1992,7 +1999,7 @@ class EventProcessingThread(threading.Thread):
 						try:
 							self.writeLogToService()
 						except Exception as err:
-							logger.error(err, exc_info=True)
+							logger.exception(err)
 
 					self.permanent_service_connection.set_temporary_service_url(None)
 
@@ -2039,7 +2046,7 @@ class EventProcessingThread(threading.Thread):
 					isError=True,
 				)
 			except Exception as err:
-				logger.error("Failed to process event %s: %s", self.event, err, exc_info=True)
+				logger.exception("Failed to process event %s: %s", self.event, err)
 				timeline.addEvent(
 					title=f"Failed to process event {self.event.eventConfig.getName()}",
 					description=f"Failed to process event {self.event} ({self.name}): {err}",

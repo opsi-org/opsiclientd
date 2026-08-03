@@ -98,7 +98,7 @@ class OpsiclientdNT(Opsiclientd):
 				timeout=20,
 			)
 		except Exception as err:
-			logger.error("Failed to suspend bitlocker: %s", err, exc_info=True)
+			logger.exception("Failed to suspend bitlocker: %s", err)
 
 	def rebootMachine(self, waitSeconds: int = 3) -> None:
 		if sys.platform != "win32":

@@ -127,7 +127,7 @@ def main() -> None:
 			opsiclientd.join(60)
 			logger.debug("Stopped")
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 		finally:
 			if options.pidFile:
 				logger.debug("Removing PID file")

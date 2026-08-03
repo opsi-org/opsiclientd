@@ -104,29 +104,29 @@ def test_max_authentication_failures(test_client: OpsiclientdTestClient) -> None
 	with (
 		patch("opsiclientd.webserver.application.middleware.CLIENT_BLOCK_TIME", client_block_time),
 		patch("opsiclientd.webserver.application.middleware.BaseMiddleware._max_authentication_failures", max_authentication_failures),
+		test_client as client,
 	):
-		with test_client as client:
-			max_authentication_failures = 3
-			auth = ("", "12345678901234567890123456789012")
-			headers = {"x-forwarded-for": "2.2.2.2"}
-			for _ in range(max_authentication_failures):
-				response = client.get("/", auth=auth, headers=headers)
-				assert response.status_code == 401
-				assert "Authentication error" in response.text
-
-			response = client.get("/", auth=auth, headers=headers)
-			assert response.status_code == 403
-			assert response.text == "Client '1.2.3.4' is blocked"
-
-			response = client.get("/", auth=auth, headers=headers)
-			assert response.status_code == 403
-			assert response.text == "Client '1.2.3.4' is blocked"
-
-			time.sleep(client_block_time + 1)
-
+		max_authentication_failures = 3
+		auth = ("", "12345678901234567890123456789012")
+		headers = {"x-forwarded-for": "2.2.2.2"}
+		for _ in range(max_authentication_failures):
 			response = client.get("/", auth=auth, headers=headers)
 			assert response.status_code == 401
 			assert "Authentication error" in response.text
+
+		response = client.get("/", auth=auth, headers=headers)
+		assert response.status_code == 403
+		assert response.text == "Client '1.2.3.4' is blocked"
+
+		response = client.get("/", auth=auth, headers=headers)
+		assert response.status_code == 403
+		assert response.text == "Client '1.2.3.4' is blocked"
+
+		time.sleep(client_block_time + 1)
+
+		response = client.get("/", auth=auth, headers=headers)
+		assert response.status_code == 401
+		assert "Authentication error" in response.text
 
 
 def test_auth_proxy(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa

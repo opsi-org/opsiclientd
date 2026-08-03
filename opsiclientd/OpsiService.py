@@ -17,7 +17,6 @@ import time
 import traceback
 from datetime import UTC, datetime
 from pathlib import Path
-from traceback import TracebackException
 from types import TracebackType
 from typing import TYPE_CHECKING, Self, cast
 from urllib.parse import urlparse
@@ -91,7 +90,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 		try:
 			ca_certs.append(x509.load_pem_x509_certificate(match.group(1).encode("utf-8")))
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 	if not ca_certs:
 		return
 
@@ -154,7 +153,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 					)
 					del_cas.append(stored_ca)
 		except Exception as err:
-			logger.error("Failed to load CAs '%s' from system cert store: %s", subject_name, err, exc_info=True)
+			logger.exception("Failed to load CAs '%s' from system cert store: %s", subject_name, err)
 
 		for del_ca in del_cas:
 			del_ca_fingerprint = del_ca.fingerprint(hashes.SHA1()).hex().upper()
@@ -163,7 +162,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 				if remove_ca(subject_name, del_ca_fingerprint):
 					logger.debug("CA '%s' (%s) successfully removed from system cert store", subject_name, del_ca_fingerprint)
 			except Exception as err:
-				logger.error("Failed to remove CA '%s' from system cert store: %s", subject_name, err, exc_info=True)
+				logger.exception("Failed to remove CA '%s' from system cert store: %s", subject_name, err)
 
 		if add_ca:
 			logger.debug("Installing CA '%s' (%s) into system cert store", subject_name, ca_cert_fingerprint)
@@ -171,9 +170,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 				install_ca(ca_cert)
 				logger.debug("CA '%s' (%s) successfully installed into system cert store", subject_name, ca_cert_fingerprint)
 			except Exception as err:
-				logger.error(
-					"Failed to install CA '%s' (%s) into system cert store: %s", subject_name, ca_cert_fingerprint, err, exc_info=True
-				)
+				logger.exception("Failed to install CA '%s' (%s) into system cert store: %s", subject_name, ca_cert_fingerprint, err)
 
 
 def get_service_client(address: str | list[str] | None = None, connect_timeout: float = 10.0) -> ServiceClient:
@@ -303,7 +300,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 				self._loop.run_until_complete(self._arun())
 				self._loop.close()
 			except Exception as err:
-				logger.error(err, exc_info=True)
+				logger.exception(err)
 			self.running = False
 
 	def stop(self) -> None:
@@ -319,7 +316,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self.start()
 		return self
 
-	def __exit__(self, exc_type: Exception, exc_value: TracebackException, exc_traceback: TracebackType) -> None:
+	def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, exc_traceback: TracebackType | None) -> None:
 		self.stop()
 
 	def connection_open(self, service_client: ServiceClient) -> None:
@@ -369,7 +366,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			try:
 				update_os_ca_store(allow_remove=True)
 			except Exception as err:
-				logger.error("Failed to update CA store: %s", err, exc_info=True)
+				logger.exception("Failed to update CA store: %s", err)
 
 			self.update_host_id()
 
@@ -399,7 +396,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					else:
 						logger.info("Permanent connection disabled in config")
 			except Exception as err:
-				logger.error(err, exc_info=True)
+				logger.exception(err)
 
 	def connection_closed(self, service_client: ServiceClient) -> None:
 		logger.notice("Connection to opsi service %s closed", service_client.base_url)
@@ -427,7 +424,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		try:
 			asyncio.run_coroutine_threadsafe(self._process_message(message), self._loop).result()
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 			response = GeneralErrorMessage(
 				sender="@",
 				channel=message.response_channel,

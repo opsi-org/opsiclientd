@@ -44,7 +44,7 @@ def opsiclientd() -> None:
 	if platform.system().lower() == "windows":
 		if STARTUP_LOG and os.path.isdir(os.path.dirname(STARTUP_LOG)):
 			with open(STARTUP_LOG, "w", encoding="utf-8") as file:
-				file.write(f"{datetime.now()} opsiclientd startup\n")
+				file.write(f"{datetime.now().astimezone()} opsiclientd startup\n")
 		from opsiclientd.windows.main import main as _main
 	elif platform.system().lower() in ("linux", "darwin"):
 		from opsiclientd.posix.main import main as _main

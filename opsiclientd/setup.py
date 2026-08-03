@@ -88,8 +88,8 @@ def setup_ssl(full: bool = False) -> None:
 		try:
 			with open(cert_file, "rb") as file:
 				srv_crt = x509.load_pem_x509_certificate(file.read())
-				enddate = srv_crt.not_valid_after_utc.replace(tzinfo=None)
-				diff = (enddate - datetime.datetime.now()).days
+				enddate = srv_crt.not_valid_after_utc
+				diff = (enddate - datetime.datetime.now(tz=datetime.UTC)).days
 				cert_server_cn = srv_crt.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[-1].value
 				logger.info("Server cert '%s' will expire in %d days", server_cn, diff)
 				if diff <= CERT_RENEW_DAYS:
@@ -108,7 +108,7 @@ def setup_ssl(full: bool = False) -> None:
 					loaded_key = load_pem_private_key(file.read(), password=None)
 					logger.info("Server key type: %s, %d bits", loaded_key.__class__.__name__, getattr(loaded_key, "key_size", 0))
 					if not isinstance(loaded_key, RSAPrivateKey):
-						raise ValueError(f"Invalid key type: {loaded_key.__class__.__name__}, needing new cert")
+						raise TypeError(f"Invalid key type: {loaded_key.__class__.__name__}, needing new cert")
 					if loaded_key.key_size < 2048:
 						raise ValueError(f"Server key is only {loaded_key.key_size} bits long, needing new cert")
 					srv_key = loaded_key
@@ -356,7 +356,7 @@ def opsi_service_setup(options: Namespace) -> None:
 			break
 		except Exception as exc:
 			if monotonic() - start >= service_timeout:
-				logger.error("Failed to connect to service within timeout of %d seconds: %s", service_timeout, exc, exc_info=True)
+				logger.exception("Failed to connect to service within timeout of %d seconds: %s", service_timeout, exc)
 				raise RuntimeError(f"Failed to connect to service within timeout of {service_timeout} seconds: {exc}") from exc
 
 			logger.warning("Failed to connect to service: %s, retrying in 5 seconds", exc)
@@ -370,7 +370,7 @@ def opsi_service_setup(options: Namespace) -> None:
 	try:
 		update_os_ca_store(allow_remove=False)
 	except Exception as err:
-		logger.error(err, exc_info=True)
+		logger.exception(err)
 
 	try:
 		clients = service_client.host_getObjects(id=config.get("global", "host_id"))  # ty: ignore[unresolved-attribute]
@@ -387,7 +387,7 @@ def opsi_service_setup(options: Namespace) -> None:
 						clients[0].systemUUID = system_uuid
 						service_client.host_updateObjects(clients)  # ty: ignore[unresolved-attribute]
 			except Exception as err:
-				logger.error("Failed to update systemUUID: %s", err, exc_info=True)
+				logger.exception("Failed to update systemUUID: %s", err)
 
 		config.getFromService(service_client)
 		config.updateConfigFile(force=True)
@@ -581,49 +581,49 @@ def setup(full: bool = False, options: Namespace | None = None) -> None:
 		try:
 			install_service()
 		except Exception as err:
-			logger.error("Failed to install service: %s", err, exc_info=True)
+			logger.exception("Failed to install service: %s", err)
 			errors.append(str(err))
 
 	try:
 		setup_ssl(full)
 	except Exception as err:
-		logger.error("Failed to setup ssl: %s", err, exc_info=True)
+		logger.exception("Failed to setup ssl: %s", err)
 		errors.append(str(err))
 
 	try:
 		cleanup_registry_uninstall()
 	except Exception as err:
-		logger.error("Failed to clean cleanup_registry_uninstall: %s", err, exc_info=True)
+		logger.exception("Failed to clean cleanup_registry_uninstall: %s", err)
 		errors.append(str(err))
 
 	if not config.get("control_server", "skip_setup_firewall"):
 		try:
 			setup_firewall()
 		except Exception as err:
-			logger.error("Failed to setup firewall: %s", err, exc_info=True)
+			logger.exception("Failed to setup firewall: %s", err)
 			errors.append(str(err))
 
 	try:
 		setup_system()
 	except Exception as err:
-		logger.error("Failed to setup system: %s", err, exc_info=True)
+		logger.exception("Failed to setup system: %s", err)
 		errors.append(str(err))
 
 	try:
 		setup_on_shutdown()
 	except Exception as err:
-		logger.error("Failed to setup on_shutdown: %s", err, exc_info=True)
+		logger.exception("Failed to setup on_shutdown: %s", err)
 		errors.append(str(err))
 
 	try:
 		cleanup_control_server_files()
 	except Exception as err:
-		logger.error("Failed to clean control server files: %s", err, exc_info=True)
+		logger.exception("Failed to clean control server files: %s", err)
 
 	try:
 		cleanup_registry_environment_path()
 	except Exception as err:
-		logger.error("Failed to clean registry environment PATH: %s", err, exc_info=True)
+		logger.exception("Failed to clean registry environment PATH: %s", err)
 
 	logger.notice("Setup completed with %d errors", len(errors))
 	if errors and full:

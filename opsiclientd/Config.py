@@ -14,7 +14,7 @@ import os
 import platform
 import sys
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, Self, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, cast
 from urllib.parse import urlparse
 
 import netifaces  # ty: ignore[unresolved-import]
@@ -99,7 +99,7 @@ class NoConfigOptionFoundException(ValueError):
 class Config:
 	_instance: Config | None = None
 
-	WINDOWS_DEFAULT_PATHS = {
+	WINDOWS_DEFAULT_PATHS: ClassVar[dict[str, dict[str, str]]] = {
 		"global": {
 			"tmp_dir": "c:\\opsi.org\\tmp",
 			"log_dir": "c:\\opsi.org\\log",
@@ -111,7 +111,7 @@ class Config:
 		"control_server": {"files_dir": "c:\\opsi.org\\opsi-client-agent\\files"},
 	}
 
-	LINUX_DEFAULT_PATHS = {
+	LINUX_DEFAULT_PATHS: ClassVar[dict[str, dict[str, str]]] = {
 		"global": {
 			"tmp_dir": "/tmp",
 			"log_dir": "/var/log/opsi-client-agent",
@@ -130,7 +130,7 @@ class Config:
 		"depot_server": {"drive": "/media/opsi_depot"},
 	}
 
-	MACOS_DEFAULT_PATHS = {
+	MACOS_DEFAULT_PATHS: ClassVar[dict[str, dict[str, str]]] = {
 		"global": {
 			"tmp_dir": "/tmp",
 			"log_dir": "/var/log/opsi-client-agent",
@@ -472,10 +472,9 @@ class Config:
 			logger.warning("Refusing to set empty value config %s.%s", section, option)
 			return
 
-		if section == "depot_server" and option == "drive":
-			if (RUNNING_ON_LINUX or RUNNING_ON_DARWIN) and not value.startswith("/"):
-				logger.warning("Refusing to set %s.%s to '%s' on posix", section, option, value)
-				return
+		if section == "depot_server" and option == "drive" and (RUNNING_ON_LINUX or RUNNING_ON_DARWIN) and not value.startswith("/"):
+			logger.warning("Refusing to set %s.%s to '%s' on posix", section, option, value)
+			return
 
 		# Preprocess values, convert to correct type
 		if option in ("exclude_product_group_ids", "include_product_group_ids", "alt_ids", "interface"):
@@ -582,7 +581,7 @@ class Config:
 		except Exception as err:
 			# An error occured while trying to read the config file
 			logger.error("Failed to read config file '%s': %s", self.get("global", "config_file"), err)
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 			return
 
 		if not self.get("depot_server", "master_depot_id"):
@@ -657,7 +656,7 @@ class Config:
 				logger.info("No need to write config file '%s', config file is up to date", self.get("global", "config_file"))
 		except Exception as err:
 			# An error occured while trying to write the config file
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 			logger.error("Failed to write config file '%s': %s", self.get("global", "config_file"), err)
 
 	def setTemporaryDepotDrive(self, temporaryDepotDrive: str | None) -> None:
@@ -819,7 +818,7 @@ class Config:
 					if not selectedDepot:
 						selectedDepot = masterDepot
 				except Exception as err:
-					logger.error("Failed to select depot: %s", err, exc_info=True)
+					logger.exception("Failed to select depot: %s", err)
 			else:
 				logger.info("No alternative depot for products: %s", productIds)
 

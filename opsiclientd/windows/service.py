@@ -48,7 +48,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			socket.setdefaulttimeout(60)
 			logger.debug("OpsiclientdService initiated")
 		except Exception as err:
-			logger.error(err, exc_info=True)
+			logger.exception(err)
 			raise
 
 	def GetAcceptedControls(self) -> int:
