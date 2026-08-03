@@ -447,9 +447,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._gui_waiter = None
 
 	@contextmanager
-	def runCacheService(
-		self, allow_fail: bool = True
-	) -> Generator[CacheService | None]:  # not typing here for speedup (costly import)
+	def runCacheService(self, allow_fail: bool = True) -> Generator[CacheService | None]:  # not typing here for speedup (costly import)
 		self._cacheService = None
 		yielded = False
 		try:

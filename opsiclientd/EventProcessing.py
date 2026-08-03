@@ -927,9 +927,7 @@ class EventProcessingThread(threading.Thread):
 					if cache_service.productCacheCompleted(self.service_client, productIds):
 						logger.notice("Event '%s' uses cached products and product caching is done", self.event.eventConfig.getId())
 					else:
-						raise RuntimeError(
-							f"Event '{self.event.eventConfig.getId()}' uses cached products but product caching is not done"
-						)
+						raise RuntimeError(f"Event '{self.event.eventConfig.getId()}' uses cached products but product caching is not done")
 
 				param_prefix = "/" if RUNNING_ON_WINDOWS else "-"
 				add_params = []

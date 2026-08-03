@@ -7,7 +7,6 @@
 test_exceptions
 """
 
-
 import pytest
 
 from opsiclientd.Exceptions import OpsiclientdError

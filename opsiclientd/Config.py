@@ -928,9 +928,7 @@ class Config:
 				# Is set here so that the configs can be overwritten
 				self.setSmartCacheActive(False)
 
-		if (
-			config_states.get("clientconfig.smart_cache.sync_completed_action")
-		):
+		if config_states.get("clientconfig.smart_cache.sync_completed_action"):
 			val = config_states["clientconfig.smart_cache.sync_completed_action"][0]
 			if val in ("none", "process", "reboot"):
 				smart_cache_sync_completed_action = val
