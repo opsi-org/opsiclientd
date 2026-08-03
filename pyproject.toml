@@ -1,6 +1,6 @@
 [project]
 name = "opsiclientd"
-version = "4.3.22.7"
+version = "4.3.23.0"
 description = "opsiclientd. The service running on opsi clients."
 readme = "README.md"
 license = "AGPL-3.0-only"
