@@ -11,8 +11,9 @@ opsiclientd.nonfree.DepotSync
 import os
 import shutil
 import threading
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 from opsi.crypt.hash import hash_file
 from opsi.logging import get_logger
@@ -134,9 +135,8 @@ class DepotToLocalDirectorySynchronizer:
 							os.remove(partialEndFile)
 						self._sourceDepot.download(sourcePath, partialEndFile, startByteNumber=localSize, pauseEvent=self._continue_event)
 
-						with open(destinationPath, "ab") as f1:
-							with open(partialEndFile, "rb") as f2:
-								shutil.copyfileobj(f2, f1)
+						with open(destinationPath, "ab") as f1, open(partialEndFile, "rb") as f2:
+							shutil.copyfileobj(f2, f1)
 
 						md5s = hash_file(Path(destinationPath), "md5")
 						if md5s != self._fileInfo[relSource].md5sum:
@@ -156,9 +156,8 @@ class DepotToLocalDirectorySynchronizer:
 								pauseEvent=self._continue_event,
 							)
 
-							with open(partialStartFile, "ab") as f1:
-								with open(partialEndFile, "rb") as f2:
-									shutil.copyfileobj(f2, f1)
+							with open(partialStartFile, "ab") as f1, open(partialEndFile, "rb") as f2:
+								shutil.copyfileobj(f2, f1)
 
 							if os.path.exists(destinationPath):
 								os.remove(destinationPath)
@@ -263,10 +262,8 @@ class DepotToLocalDirectorySynchronizer:
 
 					with chdir(product_destination_directory):
 						if os.name == "nt":
-							if linkSource.startswith("/"):
-								linkSource = linkSource[1:]
-							if linkDestination.startswith("/"):
-								linkDestination = linkDestination[1:]
+							linkSource = linkSource.removeprefix("/")
+							linkDestination = linkDestination.removeprefix("/")
 							linkSource = os.path.join(
 								str(product_destination_directory),
 								linkSource.replace("/", "\\"),

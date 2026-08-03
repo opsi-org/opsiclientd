@@ -7,7 +7,6 @@
 test_exceptions
 """
 
-from typing import Type
 
 import pytest
 
@@ -16,7 +15,7 @@ from opsiclientd.Exceptions import OpsiclientdError
 
 @pytest.mark.parametrize("testClass", [OpsiclientdError])
 @pytest.mark.parametrize("errorMessage", [None, "Something failed."])
-def testGivingMessages(testClass: Type[OpsiclientdError], errorMessage: str | None) -> None:
+def testGivingMessages(testClass: type[OpsiclientdError], errorMessage: str | None) -> None:
 	if errorMessage:
 		error = testClass(errorMessage)
 	else:

@@ -10,19 +10,18 @@ application.middelware
 import base64
 import uuid
 from collections import namedtuple
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from ipaddress import IPv6Address, ip_address
 from time import time
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
-from opsi_legacy.Backend.Manager.Authentication import AuthenticationModule
 from opsi.exception import BackendAuthenticationError, BackendPermissionDeniedError
-from opsi.logging import get_logger, secret_filter
-from opsi.logging import TRACE
+from opsi.logging import TRACE, get_logger, secret_filter
 from opsi.system.info import is_linux, is_windows
 from opsi.time import unix_timestamp
+from opsi_legacy.Backend.Manager.Authentication import AuthenticationModule
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import Headers, MutableHeaders
 from starlette.types import Message, Receive, Scope, Send
@@ -65,7 +64,7 @@ def get_server_date() -> tuple[str, str]:
 		server_date = (
 			now,
 			str(now),
-			datetime.fromtimestamp(now, timezone.utc).strftime("%a, %d %b %Y %H:%M:%S %Z"),
+			datetime.fromtimestamp(now, UTC).strftime("%a, %d %b %Y %H:%M:%S %Z"),
 		)
 	return server_date[1], server_date[2]
 
@@ -273,7 +272,6 @@ class BaseMiddleware:
 							origin_address = f"{origin_address}:{origin.port}"
 				except Exception as error:
 					logger.debug("Exception in origin handling: %s", error)
-					pass
 				# unfortunately we cannot set multiple origins here
 				# see https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS/Errors/CORSMultipleAllowOriginNotAllowed
 				# but we can set acao to the incoming origin address

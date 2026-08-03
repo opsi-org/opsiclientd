@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import mock_open, patch
@@ -144,9 +144,8 @@ def test_log_viewer_auth(test_client: OpsiclientdTestClient, opsiclientd_auth: t
 		response = client.get("/log_viewer", headers={"x-forwarded-for": "127.0.0.1"})
 		assert response.status_code == 401
 
-		with pytest.raises(WebSocketDisconnect) as exc_info:
-			with client.websocket_connect("/log_viewer/ws"):
-				pass
+		with pytest.raises(WebSocketDisconnect) as exc_info, client.websocket_connect("/log_viewer/ws"):
+			pass
 		assert exc_info.value.code == 1008
 		assert exc_info.value.reason == "Authorization header missing"
 
@@ -182,8 +181,8 @@ def test_headers(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str
 
 		server_date = response.headers["date"]
 		assert server_date.endswith(" UTC")
-		server_dt = datetime.strptime(server_date, "%a, %d %b %Y %H:%M:%S %Z").replace(tzinfo=timezone.utc)
-		now = datetime.now(tz=timezone.utc)
+		server_dt = datetime.strptime(server_date, "%a, %d %b %Y %H:%M:%S %Z").replace(tzinfo=UTC)
+		now = datetime.now(tz=UTC)
 		assert abs((now - server_dt).total_seconds()) < 2
 
 		server_timestamp = int(response.headers["x-date-unix-timestamp"])
@@ -193,7 +192,7 @@ def test_headers(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str
 
 		res = test_client.get("/")
 		server_date = res.headers["date"]
-		server_dt = datetime.strptime(server_date, "%a, %d %b %Y %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+		server_dt = datetime.strptime(server_date, "%a, %d %b %Y %H:%M:%S %Z").replace(tzinfo=UTC)
 		assert now < server_dt
 
 		response = client.get("/rpc")
@@ -234,8 +233,8 @@ def test_concurrency(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) ->
 	def run_rpc(rpc: dict[str, Any]) -> None:
 		thread = threading.current_thread()
 		res = requests.post(f"{opsiclientd_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
-		setattr(thread, "status_code", res.status_code)
-		setattr(thread, "response", res.json())
+		thread.status_code = res.status_code
+		thread.response = res.json()
 
 	threads = []
 	for rpc in rpcs:
@@ -245,8 +244,8 @@ def test_concurrency(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) ->
 
 	for thread in threads:
 		thread.join()
-		assert getattr(thread, "status_code") == 200
-		response = getattr(thread, "response")
+		assert thread.status_code == 200
+		response = thread.response
 		if response["id"] == 3:
 			assert response["error"] is not None
 		else:
@@ -260,8 +259,7 @@ def test_log_reader_start_position(tmp_path: Path) -> None:
 	for num_tail_records in (5, 10, 19, 20, 21):
 		log_file = tmp_path / "opsiclientd.log"
 		with open(log_file, "w", encoding="utf-8", errors="replace") as file:
-			for idx in range(log_lines):
-				file.write(f"[5] [2021-01-02 11:12:13.456] [opsiclientd] log line {idx + 1}   (opsiclientd.py:123)\n")
+			file.writelines(f"[5] [2021-01-02 11:12:13.456] [opsiclientd] log line {idx + 1}   (opsiclientd.py:123)\n" for idx in range(log_lines))
 
 		lrt = LogReaderThread(filename=log_file, loop=None, websocket=None, num_tail_records=num_tail_records)  # ty: ignore
 		start_position = lrt._get_start_position()
@@ -292,29 +290,28 @@ def test_cache_service_interface(default_config: Config, tmp_path: Path) -> None
 def test_cache_service_jsonrpc(default_config: Config, tmp_path: Path, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
 	default_config.set("cache_service", "extension_config_dir", str(tmp_path))
 	ocd = Opsiclientd()
-	with ocd.runCacheService(allow_fail=False):
-		with get_test_client(ocd) as client:
-			with pytest.raises(HTTPStatusError, match="401 Unauthorized"):
-				client.jsonrpc20(path="/rpc", method="backend_info", params=[], id=1)
+	with ocd.runCacheService(allow_fail=False), get_test_client(ocd) as client:
+		with pytest.raises(HTTPStatusError, match="401 Unauthorized"):
+			client.jsonrpc20(path="/rpc", method="backend_info", params=[], id=1)
 
-			client.auth = opsiclientd_auth
-			pocs = [
-				ProductOnClient(productId="product1", productType="LocalbootProduct", clientId="client1.opsi.test"),
-				ProductOnClient(productId="product2", productType="LocalbootProduct", clientId="client1.opsi.test"),
-			]
-			start = time.time()
-			for rpc_id in range(9, 21):
-				client.jsonrpc20(path="/rpc", method="productOnClient_createObjects", params=[serialize(pocs)], id=rpc_id)
-			duration = time.time() - start
-			print(f"Duration: {duration:.2f} seconds")
-			assert duration < 3
+		client.auth = opsiclientd_auth
+		pocs = [
+			ProductOnClient(productId="product1", productType="LocalbootProduct", clientId="client1.opsi.test"),
+			ProductOnClient(productId="product2", productType="LocalbootProduct", clientId="client1.opsi.test"),
+		]
+		start = time.time()
+		for rpc_id in range(9, 21):
+			client.jsonrpc20(path="/rpc", method="productOnClient_createObjects", params=[serialize(pocs)], id=rpc_id)
+		duration = time.time() - start
+		print(f"Duration: {duration:.2f} seconds")
+		assert duration < 3
 
-			response = client.jsonrpc20(path="/rpc", method="productOnClient_generateSequence", params=[serialize(pocs)], id=101)
-			print(response)
-			assert "error" not in response
-			assert response["id"] == 101
+		response = client.jsonrpc20(path="/rpc", method="productOnClient_generateSequence", params=[serialize(pocs)], id=101)
+		print(response)
+		assert "error" not in response
+		assert response["id"] == 101
 
-			response = client.jsonrpc20(path="/rpc", method="productOnClient_getObjectsWithSequence", params=[], id=102)
+		response = client.jsonrpc20(path="/rpc", method="productOnClient_getObjectsWithSequence", params=[], id=102)
 
 
 def test_upload(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
@@ -325,13 +322,12 @@ def test_upload(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str,
 		nonlocal data_received
 		data_received = Path(filename).read_bytes()
 
-	with patch("opsiclientd.Opsiclientd.Opsiclientd.self_update_from_file", self_update_from_file):
-		with test_client as client:
-			test_client.auth = opsiclientd_auth
-			response = client.post("/upload/update/opsiclientd", files={"file": ("opsiclientd.tar.gz", data)})
-			assert response.status_code == 200
-			assert response.text == '"ok"'
-			assert data == data_received
+	with patch("opsiclientd.Opsiclientd.Opsiclientd.self_update_from_file", self_update_from_file), test_client as client:
+		test_client.auth = opsiclientd_auth
+		response = client.post("/upload/update/opsiclientd", files={"file": ("opsiclientd.tar.gz", data)})
+		assert response.status_code == 200
+		assert response.text == '"ok"'
+		assert data == data_received
 
 
 def test_download(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
@@ -367,30 +363,28 @@ def test_download(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[st
 
 def test_run_opsiscript_content(opsiclientd_auth: tuple[str, str]) -> None:  # noqa
 	ocd = Opsiclientd()
-	with ocd.runCacheService(allow_fail=False):
-		with get_test_client(ocd) as client:
-			with pytest.raises(HTTPStatusError, match="401 Unauthorized"):
-				client.jsonrpc20(path="/opsiclientd", method="backend_info", params=[], id=1)
+	with ocd.runCacheService(allow_fail=False), get_test_client(ocd) as client:
+		with pytest.raises(HTTPStatusError, match="401 Unauthorized"):
+			client.jsonrpc20(path="/opsiclientd", method="backend_info", params=[], id=1)
 
-			client.auth = opsiclientd_auth
-			params = {
-				"script_content": '[Actions]\\nMessage \\"Hello, World!\\"\\nMessage \\"This is a multi-line opsi script.\\"',
-			}
+		client.auth = opsiclientd_auth
+		params = {
+			"script_content": '[Actions]\\nMessage \\"Hello, World!\\"\\nMessage \\"This is a multi-line opsi script.\\"',
+		}
 
-			class MockProcess:
-				exit_code = 0
+		class MockProcess:
+			exit_code = 0
 
-				def get_stdout_text(self) -> str:
-					return "Mocked stdout"
+			def get_stdout_text(self) -> str:
+				return "Mocked stdout"
 
-				def get_stderr_text(self) -> str:
-					return "Mocked stderr"
+			def get_stderr_text(self) -> str:
+				return "Mocked stderr"
 
-			with use_logging_config(stderr_level=LOG_INFO):
-				with (
-					patch("opsiclientd.webserver.rpc.control.run_command", return_value=MockProcess()),
-					patch("builtins.open", mock_open(read_data="[1] Mocked log content")),
-				):
-					response = client.jsonrpc20(path="/opsiclientd", method="runOpsiScriptContent", params=params, id=2)
-			assert "error" not in response
-			assert response["id"] == 2
+		with (
+			use_logging_config(stderr_level=LOG_INFO), patch("opsiclientd.webserver.rpc.control.run_command", return_value=MockProcess()),
+			patch("builtins.open", mock_open(read_data="[1] Mocked log content")),
+		):
+			response = client.jsonrpc20(path="/opsiclientd", method="runOpsiScriptContent", params=params, id=2)
+		assert "error" not in response
+		assert response["id"] == 2

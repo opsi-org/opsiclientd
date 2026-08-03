@@ -6,7 +6,7 @@
 import asyncio
 import threading
 import time
-from typing import Callable
+from collections.abc import Callable
 
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
@@ -122,7 +122,7 @@ class TerminalReaderThread(threading.Thread):
 				time.sleep(0.001)
 			# except socket.timeout:
 			# continue
-			except (IOError, EOFError) as err:
+			except (OSError, EOFError) as err:
 				logger.debug(err)
 				break
 			except Exception as err:

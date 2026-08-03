@@ -9,8 +9,9 @@ opsiclientd.windows
 
 import threading
 import time
+from collections.abc import Callable
 from types import ModuleType
-from typing import Any, Callable
+from typing import Any
 
 import win32com.client
 import win32com.server.policy

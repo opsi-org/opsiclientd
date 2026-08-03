@@ -319,7 +319,7 @@ class Config:
 		else:
 			logger.notice("Reading restart marker")
 			with open(self.restart_marker, "r", encoding="utf-8") as file:
-				for line in file.readlines():
+				for line in file:
 					line = line.strip()
 					if line.startswith("#") or "=" not in line:
 						continue
@@ -923,7 +923,7 @@ class Config:
 
 		smart_cache: bool | None = None
 		smart_cache_sync_completed_action = "none"
-		if "clientconfig.smart_cache" in config_states and config_states["clientconfig.smart_cache"]:
+		if config_states.get("clientconfig.smart_cache"):
 			smart_cache = bool(config_states["clientconfig.smart_cache"][0])
 			logger.info("SmartCache WAN is set to %s", smart_cache)
 			if smart_cache is False:
@@ -932,8 +932,7 @@ class Config:
 				self.setSmartCacheActive(False)
 
 		if (
-			"clientconfig.smart_cache.sync_completed_action" in config_states
-			and config_states["clientconfig.smart_cache.sync_completed_action"]
+			config_states.get("clientconfig.smart_cache.sync_completed_action")
 		):
 			val = config_states["clientconfig.smart_cache.sync_completed_action"][0]
 			if val in ("none", "process", "reboot"):

@@ -10,7 +10,7 @@ Functions to create, reconfigure and get event generators.
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING
 
 from opsi.logging import get_logger
 from opsi.opsi.service.model.type import to_string
@@ -120,14 +120,13 @@ def createEventGenerators(opsiclientd: Opsiclientd) -> None:
 		for eventConfigId, mainEventConfigId in event_types.get("gui startup", []):
 			logger.notice("Disabling event '%s' because 'daemon startup' is enabled", eventConfigId)
 			enabled_events[eventConfigId] = False
-			if mainEventConfigId in _EVENT_GENERATORS:
-				del _EVENT_GENERATORS[mainEventConfigId]
+			_EVENT_GENERATORS.pop(mainEventConfigId, None)
 
 	logger.notice("Configured events: %s", ", ".join(sorted(list(enabled_events))))
 	logger.notice("Enabled events: %s", ", ".join(sorted([evt_id for evt_id in enabled_events if enabled_events[evt_id]])))
 
 
-def getEventGenerators(generatorClass: Type[EventGenerator] | None = None) -> list[EventGenerator]:
+def getEventGenerators(generatorClass: type[EventGenerator] | None = None) -> list[EventGenerator]:
 	return [
 		eventGenerator
 		for eventGenerator in _EVENT_GENERATORS.values()

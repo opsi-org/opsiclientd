@@ -12,7 +12,8 @@ from __future__ import annotations
 import socket
 import threading
 import time
-from typing import TYPE_CHECKING, Any, Iterable, Sequence
+from collections.abc import Iterable, Sequence
+from typing import TYPE_CHECKING, Any
 
 import servicemanager
 import win32event

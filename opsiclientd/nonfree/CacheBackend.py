@@ -10,23 +10,15 @@ import inspect
 import json
 import warnings
 from collections import defaultdict
+from collections.abc import Callable
 from types import MethodType
-from typing import Any, Callable, Type, cast
+from typing import Any, cast
 
 from opsi.crypt.blowfish import blowfish_decrypt
-from opsi_legacy.Backend.Backend import (
-	Backend,
-	BackendModificationListener,
-	ConfigDataBackend,
-	ModificationTrackingBackend,
-)
-from opsi_legacy.Backend.Base.Extended import get_function_signature_and_args
-from opsi_legacy.Backend.Replicator import BackendReplicator
 from opsi.exception import BackendConfigurationError, BackendMissingDataError, BackendUnaccomplishableError
+from opsi.logging import TRACE, get_logger
 from opsi.opsi.licensing import OPSI_MODULE_IDS
-from opsi.logging import get_logger
-from opsi.logging import TRACE
-from opsi.opsi.service.model.object import *  # noqa  # required for dynamic class loading
+from opsi.opsi.service.model.object import *  # required for dynamic class loading
 from opsi.opsi.service.model.object import (
 	BaseObject,
 	Config,
@@ -39,6 +31,14 @@ from opsi.opsi.service.model.object import (
 	serialize,
 )
 from opsi.opsi.service.model.type import to_host_id
+from opsi_legacy.Backend.Backend import (
+	Backend,
+	BackendModificationListener,
+	ConfigDataBackend,
+	ModificationTrackingBackend,
+)
+from opsi_legacy.Backend.Base.Extended import get_function_signature_and_args
+from opsi_legacy.Backend.Replicator import BackendReplicator
 
 from opsiclientd.Config import Config as OCDConfig
 from opsiclientd.OpsiService import ServiceClient
@@ -238,7 +238,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 	def _syncModifiedObjectsWithMaster(
 		self,
-		objectClass: Type[BaseObject],
+		objectClass: type[BaseObject],
 		modifiedObjects: list[dict[str, Any]],
 		getFilter: dict[str, Any],
 		objectsDifferFunction: Callable,

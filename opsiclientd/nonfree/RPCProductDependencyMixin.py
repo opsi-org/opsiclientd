@@ -15,8 +15,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from opsi.exception import OpsiError
-from opsi.logging import get_logger
-from opsi.logging import TRACE
+from opsi.logging import TRACE, get_logger
 from opsi.opsi.service.model.object import (
 	Product,
 	ProductDependency,

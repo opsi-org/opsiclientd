@@ -13,11 +13,12 @@ import platform
 import sys
 from typing import NoReturn
 
+from opsi import __version__ as python_opsi_version
+from opsi.logging import LOG_DEBUG, LOG_NONE, get_logger, log_context, logging_config, secret_filter
+from opsi.opsi.service.client import ServiceClient, set_rpc_timeout
+
 # Do not remove this import, it's needed by using this module from CLI
 from opsi_legacy import System  # noqa
-from opsi import __version__ as python_opsi_version
-from opsi.opsi.service.client import set_rpc_timeout, ServiceClient
-from opsi.logging import LOG_DEBUG, LOG_NONE, get_logger, logging_config, log_context, secret_filter
 
 from opsiclientd import DEFAULT_FILE_LOG_FORMAT, __version__
 
@@ -36,7 +37,7 @@ def get_opsi_host_key() -> str:
 		)
 
 	with open(config_file, "r", encoding="utf-8") as file:
-		for line in file.readlines():
+		for line in file:
 			line = line.strip()
 			if line.startswith("opsi_host_key"):
 				return line.split("=", 1)[-1].strip()
@@ -59,7 +60,7 @@ def main() -> None:
 			"--log-level",
 			default=LOG_NONE,
 			type=int,
-			choices=range(0, 10),
+			choices=range(10),
 			help=(
 				"Set the log level. "
 				"0: nothing, 1: essential, 2: critical, 3: errors, 4: warnings, 5: notices "

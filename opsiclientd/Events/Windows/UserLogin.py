@@ -93,4 +93,3 @@ class LoginDetector(SensLogonEventGenerator):
 
 	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> None:
 		logger.debug("createEvent triggered for LoginDetector - should never occur")
-		return None

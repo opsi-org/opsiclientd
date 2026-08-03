@@ -10,9 +10,10 @@ utils
 from __future__ import annotations
 
 import os
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -42,7 +43,7 @@ def opsiclientd_auth() -> tuple[str, str]:
 
 
 @contextmanager
-def change_dir(path: str | Path) -> Generator[None, None, None]:
+def change_dir(path: str | Path) -> Generator[None]:
 	old_dir = os.getcwd()
 	os.chdir(path)
 	try:
@@ -122,13 +123,13 @@ class OpsiclientdTestClient(TestClient):
 
 
 @pytest.fixture()
-def test_client() -> Generator[OpsiclientdTestClient, None, None]:
+def test_client() -> Generator[OpsiclientdTestClient]:
 	with get_test_client() as client:
 		yield client
 
 
 @contextmanager
-def get_test_client(opsiclientd: Opsiclientd | None = None) -> Generator[OpsiclientdTestClient, None, None]:
+def get_test_client(opsiclientd: Opsiclientd | None = None) -> Generator[OpsiclientdTestClient]:
 	client = OpsiclientdTestClient(opsiclientd)
 
 	def get_client_address(asgi_adapter: Any, scope: Scope) -> tuple[str, int]:

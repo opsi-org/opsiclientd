@@ -7,7 +7,7 @@
 test_event_config
 """
 
-from typing import Generator, Type
+from collections.abc import Generator
 
 import pytest
 
@@ -38,15 +38,15 @@ from .utils import load_config_file
 		SyncCompletedEventConfig,
 	]
 )
-def configClass(request: pytest.FixtureRequest) -> Generator[Type[EventConfig], None, None]:
+def configClass(request: pytest.FixtureRequest) -> Generator[type[EventConfig]]:
 	yield request.param
 
 
-def testCreatingNewEventConfig(configClass: Type[EventConfig]) -> None:
+def testCreatingNewEventConfig(configClass: type[EventConfig]) -> None:
 	configClass("testevent")
 
 
-def testAttributesForWhiteAndBlackListExist(configClass: Type[EventConfig]) -> None:
+def testAttributesForWhiteAndBlackListExist(configClass: type[EventConfig]) -> None:
 	config = configClass("testevent")
 	assert hasattr(config, "excludeProductGroupIds")
 	assert hasattr(config, "includeProductGroupIds")

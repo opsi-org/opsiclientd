@@ -20,12 +20,13 @@ import tempfile
 import threading
 import time
 import urllib.request
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Generator, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 import opsi_legacy
 from opsi.process import Process, run_command, run_script
@@ -80,7 +81,7 @@ logger = get_logger()
 
 
 def sha256string(input_string: str) -> str:
-	return sha256(input_string.encode("utf-8")).digest().hex()
+	return sha256(input_string.encode("utf-8")).hexdigest()
 
 
 def ensure_not_already_running(process_name: str | None = None) -> None:
@@ -203,7 +204,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		raise NotImplementedError(f"Not implemented on {platform.system()}")
 
 	@contextmanager
-	def permanent_service_connection(self) -> Generator[None, None, None]:
+	def permanent_service_connection(self) -> Generator[None]:
 		self.start_permanent_service_connection()
 		try:
 			yield
@@ -244,9 +245,8 @@ class Opsiclientd(EventListener, threading.Thread):
 					src = src.lstrip("/").replace("/", "\\")
 				shutil.copy(src, filename)
 			else:
-				with urllib.request.urlopen(url) as response:
-					with open(filename, "wb") as file:
-						file.write(response.read())
+				with urllib.request.urlopen(url) as response, open(filename, "wb") as file:
+					file.write(response.read())
 			self.self_update_from_file(filename)
 
 	def self_update_from_file(self, filename: str | Path) -> None:
@@ -449,7 +449,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	@contextmanager
 	def runCacheService(
 		self, allow_fail: bool = True
-	) -> Generator[CacheService | None, None, None]:  # not typing here for speedup (costly import)
+	) -> Generator[CacheService | None]:  # not typing here for speedup (costly import)
 		self._cacheService = None
 		yielded = False
 		try:
@@ -478,7 +478,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.debug("Failed to stop cache service: %s", stop_err)
 
 	@contextmanager
-	def runEventGenerators(self) -> Generator[None, None, None]:
+	def runEventGenerators(self) -> Generator[None]:
 		logger.debug("Creating event generators")
 		createEventGenerators(self)
 
@@ -530,7 +530,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.info("Event generator %s stopped", eventGenerator)
 
 	@contextmanager
-	def runControlPipe(self) -> Generator[None, None, None]:
+	def runControlPipe(self) -> Generator[None]:
 		logger.notice("Starting control pipe")
 		try:
 			self._controlPipe = ControlPipeFactory(self)
@@ -553,7 +553,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.debug("Stopping controlPipe failed: %s", stopError)
 
 	@contextmanager
-	def runWebserver(self) -> Generator[None, None, None]:
+	def runWebserver(self) -> Generator[None]:
 		logger.notice("Starting webserver")
 		self._webserver = None
 		try:
@@ -1056,7 +1056,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin", "dialog"],
 		port: int | None = None,
 		link_handling: Literal["no", "internal", "browser"] = "no",
-		timeout: int | float | None = None,
+		timeout: float | None = None,
 		desktop: str | None = None,
 	) -> tuple[str, bool]:
 		# Notifier needs to be run with elevated rights for access
@@ -1087,9 +1087,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				command = f"{command} -s {skin_file.replace('\\', '\\\\')}"
 
 			# Lazarus notifier does not support all IDs
-			if notifier_id == "motd":
-				notifier_id = "popup"
-			elif notifier_id == "dialog":
+			if notifier_id == "motd" or notifier_id == "dialog":
 				notifier_id = "popup"
 			elif notifier_id == "shutdown_select":
 				notifier_id = "shutdown"
@@ -1148,7 +1146,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		device_message_valid_until = int(device_message_valid_until) if device_message_valid_until else 0
 		user_message_valid_until = int(user_message_valid_until) if user_message_valid_until else 0
 
-		utc_timestamp = int(datetime.now(tz=timezone.utc).timestamp())
+		utc_timestamp = int(datetime.now(tz=UTC).timestamp())
 		sessions = [s for s in get_display_sessions() if s.user]
 		logger.debug("Found sessions: %s", sessions)
 		if sessions:
@@ -1460,7 +1458,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		def collect_matching_files(path: Path, result_path: Path, patterns: list[re.Pattern], max_age_days: int | None) -> None:
 			for content in path.iterdir():
-				if content.is_file() and any((re.match(pattern, content.name) for pattern in patterns)):
+				if content.is_file() and any(re.match(pattern, content.name) for pattern in patterns):
 					if not max_age_days or now - content.lstat().st_mtime < int(max_age_days) * 3600 * 24:
 						if not result_path.is_dir():
 							result_path.mkdir()
@@ -1469,7 +1467,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				if content.is_dir():
 					collect_matching_files(content, result_path / content.name, patterns, max_age_days)
 
-		filename = f"logs-{config.get('global', 'host_id')}-{datetime.now(tz=timezone.utc).strftime('%Y-%m-%d_%H-%M-%S')}"
+		filename = f"logs-{config.get('global', 'host_id')}-{datetime.now(tz=UTC).strftime('%Y-%m-%d_%H-%M-%S')}"
 		outfile = Path(config.get("control_server", "files_dir")) / filename
 		compression = "zip"
 		with tempfile.TemporaryDirectory() as tempdir:

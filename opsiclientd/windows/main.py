@@ -20,8 +20,7 @@ import win32api
 import win32con
 import win32process
 import win32security
-from opsi.logging import LOG_NONE, get_logger
-from opsi.logging import logging_config
+from opsi.logging import LOG_NONE, get_logger, logging_config
 
 from opsiclientd import DEFAULT_STDERR_LOG_FORMAT, init_logging, parser
 from opsiclientd.Config import Config

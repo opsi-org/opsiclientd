@@ -34,9 +34,9 @@ import threading
 import time
 from typing import Any
 
-from opsi_legacy.Backend.SQLite import SQLite
 from opsi.logging import get_logger
 from opsi.opsi.service.model.type import to_bool, to_int, to_opsi_timestamp, to_string
+from opsi_legacy.Backend.SQLite import SQLite
 
 from opsiclientd.Config import Config
 
@@ -131,7 +131,7 @@ class Timeline:
 
 	def __new__(cls) -> Timeline:
 		if cls._instance is None:
-			cls._instance = super(Timeline, cls).__new__(cls)
+			cls._instance = super().__new__(cls)
 		return cls._instance
 
 	def __init__(self) -> None:

@@ -16,10 +16,10 @@ import sys
 import tempfile
 from logging.handlers import RotatingFileHandler
 
-from opsi.process import run_script, run_command
 import psutil
 from opsi import __version__ as python_opsi_version
 from opsi.logging import LOG_DEBUG, LOG_NONE, LOG_TRACE, get_all_handlers, get_logger, log_context, logging_config, set_filter_from_string
+from opsi.process import run_command, run_script
 
 from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS

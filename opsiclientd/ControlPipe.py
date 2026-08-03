@@ -348,7 +348,7 @@ class PosixControlDomainSocket(ControlPipe):
 		if self._socket:
 			try:
 				self._socket.close()
-			except socket.error:
+			except OSError:
 				pass
 		if os.path.exists(self._socketName):
 			os.remove(self._socketName)
@@ -363,7 +363,7 @@ class PosixControlDomainSocket(ControlPipe):
 				logger.notice("Client %s connected to %s", client_address, self._socketName)
 				self._client_id += 1
 				return (connection, f"#{self._client_id}")
-			except socket.timeout:
+			except TimeoutError:
 				if self._stopEvent.is_set():
 					return (None, "")
 

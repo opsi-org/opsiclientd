@@ -8,8 +8,8 @@ test_opsiclientd_on_posix
 """
 
 from pathlib import Path
+from unittest import mock
 
-import mock
 import pytest
 
 try:

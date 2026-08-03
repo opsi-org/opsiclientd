@@ -352,7 +352,7 @@ class ControlInterface(PipeControlInterface):
 		try:
 			with open(logFile, "r", encoding="utf-8", errors="replace") as log:
 				data = log.read()
-		except IOError as ioerr:
+		except OSError as ioerr:
 			if ioerr.errno == 2:  # This is "No such file or directory"
 				return "No such file or directory"
 			raise
@@ -488,13 +488,13 @@ class ControlInterface(PipeControlInterface):
 		option = to_string(option)
 		return self.opsiclientd.config.get(section, option)
 
-	def setConfigValue(self, section: str, option: str, value: str | int | float | bool | list[str] | dict[str, str]) -> None:
+	def setConfigValue(self, section: str, option: str, value: str | float | bool | list[str] | dict[str, str]) -> None:
 		section = to_string(section)
 		option = to_string(option)
 		value = to_string(value)
 		self.opsiclientd.config.set(section, option, value)
 
-	def set(self, section: str, option: str, value: str | int | float | bool | list[str] | dict[str, str]) -> None:
+	def set(self, section: str, option: str, value: str | float | bool | list[str] | dict[str, str]) -> None:
 		# Legacy method
 		self.setConfigValue(section, option, value)
 
@@ -530,8 +530,7 @@ class ControlInterface(PipeControlInterface):
 			if not os.path.isdir(os.path.dirname(config.ca_cert_file)):
 				os.makedirs(os.path.dirname(config.ca_cert_file))
 			with open(config.ca_cert_file, "wb") as file:
-				for cert in ca_certs:
-					file.write(cert.public_bytes(encoding=serialization.Encoding.PEM))
+				file.writelines(cert.public_bytes(encoding=serialization.Encoding.PEM) for cert in ca_certs)
 
 	def getActiveSessions(self) -> list[dict[str, str | int | bool | None]]:
 		return [
@@ -704,7 +703,7 @@ class ControlInterface(PipeControlInterface):
 				f"'false'"
 				f")\r\n"
 				f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args\r\n'
-				f'Remove-Item -Path "{str(ps_script)}" -Force\r\n'
+				f'Remove-Item -Path "{ps_script!s}" -Force\r\n'
 			),
 			encoding="windows-1252",
 		)
@@ -809,10 +808,10 @@ class ControlInterface(PipeControlInterface):
 			script_content = f"Start-Process -FilePath {parts[0]} -Wait\r\n"
 		else:
 			script_content = f"""Start-Process -FilePath {parts[0]} -ArgumentList {
-				",".join((f"'{entry}'" if entry.startswith('"') else f'"{entry}"' for entry in parts[1:]))
+				",".join(f"'{entry}'" if entry.startswith('"') else f'"{entry}"' for entry in parts[1:])
 			} -Wait\r\n"""
 		# WARNING: This part is not executed if the command call above initiates reboot
-		script_content += f'Remove-Item -Path "{str(script)}" -Force\r\n'
+		script_content += f'Remove-Item -Path "{script!s}" -Force\r\n'
 		script.write_text(script_content, encoding="windows-1252")
 		logger.debug("Preparing script:\n%s", script_content)
 		try:
@@ -931,7 +930,7 @@ class ControlInterface(PipeControlInterface):
 
 		try:
 			self._run_process_as_opsi_setup_user(
-				f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}"',
+				f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{script!s}"',
 				admin,
 				recreate_user,
 				[script],
@@ -1126,10 +1125,10 @@ def get_cache_service_interface(opsiclientd: Opsiclientd) -> ControlInterface:
 		raise RuntimeError("Cache service not running")
 
 	backend = cache_service.getConfigBackend()
-	setattr(backend, "_interface", {})
-	setattr(backend, "_interface_list", [])
-	setattr(backend, "_create_interface", MethodType(Interface._create_interface, backend))
-	setattr(backend, "get_interface", MethodType(Interface.get_interface, backend))
-	setattr(backend, "get_method_interface", MethodType(Interface.get_method_interface, backend))
+	backend._interface = {}
+	backend._interface_list = []
+	backend._create_interface = MethodType(Interface._create_interface, backend)
+	backend.get_interface = MethodType(Interface.get_interface, backend)
+	backend.get_method_interface = MethodType(Interface.get_method_interface, backend)
 	backend._create_interface()  # ty: ignore[unresolved-attribute]
 	return backend  # ty: ignore[invalid-return-type]

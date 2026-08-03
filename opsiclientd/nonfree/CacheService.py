@@ -18,7 +18,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from opsi.crypt.secret import SecretAlphabet, generate_secret
@@ -564,7 +564,7 @@ class ConfigCacheService(threading.Thread):
 		self._cacheBackend.addBackendChangeListener(self._backendTracker)
 
 	def _createConfigBackend(self) -> None:
-		extension_class: Type[ConfigCacheServiceBackendExtension43] | Type[ConfigCacheServiceBackendExtension42] = (
+		extension_class: type[ConfigCacheServiceBackendExtension43 | ConfigCacheServiceBackendExtension42] = (
 			ConfigCacheServiceBackendExtension43
 		)
 		server_version = version.parse(self._state.get("server_version", "4.3.0.0"))
@@ -849,7 +849,7 @@ class ProductCacheException(Exception):
 		return self.message
 
 	def __repr__(self) -> str:
-		return f"{self.__class__.__name__}({str(self)})"
+		return f"{self.__class__.__name__}({self!s})"
 
 
 class ProductCacheInsufficientCacheSpaceException(ProductCacheException):

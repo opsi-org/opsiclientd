@@ -473,7 +473,7 @@ def cleanup_registry_environment_path() -> None:
 
 def setup_on_shutdown() -> None:
 	if sys.platform != "win32":
-		return None
+		return
 
 	logger.notice("Creating opsi shutdown install policy")
 	import winreg
@@ -545,7 +545,7 @@ def setup_on_shutdown() -> None:
 
 def setup_system() -> None:
 	if sys.platform != "win32":
-		return None
+		return
 
 	logger.notice("Setting WebDAV WebClient parameters")
 	import winreg

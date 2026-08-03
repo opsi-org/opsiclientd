@@ -12,8 +12,8 @@ from dataclasses import asdict, dataclass, field
 from threading import Event, Lock, Thread
 from typing import Any
 
-from opsi_legacy.Util.Message import ChoiceSubject, Subject, SubjectsObserver
 from opsi.logging import get_logger, log_context
+from opsi_legacy.Util.Message import ChoiceSubject, Subject, SubjectsObserver
 
 logger = get_logger()
 

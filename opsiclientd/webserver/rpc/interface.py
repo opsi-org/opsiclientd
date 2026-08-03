@@ -9,14 +9,15 @@ webserver.rpc
 
 import inspect
 import re
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from inspect import getfullargspec, signature
 from textwrap import dedent
-from typing import Any, Callable
+from typing import Any
 
 
 def no_export(func: Callable) -> Callable:
-	setattr(func, "no_export", True)
+	func.no_export = True
 	return func
 
 

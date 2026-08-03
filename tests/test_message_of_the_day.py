@@ -3,7 +3,7 @@
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0-only
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 from unittest.mock import patch
@@ -53,27 +53,26 @@ def test_motd_update_without_valid_until(default_config: Config, tmp_path: Path,
 	controlServer = get_control_interface(ocd)
 	state._stateFile = str(tmp_path / "state_file.json")
 
-	with use_logging_config(stderr_level=LOG_INFO):
-		with patch("opsiclientd.Opsiclientd.get_display_sessions", get_display_sessions):
-			first = controlServer.messageOfTheDayUpdated(
-				user_message="Test message user",
-				user_message_valid_until=0,
-				device_message="Test message device",
-				device_message_valid_until=None,  # ty: ignore[invalid-argument-type]
-			)
-			second = controlServer.messageOfTheDayUpdated(user_message="Test message user", device_message="Test message device")
+	with use_logging_config(stderr_level=LOG_INFO), patch("opsiclientd.Opsiclientd.get_display_sessions", get_display_sessions):
+		first = controlServer.messageOfTheDayUpdated(
+			user_message="Test message user",
+			user_message_valid_until=0,
+			device_message="Test message device",
+			device_message_valid_until=None,  # ty: ignore[invalid-argument-type]
+		)
+		second = controlServer.messageOfTheDayUpdated(user_message="Test message user", device_message="Test message device")
 
-			if motd_enabled:
-				# First should be shown
-				if user_logged_in:
-					assert first == ["user"]
-				else:
-					assert first == ["device"]
-				# Second should not be shown (same hash)
-				assert second == []
+		if motd_enabled:
+			# First should be shown
+			if user_logged_in:
+				assert first == ["user"]
 			else:
-				assert first == []
-				assert second == []
+				assert first == ["device"]
+			# Second should not be shown (same hash)
+			assert second == []
+		else:
+			assert first == []
+			assert second == []
 
 
 @pytest.mark.parametrize(
@@ -93,14 +92,14 @@ def test_motd_update_valid_until(default_config: Config, tmp_path: Path, user_lo
 	state._stateFile = str(tmp_path / "state_file.json")
 
 	with patch("opsiclientd.Opsiclientd.get_display_sessions", get_display_sessions):
-		valid_until = int((datetime.now(tz=timezone.utc) - timedelta(days=1)).timestamp())
+		valid_until = int((datetime.now(tz=UTC) - timedelta(days=1)).timestamp())
 		first = controlServer.messageOfTheDayUpdated(
 			user_message="usermsg1",
 			device_message="devicemsg1",
 			user_message_valid_until=valid_until,
 			device_message_valid_until=valid_until,
 		)
-		valid_until = int((datetime.now(tz=timezone.utc) + timedelta(days=1)).timestamp())
+		valid_until = int((datetime.now(tz=UTC) + timedelta(days=1)).timestamp())
 		second = controlServer.messageOfTheDayUpdated(
 			user_message="usermsg2",
 			device_message="devicemsg2",

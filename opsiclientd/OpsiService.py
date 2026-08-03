@@ -15,7 +15,7 @@ import re
 import threading
 import time
 import traceback
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from traceback import TracebackException
 from types import TracebackType
@@ -85,9 +85,8 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 		return
 
 	ca_certs: list[x509.Certificate] = []
-	with open(ca_cert_file, "r", encoding="utf-8") as file:
-		with lock_file(file=file, exclusive=False, timeout=5.0):
-			data = file.read()
+	with open(ca_cert_file, "r", encoding="utf-8") as file, lock_file(file=file, exclusive=False, timeout=5.0):
+		data = file.read()
 	for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", data, re.DOTALL):
 		try:
 			ca_certs.append(x509.load_pem_x509_certificate(match.group(1).encode("utf-8")))
@@ -96,7 +95,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 	if not ca_certs:
 		return
 
-	utc_now = datetime.now(tz=timezone.utc)
+	utc_now = datetime.now(tz=UTC)
 	install_ca_into_os_store = config.get("global", "install_opsi_ca_into_os_store")
 	for ca_cert in ca_certs:
 		subject_name = to_string(ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value)

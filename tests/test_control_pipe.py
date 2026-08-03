@@ -40,7 +40,7 @@ class PipeClient(threading.Thread):
 		while True:
 			try:
 				data = self.socket.recv(4096)
-			except socket.timeout:
+			except TimeoutError:
 				continue
 			except OSError:
 				break
@@ -56,7 +56,7 @@ class PipeClient(threading.Thread):
 
 
 @pytest.mark.linux
-def test_control_pipe() -> None:  # noqa
+def test_control_pipe() -> None:
 	ocd = Opsiclientd()
 	control_pipe = ControlPipeFactory(ocd)
 	assert isinstance(control_pipe, PosixControlDomainSocket)

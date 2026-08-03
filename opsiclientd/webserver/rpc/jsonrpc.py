@@ -12,10 +12,11 @@ from __future__ import annotations
 import time
 import urllib.parse
 import warnings
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from inspect import iscoroutinefunction
-from typing import Any, AsyncGenerator, Literal
+from typing import Any, Literal
 
 from fastapi import HTTPException
 from fastapi.requests import Request
@@ -34,7 +35,7 @@ COMPRESS_MIN_SIZE = 10000
 
 
 def utcnow() -> datetime:
-	return datetime.now(tz=timezone.utc)
+	return datetime.now(tz=UTC)
 
 
 @dataclass(kw_only=True)
@@ -266,7 +267,7 @@ async def process_rpc(request: JSONRPC20Request | JSONRPCRequest, interface: Int
 
 async def process_rpcs(
 	interface: Interface, *requests: JSONRPC20Request | JSONRPCRequest
-) -> AsyncGenerator[JSONRPC20Response | JSONRPC20ErrorResponse | JSONRPCResponse | JSONRPCErrorResponse, None]:
+) -> AsyncGenerator[JSONRPC20Response | JSONRPC20ErrorResponse | JSONRPCResponse | JSONRPCErrorResponse]:
 	for request in requests:
 		response: JSONRPC20Response | JSONRPC20ErrorResponse | JSONRPCResponse | JSONRPCErrorResponse
 		start = time.time()
