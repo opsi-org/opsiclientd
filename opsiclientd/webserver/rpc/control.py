@@ -697,10 +697,7 @@ class ControlInterface(PipeControlInterface):
 				f"'-1',"
 				f"'default',"
 				f"'{command}',"
-				f"'3600',"
-				f"'{OPSI_SETUP_USER_NAME}',"
-				f"'\"\"',"
-				f"'false'"
+				f"'3600'"
 				f")\r\n"
 				f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args\r\n'
 				f'Remove-Item -Path "{ps_script!s}" -Force\r\n'
