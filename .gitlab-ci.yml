@@ -100,8 +100,8 @@ lint-pytest:
     - uv sync --frozen
     - uv run ruff check opsiclientd tests
     - uv run ty check opsiclientd tests
-    # Ignore setuptools vulnerability GHSA-h35f-9h28-mq5c for now
-    - uv audit --ignore GHSA-h35f-9h28-mq5c
+    # Ignore vulnerabilities for now, we need to get rid of 32 bit Python first
+    # - uv audit --ignore GHSA-h35f-9h28-mq5c
     - opsi-dev-cli self upgrade
     - opsi-dev-cli -l info testing merge-coverage-files coverage_* .coverage
     - opsi-dev-cli -l info testing coverage-report
