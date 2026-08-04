@@ -17,6 +17,7 @@ from opsi.logging import LOG_NONE, get_logger, log_context, logging_config, secr
 from opsi.opsi.service.client import ServiceClient, ServiceVerificationFlags
 from opsi.process import run_command
 from opsi.system.network import mount_network_share, unmount_network_share
+from opsi_legacy import System
 
 from opsiclientd import DEFAULT_FILE_LOG_FORMAT, DEFAULT_STDERR_LOG_FORMAT
 
@@ -117,6 +118,7 @@ def main() -> None:
 			logger.debug("Failed to load locale for %s from %s: %s", language, sp, err)
 
 		depot_share_mounted = False
+		impersonation = None
 		service_client = None
 		depot_url = urlparse(depot_remote_url)
 
@@ -131,6 +133,12 @@ def main() -> None:
 			if (depot_url.hostname or "").lower() not in ("127.0.0.1", "localhost", "::1"):
 				logger.notice("Mounting depot share %s", depot_remote_url)
 				set_status_message(service_client, session_id, _("Mounting depot share %s") % depot_remote_url)
+				if depot_url.scheme in ("smb", "cifs"):
+					logger.info("Impersonating network account '%s'", depot_server_username)
+					impersonation = System.Impersonate(
+						username=depot_server_username, password=depot_server_password, desktop=action_processor_desktop
+					)
+					impersonation.start(logonType="NEW_CREDENTIALS")
 				mount_network_share(
 					url=depot_remote_url, mount_point=depot_drive, username=depot_server_username, password=depot_server_password
 				)
@@ -139,7 +147,10 @@ def main() -> None:
 			logger.notice("Starting action processor")
 			set_status_message(service_client, session_id, _("Action processor is running"))
 
-			run_command(action_processor_command, timeout=int(action_processor_timeout))
+			if impersonation:
+				impersonation.runCommand(action_processor_command, timeoutSeconds=int(action_processor_timeout))
+			else:
+				run_command(action_processor_command, timeout=int(action_processor_timeout))
 
 			logger.notice("Action processor ended")
 			set_status_message(service_client, session_id, _("Action processor ended"))
@@ -156,6 +167,12 @@ def main() -> None:
 				unmount_network_share(depot_drive)
 			except Exception as err:
 				logger.error("Failed to unmount depot share: %s", err)
+
+		if impersonation:
+			try:
+				impersonation.end()
+			except Exception as err:
+				logger.error("Failed to end impersonation: %s", err)
 
 		if service_client:
 			try:

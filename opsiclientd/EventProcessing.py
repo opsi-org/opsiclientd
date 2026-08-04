@@ -31,7 +31,7 @@ from opsi.opsi.service.model.object import Product, ProductOnClient
 from opsi.opsi.service.model.type import to_int, to_string, to_string_list, to_string_lower
 from opsi.process import Process, ProcessError, run_command, run_script
 from opsi.system.environment import chdir
-from opsi.system.network import mount_network_share
+from opsi.system.network import mount_network_share, unmount_network_share
 from opsi_legacy import System
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject, MessageSubjectProxy, ProgressSubjectProxy
 
@@ -96,6 +96,7 @@ class EventProcessingThread(threading.Thread):
 		self._notificationServer: NotificationServer | None = None
 
 		self._depotShareMounted = False
+		self._depotShareImpersonation = None
 
 		self._statusSubject = MessageSubject("status")
 		self._messageSubject = MessageSubject("message")
@@ -422,8 +423,8 @@ class EventProcessingThread(threading.Thread):
 				ca_certs = read_certs_from_file(config.ca_cert_file)
 
 		depot_server_url = config.get("depot_server", "url")
+		depot_url_parsed = urlparse(depot_server_url)
 		if RUNNING_ON_WINDOWS:
-			depot_url_parsed = urlparse(depot_server_url)
 			try:
 				if isinstance(ip_address(depot_url_parsed.hostname), IPv6Address):
 					depot_server_url = (
@@ -437,6 +438,14 @@ class EventProcessingThread(threading.Thread):
 					logger.notice("Using windows workaround to mount depot %s", depot_server_url)
 			except ValueError as error:
 				logger.info("Not an IP address '%s', using %s for depot mount: %s", depot_url_parsed.hostname, depot_server_url, error)
+		if RUNNING_ON_WINDOWS and depot_url_parsed.scheme in ("smb", "cifs"):
+			logger.info("Impersonating network account '%s'", mount_username)
+			self._depotShareImpersonation = System.Impersonate(username=mount_username, password=mount_password)
+			try:
+				self._depotShareImpersonation.start(logonType="NEW_CREDENTIALS")
+			except Exception:
+				self._depotShareImpersonation = None
+				raise
 		try:
 			mount_network_share(
 				url=depot_server_url,
@@ -450,6 +459,13 @@ class EventProcessingThread(threading.Thread):
 			)
 		except Exception as err:
 			logger.error("Failed to mount depot share: %s", err)
+			if self._depotShareImpersonation:
+				try:
+					self._depotShareImpersonation.end()
+				except Exception as impersonation_error:
+					logger.warning("Failed to end depot share impersonation: %s", impersonation_error)
+				finally:
+					self._depotShareImpersonation = None
 			if RUNNING_ON_WINDOWS and "1219" in str(err):
 				# Multiple connections to a server or shared resource by the same user
 				logger.debug("Trying to list existing network connections")
@@ -468,10 +484,18 @@ class EventProcessingThread(threading.Thread):
 			return
 		try:
 			logger.notice("Unmounting depot share")
-			System.umount(config.getDepotDrive())
-			self._depotShareMounted = False
+			unmount_network_share(config.getDepotDrive())
 		except Exception as err:
 			logger.warning(err)
+		finally:
+			self._depotShareMounted = False
+			if self._depotShareImpersonation:
+				try:
+					self._depotShareImpersonation.end()
+				except Exception as err:
+					logger.warning("Failed to end depot share impersonation: %s", err)
+				finally:
+					self._depotShareImpersonation = None
 
 	def updateActionProcessor(self) -> None:
 		logger.notice("Updating action processor")
