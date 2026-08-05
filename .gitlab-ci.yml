@@ -34,9 +34,9 @@ test:pytest-windows:
   script:
     - $Env:UV_PYTHON_INSTALL_DIR = "c:\\uv\\python"
     - $Env:UV_CACHE_DIR = "c:\\uv\\cache"
-    - $Env:UV_PYTHON = "3.14-x86"
+    - $Env:UV_PYTHON = "3.14-x86_64"
     - $Env:UV_PYTHON_PREFERENCE = "only-managed"
-    - $Env:RUSTUP_TOOLCHAIN = "stable-i686-pc-windows-msvc"
+    - $Env:RUSTUP_TOOLCHAIN = "stable-x86_64-pc-windows-msvc"
     - uv sync --frozen
     - uv run pytest --tb=short -x -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
     - Rename-Item -Path .coverage -NewName coverage_windows
@@ -100,8 +100,7 @@ lint-pytest:
     - uv sync --frozen
     - uv run ruff check opsiclientd tests
     - uv run ty check opsiclientd tests
-    # Ignore vulnerabilities for now, we need to get rid of 32 bit Python first
-    # - uv audit --ignore GHSA-h35f-9h28-mq5c
+    - uv audit
     - opsi-dev-cli self upgrade
     - opsi-dev-cli -l info testing merge-coverage-files coverage_* .coverage
     - opsi-dev-cli -l info testing coverage-report
@@ -158,32 +157,6 @@ build:pyinstaller-macos-x64:
     - '[ "$CI_COMMIT_TAG" = "" ] && opsi-dev-cli -l info binary push opsiclientd_macos_x64 --prerelease="$CI_JOB_ID"'
     - '[ "$CI_COMMIT_TAG" = "" ] || opsi-dev-cli -l info binary push opsiclientd_macos_x64'
 
-build:pyinstaller-windows-x86:
-  stage: build
-  tags:
-    - win10-x64
-  script:
-    - $Env:UV_PYTHON_INSTALL_DIR = "c:\\uv\\python"
-    - $Env:UV_CACHE_DIR = "c:\\uv\\cache"
-    - $Env:UV_PYTHON = "3.14-x86"
-    - $Env:UV_PYTHON_PREFERENCE = "only-managed"
-    - $Env:RUSTUP_TOOLCHAIN = "stable-i686-pc-windows-msvc"
-    - $Env:TRANSIFEX_MIN_REVIEW_RATE="0.0"
-    - if ($CI_COMMIT_TAG) { $Env:TRANSIFEX_MIN_REVIEW_RATE="1.0" }
-    - irm "${OPSIDEVTOOLS_INSTALLER_URL_WINDOWS_X86}" | iex
-    - uv run opsi-dev-cli -l debug pyinstaller build
-    - opsi-dev-cli -l info signserver sign dist\opsiclientd\
-    - Move-Item -Path dist\opsiclientd -Destination opsiclientd_windows_x86
-    # Check if binary is working
-    - opsiclientd_windows_x86\opsiclientd.exe --version
-    # Push to biaryindex
-    - if (! $CI_COMMIT_TAG) {opsi-dev-cli -l info binary push opsiclientd_windows_x86 --prerelease="$CI_JOB_ID"}
-    - if ($CI_COMMIT_TAG) {opsi-dev-cli -l info binary push opsiclientd_windows_x86}
-  artifacts:
-    name: "opsiclientd_windows_x86"
-    paths:
-      - opsiclientd_windows_x86\opsiclientd.exe
-
 build:pyinstaller-windows-x64:
   stage: build
   tags:
@@ -215,8 +188,8 @@ viruscheck:virustotal:
   tags:
     - win10-x64
   script:
-    - irm "${OPSIDEVTOOLS_INSTALLER_URL_WINDOWS_X86}" | iex
-    - opsi-dev-cli -l info --output-format summary virustotal check opsiclientd_windows_x86\opsiclientd.exe --allow-detections=5 > viruscheck.txt
+    - irm "${OPSIDEVTOOLS_INSTALLER_URL_WINDOWS_X64}" | iex
+    - opsi-dev-cli -l info --output-format summary virustotal check opsiclientd_windows_x64\opsiclientd.exe --allow-detections=5 > viruscheck.txt
   artifacts:
     name: "opsiclientd_viruscheck"
     paths:
