@@ -60,10 +60,7 @@ dev = [
 	"types-pywin32>=308.0",
 	"types-requests>=2.31",
 	"pywin32-ctypes>=0.2; platform_system == 'Windows'",
-	# Pin setuptools to avoid warning:
-	# See https://setuptools.pypa.io/en/latest/pkg_resources.html.
-	# The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
-	"setuptools>=71.0,<80.9",
+	"setuptools>=83.0",
 	"ty>=0.0.8",
 ]
 
