@@ -196,14 +196,7 @@ def get_mshotfix_package_name() -> str | None:
 	if not RUNNING_ON_WINDOWS:
 		return None
 
-	arch = "x64"
-	if "PROGRAMFILES(X86)" not in os.environ:
-		# 32bit Windows running on 64bit hardware
-		arch = "x86"
-	if platform.machine().lower() in ("arm64", "aarch64"):
-		arch = "arm64"
-	elif platform.machine().lower() in ("x86", "i386", "i486", "i586", "i686", "i786"):
-		arch = "x86"
+	arch = "arm64" if platform.machine().lower() in ("arm64", "aarch64") else "x64"
 	releaseId = ""
 	currentBuild = 0
 	subKey = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"

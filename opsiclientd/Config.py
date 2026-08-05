@@ -274,15 +274,12 @@ class Config:
 	def getBaseDirectory() -> str:
 		if RUNNING_ON_WINDOWS:
 			for pfp in (
-				os.environ.get("PROGRAMFILES(X86)"),
-				"c:\\Program Files (x86)",
-				os.environ.get("PROGRAMFILES"),
-				"c:\\Program Files",
+				os.environ.get("PROGRAMFILES") or "c:\\Program Files",
+				os.environ.get("PROGRAMFILES(X86)") or "c:\\Program Files (x86)",
 			):
-				if pfp:
-					baseDir = os.path.join(pfp, "opsi.org", "opsi-client-agent")
-					if os.path.exists(baseDir):
-						break
+				baseDir = os.path.join(pfp, "opsi.org", "opsi-client-agent")
+				if os.path.exists(baseDir):
+					break
 			if not os.path.exists(baseDir):
 				logger.warning("Could not find base directory (%s)", dict(os.environ))
 				try:
