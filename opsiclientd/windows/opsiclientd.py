@@ -117,7 +117,7 @@ class OpsiclientdNT(Opsiclientd):
 
 	def isRebootRequested(self) -> bool:
 		try:
-			rebootRequested = int(get_registry_value("SOFTWARE\\opsi.org\\winst", "RebootRequested"))
+			rebootRequested = int(get_registry_value("SOFTWARE\\opsi.org\\winst", "RebootRequested", registry_view=32))
 		except Exception as error:
 			logger.warning("Failed to get RebootRequested from registry: %s", error)
 			rebootRequested = 0
@@ -133,7 +133,7 @@ class OpsiclientdNT(Opsiclientd):
 
 	def isShutdownRequested(self) -> bool:
 		try:
-			shutdownRequested = int(get_registry_value("SOFTWARE\\opsi.org\\winst", "ShutdownRequested"))
+			shutdownRequested = int(get_registry_value("SOFTWARE\\opsi.org\\winst", "ShutdownRequested", registry_view=32))
 		except Exception as err:
 			logger.info("Failed to get shutdownRequested from registry: %s", err)
 			shutdownRequested = 0

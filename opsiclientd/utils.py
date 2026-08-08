@@ -14,7 +14,7 @@ import platform
 import struct
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from opsi.logging import get_logger
 from opsi.system.network import get_network_info
@@ -236,14 +236,17 @@ def get_mshotfix_package_name() -> str | None:
 
 
 # TODO: move to opsi or opsi-script
-def get_registry_value(sub_key: str, value_name: str, root=None) -> str:
+def get_registry_value(sub_key: str, value_name: str, root=None, registry_view: Literal[32, 64] | None = None) -> str:
 	if not RUNNING_ON_WINDOWS:
 		raise RuntimeError("Can only access registry on Windows")
+	if registry_view not in (None, 32, 64):
+		raise ValueError("registry_view must be 32, 64 or None")
 
 	root = root or winreg.HKEY_LOCAL_MACHINE
+	registry_view = registry_view or (32 if platform.architecture()[0] == "32bit" else 64)
 
 	flags = winreg.KEY_READ
-	flags |= winreg.KEY_WOW64_32KEY if platform.architecture()[0] == "32bit" else winreg.KEY_WOW64_64KEY
+	flags |= winreg.KEY_WOW64_32KEY if registry_view == 32 else winreg.KEY_WOW64_64KEY
 
 	with winreg.OpenKeyEx(root, sub_key, 0, flags) as hkey:
 		return winreg.QueryValueEx(hkey, value_name)[0]

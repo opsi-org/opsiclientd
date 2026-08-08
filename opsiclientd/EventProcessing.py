@@ -827,7 +827,7 @@ class EventProcessingThread(threading.Thread):
 			bootmode = None
 			if RUNNING_ON_WINDOWS:
 				try:
-					bootmode = get_registry_value("SOFTWARE\\opsi.org\\general", "bootmode").upper()
+					bootmode = get_registry_value("SOFTWARE\\opsi.org\\general", "bootmode", registry_view=32).upper()
 				except Exception as err:
 					logger.warning("Failed to get bootmode from registry: %s", err)
 			bootmode = bootmode or "BKSTD"
