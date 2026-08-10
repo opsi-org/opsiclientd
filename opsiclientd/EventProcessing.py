@@ -921,7 +921,7 @@ class EventProcessingThread(threading.Thread):
 						logger.warning("Cache service not available, cannot set config cache obsolete")
 
 				if cache_service:
-					cache_service.trim_product_cache(needed_products=[])
+					cache_service.trim_product_cache(needed_products=[config.action_processor_name])
 
 				try:
 					self.cleanup_temp_dir()
@@ -1027,7 +1027,7 @@ class EventProcessingThread(threading.Thread):
 						new_product_ids.append(poc["productId"])
 
 					if cache_service:
-						cache_service.trim_product_cache(needed_products=new_product_ids)
+						cache_service.trim_product_cache(needed_products=new_product_ids + [config.action_processor_name])
 
 					logger.info("New product IDs with action request after runActions: %r", new_product_ids)
 
