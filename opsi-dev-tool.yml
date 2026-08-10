@@ -94,3 +94,5 @@ pyinstaller:
       - chmod -R g-w,o-w dist/opsiclientd
     windows:
       - Move-Item -Path dist\opsiclientd\_internal\opsiclientd_data -Destination dist\opsiclientd\
+      - Copy-Item -Path .venv\Lib\site-packages\winpty\OpenConsole.exe -Destination dist\opsiclientd\_internal\winpty\
+      - Copy-Item -Path .venv\Lib\site-packages\winpty\winpty-agent.exe -Destination dist\opsiclientd\_internal\winpty\
