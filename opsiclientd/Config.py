@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, cast
 from urllib.parse import urlparse
 
-import netifaces  # ty: ignore[unresolved-import]
+import netifaces
 from opsi.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
 from opsi.opsi.service.client import ServiceClient, ServiceVerificationFlags
 from opsi.opsi.service.model.object import serialize
