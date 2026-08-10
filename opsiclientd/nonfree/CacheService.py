@@ -1004,7 +1004,7 @@ class ProductCacheService(threading.Thread):
 			return try_after_seconds
 		finally:
 			if heartbeat_thread:
-				logger.debug("Releasing transfer slot %s", heartbeat_thread.slot_id)
+				logger.notice("Releasing transfer slot %s", heartbeat_thread.slot_id)
 				heartbeat_thread.should_stop = True
 				if heartbeat_thread.is_alive():
 					logger.debug("Joining transfer slot heartbeat thread")
