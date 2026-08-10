@@ -253,14 +253,17 @@ def get_registry_value(sub_key: str, value_name: str, root=None, registry_view: 
 
 
 # TODO: move to opsi or opsi-script
-def set_registry_value(sub_key: str, value_name: str, value: str | int, root=None) -> None:
+def set_registry_value(sub_key: str, value_name: str, value: str | int, root=None, registry_view: Literal[32, 64] | None = None) -> None:
 	if not RUNNING_ON_WINDOWS:
-		return
+		raise RuntimeError("Can only access registry on Windows")
+	if registry_view not in (None, 32, 64):
+		raise ValueError("registry_view must be 32, 64 or None")
 
 	root = root or winreg.HKEY_LOCAL_MACHINE
+	registry_view = registry_view or (32 if platform.architecture()[0] == "32bit" else 64)
 
 	flags = winreg.KEY_WRITE
-	flags |= winreg.KEY_WOW64_32KEY if platform.architecture()[0] == "32bit" else winreg.KEY_WOW64_64KEY
+	flags |= winreg.KEY_WOW64_32KEY if registry_view == 32 else winreg.KEY_WOW64_64KEY
 
 	with winreg.CreateKeyEx(root, sub_key, 0, flags) as hkey:
 		if isinstance(value, int):

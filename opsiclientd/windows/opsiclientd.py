@@ -110,10 +110,10 @@ class OpsiclientdNT(Opsiclientd):
 		super().rebootMachine(waitSeconds)
 
 	def clearRebootRequest(self) -> None:
-		set_registry_value("SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
+		set_registry_value("SOFTWARE\\opsi.org\\winst", "RebootRequested", 0, registry_view=32)
 
 	def clearShutdownRequest(self) -> None:
-		set_registry_value("SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
+		set_registry_value("SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0, registry_view=32)
 
 	def isRebootRequested(self) -> bool:
 		try:
