@@ -10,6 +10,7 @@ dependencies = [
 	"anyio>=4.6",
 	"click>=8.1",
 	"fastapi>=0.115",
+	"greenlet==3.5.4",
 	"h11>=0.14",
 	"macholib>=1.14",
 	"netifaces>=0.11",
