@@ -1454,17 +1454,15 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		def collect_matching_files(path: Path, result_path: Path, patterns: list[re.Pattern], max_age_days: int | None) -> None:
 			for content in path.iterdir():
-				if (
+				if content.is_dir():
+					collect_matching_files(content, result_path / content.name, patterns, max_age_days)
+				elif (
 					content.is_file()
 					and any(re.match(pattern, content.name) for pattern in patterns)
 					and (not max_age_days or now - content.lstat().st_mtime < int(max_age_days) * 3600 * 24)
 				):
-					if not result_path.is_dir():
-						result_path.mkdir()
+					result_path.mkdir(parents=True, exist_ok=True)
 					shutil.copy2(content, result_path)  # preserve metadata
-
-				if content.is_dir():
-					collect_matching_files(content, result_path / content.name, patterns, max_age_days)
 
 		filename = f"logs-{config.get('global', 'host_id')}-{datetime.now(tz=UTC).strftime('%Y-%m-%d_%H-%M-%S')}"
 		outfile = Path(config.get("control_server", "files_dir")) / filename
