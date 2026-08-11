@@ -222,7 +222,13 @@ class CacheService(threading.Thread):
 		maxBandwidth: int = 0,
 		fireSyncCompletedEvent: bool = True,
 	) -> bool:
-		logger.info("Trigger product caching with waitForEnding=%s, waitForTransferSlot=%s, dynamicBandwidth=%s, maxBandwidth=%s", waitForEnding, waitForTransferSlot, dynamicBandwidth, maxBandwidth)
+		logger.info(
+			"Trigger product caching with waitForEnding=%s, waitForTransferSlot=%s, dynamicBandwidth=%s, maxBandwidth=%s",
+			waitForEnding,
+			waitForTransferSlot,
+			dynamicBandwidth,
+			maxBandwidth,
+		)
 
 		self.initializeProductCacheService()
 		assert self._productCacheService
@@ -1014,7 +1020,7 @@ class ProductCacheService(threading.Thread):
 				try_after_seconds = float(response.get("retry_after") or 0.0)
 				logger.debug("depot_acquireTransferSlot produced response %s", response)
 			if try_after_seconds:
-				logger.notice(msg="Transfer slot not available, server suggested waiting time of %s seconds", try_after_seconds)
+				logger.notice("Transfer slot not available, server suggested waiting time of %s seconds", try_after_seconds)
 				return try_after_seconds or 1.0
 
 			if heartbeat_thread:
