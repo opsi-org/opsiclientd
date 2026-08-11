@@ -222,13 +222,15 @@ class CacheService(threading.Thread):
 		maxBandwidth: int = 0,
 		fireSyncCompletedEvent: bool = True,
 	) -> bool:
+		logger.info("Trigger product caching with waitForEnding=%s, waitForTransferSlot=%s, dynamicBandwidth=%s, maxBandwidth=%s", waitForEnding, waitForTransferSlot, dynamicBandwidth, maxBandwidth)
+
 		self.initializeProductCacheService()
 		assert self._productCacheService
 		if not self._productCacheService.isWorking():
 			if self._configCacheService and self._configCacheService.syncConfigToServerError:
 				raise RuntimeError("Failed to cache products because config sync to server failed")
 
-			logger.info("Trigger product caching")
+			logger.debug("Trigger product caching")
 			self._productCacheService.setDynamicBandwidth(dynamicBandwidth)
 			self._productCacheService.setMaxBandwidth(maxBandwidth)
 			self._productCacheService.cacheProducts(
@@ -238,16 +240,21 @@ class CacheService(threading.Thread):
 			)
 
 		if not waitForEnding:
+			logger.info("Not waiting for product caching to finish")
 			return False
 
 		time.sleep(10)
 
-		while self._productCacheService.isRunning() and self._productCacheService.isWorking():
+		while self._productCacheService.isRunning():
 			if self._productCacheService.isWaitingForTransferSlot() and not waitForTransferSlot:
 				logger.notice("Product caching is waiting for transfer slot, but waitForTransferSlot is False, returning")
 				return False
+			if not self._productCacheService.isWorking():
+				logger.info("Product caching finished")
+				return True
 			time.sleep(1)
-		return True
+
+		return False
 
 	def productCacheCompleted(self, configService: ServiceClient, productIds: list[str], checkCachedProductVersion: bool = False) -> bool:
 		logger.debug("productCacheCompleted: configService=%s productIds=%s", configService, productIds)
@@ -1007,7 +1014,7 @@ class ProductCacheService(threading.Thread):
 				try_after_seconds = float(response.get("retry_after") or 0.0)
 				logger.debug("depot_acquireTransferSlot produced response %s", response)
 			if try_after_seconds:
-				logger.notice("Transfer slot not available, server suggested waiting time of %s", try_after_seconds)
+				logger.notice(msg="Transfer slot not available, server suggested waiting time of %s seconds", try_after_seconds)
 				return try_after_seconds or 1.0
 
 			if heartbeat_thread:
@@ -1085,9 +1092,6 @@ class ProductCacheService(threading.Thread):
 					if self._cache_products_requested and not self._working and self._continue_event.is_set():
 						init_from_service(service_client=self.service_client)
 						wait_time = self.start_caching_or_get_waiting_time()
-					if wait_time:
-						# No transfer slot available
-						pass
 					time.sleep(wait_time or 1.0)
 			except Exception as err:
 				logger.exception(err)
