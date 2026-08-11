@@ -216,6 +216,8 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 						eventConfigs[eventConfigId]["cacheDynamicBandwidth"] = to_bool(value)
 					elif key == "use_cached_products":
 						eventConfigs[eventConfigId]["useCachedProducts"] = to_bool(value)
+					elif key == "wait_for_transfer_slot":
+						eventConfigs[eventConfigId]["waitForTransferSlot"] = to_bool(value)
 					elif key == "sync_config_from_server":
 						eventConfigs[eventConfigId]["syncConfigFromServer"] = to_bool(value)
 					elif key == "sync_config_to_server":

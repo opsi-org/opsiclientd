@@ -87,6 +87,7 @@ class EventConfig:
 		self.cacheMaxBandwidth = int(conf.get("cacheMaxBandwidth", 0))
 		self.cacheDynamicBandwidth = to_bool(conf.get("cacheDynamicBandwidth", True))
 		self.useCachedProducts = to_bool(conf.get("useCachedProducts", False))
+		self.waitForTransferSlot = to_bool(conf.get("waitForTransferSlot", True))
 		self.syncConfigToServer = to_bool(conf.get("syncConfigToServer", False))
 		self.syncConfigFromServer = to_bool(conf.get("syncConfigFromServer", False))
 		self.useCachedConfig = to_bool(conf.get("useCachedConfig", False))

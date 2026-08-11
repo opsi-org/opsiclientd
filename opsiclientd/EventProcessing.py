@@ -1767,7 +1767,9 @@ class EventProcessingThread(threading.Thread):
 			logger.exception("Working window processing failed (start=%s, end=%s, now=%s): %s", start_str, end_str, now, err)
 			return True
 
-	def cache_products(self, wait_for_ending: bool = False, fire_sync_completed_event: bool = True) -> None:
+	def cache_products(
+		self, wait_for_ending: bool = False, wait_for_transfer_slot: bool = True, fire_sync_completed_event: bool = True
+	) -> None:
 		assert self.opsiclientd
 
 		if self.opsiclientd.getCacheService().isProductCacheServiceWorking():
@@ -1777,15 +1779,15 @@ class EventProcessingThread(threading.Thread):
 		self.setStatusMessage(_("Caching products"))
 		try:
 			self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
-			self.opsiclientd.getCacheService().cacheProducts(
+			if self.opsiclientd.getCacheService().cacheProducts(
 				waitForEnding=wait_for_ending,
+				waitForTransferSlot=wait_for_transfer_slot,
 				productProgressObserver=self._currentProgressSubjectProxy,
 				overallProgressObserver=self._overallProgressSubjectProxy,
 				dynamicBandwidth=self.event.eventConfig.cacheDynamicBandwidth,
 				maxBandwidth=self.event.eventConfig.cacheMaxBandwidth,
 				fireSyncCompletedEvent=fire_sync_completed_event,
-			)
-			if wait_for_ending:
+			):
 				self.setStatusMessage(_("Products cached"))
 		finally:
 			self._detailSubjectProxy.setMessage("")
@@ -1999,7 +2001,11 @@ class EventProcessingThread(threading.Thread):
 
 							if self.event.eventConfig.cacheProducts and self.event.eventConfig.useCachedProducts:
 								logger.info("Event '%s' should cache products and uses cached products", self.event.eventConfig.getId())
-								self.cache_products(wait_for_ending=True, fire_sync_completed_event=False)
+								self.cache_products(
+									wait_for_ending=True,
+									wait_for_transfer_slot=self.event.eventConfig.waitForTransferSlot,
+									fire_sync_completed_event=False,
+								)
 
 							if self.event.eventConfig.actionType == "login":
 								self.processUserLoginActions()
