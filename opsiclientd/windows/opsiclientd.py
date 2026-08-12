@@ -296,7 +296,17 @@ class OpsiclientdNT(Opsiclientd):
 			max_depth=1,
 		)
 
-		return trusted_installer_running
+		if not trusted_installer_running:
+			return False
+
+		key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\Interface"
+		try:
+			val = get_registry_value(key, "ServicingInProgress")
+			logger.info("Registry value %s\\%s: %s", key, "ServicingInProgress", val)
+			return bool(int(val))
+		except Exception as err:
+			logger.info("Failed to read registry value %s %s: %s", key, "ServicingInProgress", err)
+		return False
 
 	def loginUser(self, domain: str, username: str, password: str) -> bool:
 		secret_filter.add_secrets(password)
