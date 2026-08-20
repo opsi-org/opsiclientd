@@ -16,5 +16,6 @@
 	},
 	"cSpell.words": [
 		"opsiclientd"
-	]
+	],
+	"python-envs.defaultEnvManager": "ms-python.python:venv"
 }
