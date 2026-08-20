@@ -833,7 +833,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/a6/91/86a6eac449ddfae23
 
 [[package]]
 name = "opsiclientd"
-version = "4.3.24.4"
+version = "4.3.24.5"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -1291,7 +1291,7 @@ wheels = [
 
 [[package]]
 name = "python-opsi-legacy"
-version = "4.3.13.0"
+version = "4.3.13.1"
 source = { registry = "https://pypi.uib.gmbh/simple" }
 dependencies = [
     { name = "colorlog" },
@@ -1317,9 +1317,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wmi", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.13.0.tar.gz", hash = "sha256:62f5eb11efbc0e60e4fe0d072f98521e182f539112e4ae62f2fb94e418fb1838" }
+sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.13.1.tar.gz", hash = "sha256:aba9255a7449ce03dc73358d3710a482edf390b7a37cdd2fc13678ce6b0da2d5" }
 wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.13.0-py3-none-any.whl", hash = "sha256:c51b6d2e9dfe15cb8e85f76aa517c131de983ee066f07d537b1dbdc3f6fcc785" },
+    { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.13.1-py3-none-any.whl", hash = "sha256:7d926830f94c183261a39b8128935abc4dc88354337d2b155507afc72989dc3f" },
 ]
 
 [[package]]
