@@ -1219,7 +1219,7 @@ class EventProcessingThread(threading.Thread):
 			if RUNNING_ON_WINDOWS:
 				logger.notice("Starting action processor in session '%s' on desktop '%s'", sessionId, desktop)
 				self.opsiclientd.runCommandInSession(
-					command=command, session_id=sessionId, session_desktop=desktop, wait=True, hide_window=True
+					command=command, session_id=sessionId, session_desktop=desktop, wait=True, hide_window=True, detach=True
 				)
 			else:
 				(username, password) = (None, None)

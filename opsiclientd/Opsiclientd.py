@@ -897,6 +897,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		wait: bool = False,
 		timeout: float = 0.0,
 		hide_window: bool = False,
+		detach: bool = False,
 	) -> Process | None:
 		"""
 		Execute a command, optionally in a user session and on a specific desktop.
@@ -943,6 +944,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				wait=wait,
 				timeout=timeout,
 				hide_window=hide_window,
+				detach=detach,
 			)
 		except Exception as err:
 			logger.exception(err)
