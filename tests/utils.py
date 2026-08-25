@@ -37,8 +37,7 @@ def opsiclientd_url() -> str:
 
 @pytest.fixture
 def opsiclientd_auth() -> tuple[str, str]:
-	config = Config()
-	config.readConfigFile()
+	config = load_config_file("tests/data/opsiclientd.conf")
 	return (config.get("global", "host_id"), config.get("global", "opsi_host_key"))
 
 
