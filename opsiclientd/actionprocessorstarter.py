@@ -35,7 +35,7 @@ def set_status_message(service_client: ServiceClient, session_id: str, message: 
 
 
 def main() -> None:
-	if len(sys.argv) != 14:
+	if len(sys.argv) < 14 or len(sys.argv) > 15:
 		print(
 			f"Usage: {os.path.basename(sys.argv[0])} <hostId> <hostKey> <controlServerPort>"
 			" <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword>"
