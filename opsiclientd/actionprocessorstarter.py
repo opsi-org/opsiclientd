@@ -39,7 +39,7 @@ def main() -> None:
 		print(
 			f"Usage: {os.path.basename(sys.argv[0])} <hostId> <hostKey> <controlServerPort>"
 			" <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword>"
-			" <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <actionProcessorTimeout> [noImpersonation]"
+			" <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <actionProcessorTimeout> [impersonation]"
 		)
 		sys.exit(1)
 
@@ -59,7 +59,7 @@ def main() -> None:
 		action_processor_timeout,
 	) = sys.argv[1:]
 
-	no_impersonation = len(sys.argv) > 14 and sys.argv[14].lower() in ("1", "true", "yes")
+	no_impersonation = len(sys.argv) > 14 and sys.argv[14].lower() in ("0", "false", "no")
 
 	if host_key:
 		secret_filter.add_secrets(host_key)
