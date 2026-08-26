@@ -12,18 +12,19 @@ from unittest import mock
 
 import pytest
 
+OpsiclientdPosix: type | None = None
 try:
 	from opsiclientd.nonfree.Posix import OpsiclientdPosix
 
 	error_message = ""
 except ImportError as err:
-	OpsiclientdPosix = None  # ty: ignore
 	error_message = str(err)
 
 
 @pytest.mark.skipif(OpsiclientdPosix is None, reason=error_message)
 def test_requesting_reboot(tmp_path: Path) -> None:
 	with mock.patch("opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR", str(tmp_path)):
+		assert OpsiclientdPosix is not None
 		ocd = OpsiclientdPosix()
 		assert not ocd.isRebootRequested()
 		rebootFile = tmp_path / "reboot"
@@ -36,6 +37,7 @@ def test_requesting_reboot(tmp_path: Path) -> None:
 @pytest.mark.skipif(OpsiclientdPosix is None, reason=error_message)
 def test_requesting_shutdown(tmp_path: Path) -> None:
 	with mock.patch("opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR", str(tmp_path)):
+		assert OpsiclientdPosix is not None
 		ocd = OpsiclientdPosix()
 		assert not ocd.isShutdownRequested()
 		rebootFile = tmp_path / "shutdown"
