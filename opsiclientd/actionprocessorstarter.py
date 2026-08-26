@@ -57,7 +57,7 @@ def main() -> None:
 		action_processor_desktop,
 		action_processor_command,
 		action_processor_timeout,
-	) = sys.argv[1:]
+	) = sys.argv[1:14]
 
 	no_impersonation = len(sys.argv) > 14 and sys.argv[14].lower() in ("0", "false", "no")
 
