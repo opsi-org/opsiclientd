@@ -1178,10 +1178,14 @@ class EventProcessingThread(threading.Thread):
 			except Exception:
 				pass
 
+			depot_path = config.get_depot_path()
+			if RUNNING_ON_WINDOWS:
+				depot_path = depot_path.replace("/", r"\\")
+
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace("%service_url%", self.service_client.base_url or "?")
 			actionProcessorCommand = actionProcessorCommand.replace("%service_session%", serviceSession)
-			actionProcessorCommand = actionProcessorCommand.replace("%depot_path%", config.get_depot_path())
+			actionProcessorCommand = actionProcessorCommand.replace("%depot_path%", depot_path)
 			actionProcessorCommand = actionProcessorCommand.replace(
 				"%action_processor_productids%", ",".join(self.event.eventConfig.actionProcessorProductIds)
 			)
