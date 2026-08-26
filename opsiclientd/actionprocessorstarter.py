@@ -39,7 +39,7 @@ def main() -> None:
 		print(
 			f"Usage: {os.path.basename(sys.argv[0])} <hostId> <hostKey> <controlServerPort>"
 			" <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword>"
-			" <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <actionProcessorTimeout>"
+			" <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <actionProcessorTimeout> [noImpersonation]"
 		)
 		sys.exit(1)
 
@@ -58,6 +58,8 @@ def main() -> None:
 		action_processor_command,
 		action_processor_timeout,
 	) = sys.argv[1:]
+
+	no_impersonation = len(sys.argv) > 14 and sys.argv[14].lower() in ("1", "true", "yes")
 
 	if host_key:
 		secret_filter.add_secrets(host_key)
@@ -117,7 +119,7 @@ def main() -> None:
 			if (depot_url.hostname or "").lower() not in ("127.0.0.1", "localhost", "::1"):
 				logger.notice("Mounting depot share %s", depot_remote_url)
 				set_status_message(service_client, session_id, _("Mounting depot share %s") % depot_remote_url)
-				if depot_url.scheme in ("smb", "cifs"):
+				if depot_url.scheme in ("smb", "cifs") and not no_impersonation:
 					logger.info("Impersonating network account '%s'", depot_server_username)
 					impersonation = System.Impersonate(
 						username=depot_server_username, password=depot_server_password, desktop=action_processor_desktop
