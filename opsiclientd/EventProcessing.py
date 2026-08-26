@@ -52,6 +52,7 @@ from opsiclientd.utils import (
 	get_version_from_dos_binary,
 	get_version_from_elf_binary,
 	get_version_from_mach_binary,
+	set_registry_value,
 )
 
 if TYPE_CHECKING:
@@ -392,21 +393,18 @@ class EventProcessingThread(threading.Thread):
 			url = urlparse(config.get("depot_server", "url"))
 			try:
 				if url.scheme in ("smb", "cifs"):
-					System.setRegistryValue(
-						System.HKEY_LOCAL_MACHINE,
+					set_registry_value(
 						f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\{url.hostname}",
 						"file",
 						1,
 					)
 				elif url.scheme in ("webdavs", "https"):
-					System.setRegistryValue(
-						System.HKEY_LOCAL_MACHINE,
+					set_registry_value(
 						f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\{url.hostname}@SSL@{url.port}",
 						"file",
 						1,
 					)
-					System.setRegistryValue(
-						System.HKEY_LOCAL_MACHINE,
+					set_registry_value(
 						"SYSTEM\\CurrentControlSet\\Services\\WebClient\\Parameters",
 						"FileSizeLimitInBytes",
 						0xFFFFFFFF,
@@ -1108,19 +1106,8 @@ class EventProcessingThread(threading.Thread):
 			self.setStatusMessage(_("Starting actions"))
 
 			if RUNNING_ON_WINDOWS:
-				# Setting some registry values before starting action
-				# Mainly for action processor
-				System.setRegistryValue(
-					System.HKEY_LOCAL_MACHINE,
-					"SOFTWARE\\opsi.org\\shareinfo",
-					"depoturl",
-					config.get("depot_server", "url"),
-				)
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive())
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configurl", "<deprecated>")
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configdrive", "<deprecated>")
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl", "<deprecated>")
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive", "<deprecated>")
+				# opsi-script is reading this value to get the depot url if not supplied via command line parameter
+				set_registry_value("SOFTWARE\\opsi.org\\shareinfo", "depoturl", config.get("depot_server", "url"), registry_view=32)
 
 			depotServerUsername = ""
 			depotServerPassword = ""

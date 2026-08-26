@@ -548,14 +548,14 @@ class OpsiclientdNT5(OpsiclientdNT):
 
 	def shutdownMachine(self, waitSeconds: int = 3) -> None:
 		self._isShutdownTriggered = True
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
+		set_registry_value("SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0, registry_view=32)
 
 		# Running in thread to avoid failure of shutdown (device not ready)
 		ShutdownThread().start()
 
 	def rebootMachine(self, waitSeconds: int = 3) -> None:
 		self._isRebootTriggered = True
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
+		set_registry_value("SOFTWARE\\opsi.org\\winst", "RebootRequested", 0, registry_view=32)
 
 		# Running in thread to avoid failure of reboot (device not ready)
 		RebootThread().start()
