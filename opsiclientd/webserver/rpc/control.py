@@ -853,6 +853,13 @@ class ControlInterface(PipeControlInterface):
 					logger.error("Failed to set permissions for file: %s", err)
 
 		logger.info("Setting login shell to '%s' for user %s (%s)", command, user_info["name"], str_sid)
+		logger.warning(
+			"Logging in user %r. "
+			"Be aware that a following user logout will terminate the active console session and start a new one. "
+			"This will terminate any processes running in the session, such as action_processor_starter.exe or opsi-script.exe, "
+			"which may have requested this login.",
+			user_info["name"],
+		)
 		logon = win32security.LogonUser(
 			user_info["name"],
 			None,
