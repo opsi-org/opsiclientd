@@ -1108,6 +1108,7 @@ class EventProcessingThread(threading.Thread):
 			if RUNNING_ON_WINDOWS:
 				# opsi-script is reading this value to get the depot url if not supplied via command line parameter
 				set_registry_value("SOFTWARE\\opsi.org\\shareinfo", "depoturl", config.get("depot_server", "url"), registry_view=32)
+				set_registry_value("SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive(), registry_view=32)
 
 			depotServerUsername = ""
 			depotServerPassword = ""
