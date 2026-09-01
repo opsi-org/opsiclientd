@@ -48,7 +48,6 @@ from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING
 from opsiclientd.Timeline import Timeline
 from opsiclientd.utils import (
 	get_include_exclude_product_ids,
-	get_registry_value,
 	get_version_from_dos_binary,
 	get_version_from_elf_binary,
 	get_version_from_mach_binary,
@@ -822,13 +821,6 @@ class EventProcessingThread(threading.Thread):
 
 		try:
 			assert self.opsiclientd
-			bootmode = None
-			if RUNNING_ON_WINDOWS:
-				try:
-					bootmode = get_registry_value("SOFTWARE\\opsi.org\\general", "bootmode", registry_view=32).upper()
-				except Exception as err:
-					logger.warning("Failed to get bootmode from registry: %s", err)
-			bootmode = bootmode or "BKSTD"
 
 			if not self.service_client.connected:
 				raise RuntimeError("Not connected to config service")
@@ -906,7 +898,7 @@ class EventProcessingThread(threading.Thread):
 				logger.debug("Cache service not available: %s", err)
 				cache_service = None
 
-			if (not productIds) and bootmode == "BKSTD":
+			if not productIds:
 				logger.notice("No product action requests set")
 				self.setStatusMessage(_("No product action requests set"))
 				state.set("pending_product_ids", [])
@@ -926,9 +918,12 @@ class EventProcessingThread(threading.Thread):
 				except Exception as err:
 					logger.error(err)
 			else:
+				assert productIds
+
+				depot_id = config.get("depot_server", "depot_id")
 				for productOnDepot in self.service_client.productOnDepot_getObjects(  # ty: ignore[unresolved-attribute]
 					productType="LocalbootProduct",
-					depotId=config.get("depot_server", "depot_id"),
+					depotId=depot_id,
 					attributes=["productId", "productVersion", "packageVersion"],
 					productId=productIds,
 				):
@@ -941,8 +936,30 @@ class EventProcessingThread(threading.Thread):
 						)
 					)
 
+				for product in self.service_client.product_getObjects(  # ty: ignore[unresolved-attribute]
+					attributes=["id", "name", "productVersion", "packageVersion"], id=productIds
+				):
+					for p_info in productInfo:
+						if (
+							p_info.id == product.id
+							and p_info.productVersion == product.productVersion
+							and p_info.packageVersion == product.packageVersion
+						):
+							p_info.name = product.name
+							break
+
+				self.processActionWarningTime(productInfo)
+
 				logger.notice("Start processing action requests")
-				if productIds and self.event.eventConfig.useCachedProducts:
+				if self.event.eventConfig.cacheProducts and self.event.eventConfig.useCachedProducts:
+					logger.info("Event '%s' should cache products and uses cached products", self.event.eventConfig.getId())
+					self.cache_products(
+						wait_for_ending=True,
+						wait_for_transfer_slot=self.event.eventConfig.waitForTransferSlot,
+						fire_sync_completed_event=False,
+					)
+
+				if self.event.eventConfig.useCachedProducts:
 					if not cache_service:
 						raise RuntimeError(
 							f"Event '{self.event.eventConfig.getId()}' uses cached products but cache service is not available"
@@ -951,44 +968,6 @@ class EventProcessingThread(threading.Thread):
 						logger.notice("Event '%s' uses cached products and product caching is done", self.event.eventConfig.getId())
 					else:
 						raise RuntimeError(f"Event '{self.event.eventConfig.getId()}' uses cached products but product caching is not done")
-
-				param_prefix = "/" if RUNNING_ON_WINDOWS else "-"
-				add_params = []
-				if (includeProductIds or excludeProductIds) and "productlist" not in self.event.eventConfig.actionProcessorCommand:
-					add_params.append(f"{param_prefix}processproducts {','.join(productIds)}")
-				if RUNNING_ON_WINDOWS and not self.event.eventConfig.blockLogin:
-					add_params.append(f"{param_prefix}normalwindow")
-				additionalParams = " ".join(add_params)
-
-				if productInfo:
-					depot_id = config.get("depot_server", "depot_id")
-					count = 0
-					for product in self.service_client.productOnDepot_getObjects(  # ty: ignore[unresolved-attribute]
-						attributes=["productId", "productVersion", "packageVersion"], productId=productIds, depotId=depot_id
-					):
-						for p_info in productInfo:
-							if p_info.id == product.productId:
-								p_info.productVersion = product.productVersion
-								p_info.packageVersion = product.packageVersion
-								count += 1
-								break
-						if count == len(productIds):
-							break
-
-					count = 0
-					for product in self.service_client.product_getObjects(  # ty: ignore[unresolved-attribute]
-						attributes=["id", "name", "productVersion", "packageVersion"], id=productIds
-					):
-						for p_info in productInfo:
-							if p_info.id == product.id:
-								if p_info.productVersion == product.productVersion and p_info.packageVersion == product.packageVersion:
-									p_info.name = product.name
-								count += 1
-								break
-						if count == len(productIds):
-							break
-
-				self.processActionWarningTime(productInfo)
 
 				logger.info("Setting pending product_ids before running actions: %s", productIds)
 				state.set("pending_product_ids", productIds)
@@ -1000,7 +979,16 @@ class EventProcessingThread(threading.Thread):
 					logger.info("Performing event that did not use cached config, setting config cache obsolete to suggest update")
 					cache_service.setConfigCacheObsolete()
 
+				param_prefix = "/" if RUNNING_ON_WINDOWS else "-"
+				add_params = []
+				if (includeProductIds or excludeProductIds) and "productlist" not in self.event.eventConfig.actionProcessorCommand:
+					add_params.append(f"{param_prefix}processproducts {','.join(productIds)}")
+				if RUNNING_ON_WINDOWS and not self.event.eventConfig.blockLogin:
+					add_params.append(f"{param_prefix}normalwindow")
+				additionalParams = " ".join(add_params)
+
 				self.runActions(productInfo, additionalParams=additionalParams)
+
 				try:
 					if (
 						cache_service
@@ -1990,14 +1978,6 @@ class EventProcessingThread(threading.Thread):
 							if self.should_cancel():
 								raise EventProcessingCanceled()
 							self._set_cancelable(False)
-
-							if self.event.eventConfig.cacheProducts and self.event.eventConfig.useCachedProducts:
-								logger.info("Event '%s' should cache products and uses cached products", self.event.eventConfig.getId())
-								self.cache_products(
-									wait_for_ending=True,
-									wait_for_transfer_slot=self.event.eventConfig.waitForTransferSlot,
-									fire_sync_completed_event=False,
-								)
 
 							if self.event.eventConfig.actionType == "login":
 								self.processUserLoginActions()
