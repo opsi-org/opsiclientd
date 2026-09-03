@@ -209,7 +209,7 @@ def get_mshotfix_package_name() -> str | None:
 	except Exception as reg_err:
 		logger.error("Failed to read registry value %s %s: %s", subKey, "ReleaseID", reg_err)
 
-	releasePackageName = None
+	productName = get_registry_value(subKey, "ProductName")
 	if currentBuild >= 10000 and currentBuild < 20000:  # win10
 		# Setting default to 1507-Build
 		if not releaseId:
@@ -221,9 +221,11 @@ def get_mshotfix_package_name() -> str | None:
 		releasePackageName = "mshotfix-win11-21h2"
 	elif currentBuild in (22621, 22631):  # 22h2 and 22h2 with enablement package
 		releasePackageName = "mshotfix-win11-22h2"
-	elif currentBuild in (26100, 26200):  # 24h2 and 25h2
+	elif currentBuild in (26100, 26200, 26300):  # 24h2, 25h2 and 26h2
 		releasePackageName = "mshotfix-win11-24h2"
-	elif currentBuild > 26200:
+		if currentBuild == 26100 and "Windows Server 2025" in productName:
+			releasePackageName = "mshotfix-win2025"
+	elif currentBuild > 26300:
 		logger.warning("Unknown windows build %s. Maybe update opsi-client-agent. Using fallback mshotfix-win11-24h2", currentBuild)
 		releasePackageName = "mshotfix-win11-24h2"
 	else:
