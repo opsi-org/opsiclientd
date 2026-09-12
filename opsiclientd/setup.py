@@ -262,12 +262,14 @@ def install_service_windows() -> None:
 
 	import winreg
 
+	image_path = config.get("global", "base_dir") + "\\opsiclientd_bin\\opsiclientd.exe"
 	with winreg.CreateKeyEx(
 		winreg.HKEY_LOCAL_MACHINE,
 		r"SYSTEM\CurrentControlSet\Services\opsiclientd",
 		0,
 		winreg.KEY_READ | winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY,
 	) as key_handle:
+		winreg.SetValueEx(key_handle, "ImagePath", 0, winreg.REG_EXPAND_SZ, image_path)
 		winreg.SetValueEx(key_handle, "DependOnService", 0, winreg.REG_MULTI_SZ, ["Dhcp"])
 		# SC failure opsiclientd actions= restart/60000/restart/60000/restart/60000 reset= 86400
 		failure_actions = "80510100000000000000000003000000140000000100000060ea00000100000060ea00000100000060ea0000"
