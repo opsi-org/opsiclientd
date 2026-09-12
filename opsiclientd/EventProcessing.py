@@ -975,7 +975,7 @@ class EventProcessingThread(threading.Thread):
 				if self.event.eventConfig.useCachedProducts:
 					assert cache_service
 					if cache_service.productCacheCompleted(self.service_client, productIds):
-						logger.notice(msg="Event '%s' uses cached products and product caching is done", self.event.eventConfig.getId())
+						logger.notice("Event '%s' uses cached products and product caching is done", self.event.eventConfig.getId())
 					else:
 						raise RuntimeError(f"Event '{self.event.eventConfig.getId()}' uses cached products but product caching is not done")
 
