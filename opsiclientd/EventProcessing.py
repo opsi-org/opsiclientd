@@ -920,6 +920,19 @@ class EventProcessingThread(threading.Thread):
 			else:
 				assert productIds
 
+				if self.event.eventConfig.useCachedProducts:
+					if not cache_service:
+						raise RuntimeError(
+							f"Event '{self.event.eventConfig.getId()}' uses cached products but cache service is not available"
+						)
+
+					if not self.event.eventConfig.cacheProducts and not cache_service.productCacheCompleted(
+						self.service_client, productIds
+					):
+						raise RuntimeError(
+							f"Event '{self.event.eventConfig.getId()}' uses cached products, does not cache products and product caching is not done"
+						)
+
 				depot_id = config.get("depot_server", "depot_id")
 				for productOnDepot in self.service_client.productOnDepot_getObjects(  # ty: ignore[unresolved-attribute]
 					productType="LocalbootProduct",
@@ -951,7 +964,7 @@ class EventProcessingThread(threading.Thread):
 				self.processActionWarningTime(productInfo)
 
 				logger.notice("Start processing action requests")
-				if self.event.eventConfig.cacheProducts and self.event.eventConfig.useCachedProducts:
+				if self.event.eventConfig.useCachedProducts and self.event.eventConfig.cacheProducts:
 					logger.info("Event '%s' should cache products and uses cached products", self.event.eventConfig.getId())
 					self.cache_products(
 						wait_for_ending=True,
@@ -960,12 +973,9 @@ class EventProcessingThread(threading.Thread):
 					)
 
 				if self.event.eventConfig.useCachedProducts:
-					if not cache_service:
-						raise RuntimeError(
-							f"Event '{self.event.eventConfig.getId()}' uses cached products but cache service is not available"
-						)
+					assert cache_service
 					if cache_service.productCacheCompleted(self.service_client, productIds):
-						logger.notice("Event '%s' uses cached products and product caching is done", self.event.eventConfig.getId())
+						logger.notice(msg="Event '%s' uses cached products and product caching is done", self.event.eventConfig.getId())
 					else:
 						raise RuntimeError(f"Event '{self.event.eventConfig.getId()}' uses cached products but product caching is not done")
 

@@ -886,6 +886,7 @@ class Config:
 			"clientconfig.suspend_bitlocker_on_reboot",
 			"clientconfig.smart_cache",
 			"clientconfig.smart_cache.sync_completed_action",
+			"clientconfig.smart_cache.cache_products_on_startup",
 			"opsiclientd.*",  # everything starting with opsiclientd.
 		]
 		config_states = {}
@@ -916,6 +917,7 @@ class Config:
 
 		smart_cache: bool | None = None
 		smart_cache_sync_completed_action = "none"
+		smart_cache_cache_products_on_startup = False
 		if config_states.get("clientconfig.smart_cache"):
 			smart_cache = bool(config_states["clientconfig.smart_cache"][0])
 			logger.info("SmartCache WAN is set to %s", smart_cache)
@@ -933,6 +935,9 @@ class Config:
 				logger.error(
 					"Invalid value for clientconfig.smart_cache.sync_completed_action: %s, using %r", val, smart_cache_sync_completed_action
 				)
+		if config_states.get("clientconfig.smart_cache.cache_products_on_startup"):
+			smart_cache_cache_products_on_startup = bool(config_states["clientconfig.smart_cache.cache_products_on_startup"][0])
+			logger.info("SmartCache cache products on startup is set to %s", smart_cache_cache_products_on_startup)
 
 		for config_id, values in config_states.items():
 			logger.info("Got config state from service: %r=%r", config_id, values)
@@ -951,8 +956,8 @@ class Config:
 				self.set("depot_server", "username", values[0])
 			elif config_id == "clientconfig.suspend_bitlocker_on_reboot":
 				self.set("global", "suspend_bitlocker_on_reboot", values[0])
-			elif config_id == "clientconfig.smart_cache":
-				continue  # handled above (False) and below (True)
+			elif config_id.startswith("clientconfig.smart_cache"):
+				continue  # skip smart_cache related configs as they are handled separately
 			elif config_id.startswith("opsiclientd."):
 				try:
 					parts = config_id.lower().split(".")
@@ -968,14 +973,30 @@ class Config:
 					logger.error("Failed to process configState '%s': %s", config_id, err)
 
 		if smart_cache is True:
-			logger.info("SmartCache WAN is enabled")
+			logger.info("SmartCache is enabled")
 			# Is set here so that the configs can not be overwritten
-			self.setSmartCacheActive(True, sync_completed_action=smart_cache_sync_completed_action)
+			self.setSmartCacheActive(
+				True,
+				sync_completed_action=smart_cache_sync_completed_action,
+				cache_products_on_startup=smart_cache_cache_products_on_startup,
+			)
 
 		logger.notice("Got config from service")
 		logger.debug("Config is now:\n %s", json.dumps(serialize(self.getDict()), indent=4))
 
-	def setSmartCacheActive(self, activated: bool, sync_completed_action: Literal["none", "process", "reboot"] | None = None) -> None:
+	def setSmartCacheActive(
+		self,
+		activated: bool,
+		sync_completed_action: Literal["none", "process", "reboot"] | None = None,
+		cache_products_on_startup: bool = False,
+	) -> None:
+		"""
+		Set the smart cache active state and configure related events.
+
+		:param activated: Whether to activate or deactivate smart cache.
+		:param sync_completed_action: Action to take when sync is completed ("none", "process", "reboot").
+		:param cache_products_on_startup: Whether to cache products on startup.
+		"""
 		start_event = "event_gui_startup" if RUNNING_ON_WINDOWS else "event_opsiclientd_start"
 		if activated:
 			self.set("event_net_connection", "active", False)
@@ -987,7 +1008,7 @@ class Config:
 				if not precondition:
 					# cache-ready not needed, actions will be processed on startup no matter if cache is ready or not
 					self.set(f"{start_event}{precondition}", "active", True)
-				self.set(f"{start_event}{precondition}", "cache_products", True)
+				self.set(f"{start_event}{precondition}", "cache_products", cache_products_on_startup)
 				self.set(f"{start_event}{precondition}", "use_cached_config", False)
 				self.set(f"{start_event}{precondition}", "use_cached_products", True)
 
