@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from ipaddress import IPv4Address, IPv6Address, ip_address
 from threading import Thread
 from typing import TYPE_CHECKING
 
@@ -20,6 +21,25 @@ if TYPE_CHECKING:
 logger = get_logger()
 
 
+def _get_bind_interfaces(interfaces: list[str]) -> list[str]:
+	"""Remove duplicate IPs and specific IPs covered by a wildcard of the same family."""
+	addresses: list[IPv4Address | IPv6Address | str] = []
+	for interface in interfaces:
+		try:
+			addresses.append(ip_address(interface))
+		except ValueError:
+			# Leave hostname resolution and validation to the server.
+			addresses.append(interface)
+	wildcard_versions = {address.version for address in addresses if not isinstance(address, str) and address.is_unspecified}
+	return list(
+		dict.fromkeys(
+			str(address)
+			for address in addresses
+			if isinstance(address, str) or address.is_unspecified or address.version not in wildcard_versions
+		)
+	)
+
+
 class Webserver(Thread):
 	def __init__(self, opsiclientd: Opsiclientd) -> None:
 		super().__init__(daemon=True, name="Webserver")
@@ -33,7 +53,7 @@ class Webserver(Thread):
 			app=app,
 			interface="asgi3",
 			http="h11",
-			host=self.opsiclientd.config.get("control_server", "interface"),
+			host=_get_bind_interfaces(self.opsiclientd.config.get("control_server", "interface")),
 			port=self.opsiclientd.config.get("control_server", "port"),
 			workers=1,
 			log_config=None,

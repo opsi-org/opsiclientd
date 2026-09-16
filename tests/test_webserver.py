@@ -9,7 +9,48 @@ test_control_server
 
 from __future__ import annotations
 
+from unittest.mock import Mock, patch
+
+import pytest
+
+from opsiclientd.Config import Config
+from opsiclientd.webserver import Webserver, _get_bind_interfaces
+
 from .utils import OpsiclientdTestClient, default_config, opsiclientd_auth, test_client  # noqa
+
+
+@pytest.mark.parametrize(
+	("interfaces", "expected"),
+	[
+		(["127.0.0.1", "0.0.0.0", "::", "::1"], ["0.0.0.0", "::"]),
+		(["::1", "::", "0.0.0.0", "127.0.0.1"], ["::", "0.0.0.0"]),
+		(["0.0.0.0", "::"], ["0.0.0.0", "::"]),
+		(["127.0.0.1", "::1"], ["127.0.0.1", "::1"]),
+		(["127.0.0.1", "0.0.0.0", "::1"], ["0.0.0.0", "::1"]),
+		(["127.0.0.1", "::", "::1"], ["127.0.0.1", "::"]),
+		(["192.0.2.1", "0.0.0.0", "2001:db8::1", "::"], ["0.0.0.0", "::"]),
+		(["127.0.0.1", "127.0.0.1", "::1", "0:0:0:0:0:0:0:1"], ["127.0.0.1", "::1"]),
+		(["::1", "0:0:0:0:0:0:0:0", "::"], ["::"]),
+		(["localhost", "0.0.0.0"], ["localhost", "0.0.0.0"]),
+	],
+)
+def test_get_bind_interfaces(interfaces: list[str], expected: list[str]) -> None:
+	original = interfaces.copy()
+	assert _get_bind_interfaces(interfaces) == expected
+	assert interfaces == original
+
+
+def test_webserver_overlapping_interfaces(default_config: Config) -> None:  # noqa: F811
+	original = default_config.get("control_server", "interface")
+	try:
+		default_config.set("control_server", "interface", "127.0.0.1, 0.0.0.0, ::, ::1")
+		with patch("opsiclientd.webserver.setup_application"):
+			server = Webserver(Mock(config=default_config))
+		assert server._server is not None
+		assert server._server.config.host == ["0.0.0.0", "::"]
+		assert default_config.get("control_server", "interface") == ["127.0.0.1", "0.0.0.0", "::", "::1"]
+	finally:
+		default_config.set("control_server", "interface", original)
 
 
 def test_authorization(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
