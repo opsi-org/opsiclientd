@@ -53,7 +53,8 @@ class Webserver(Thread):
 			app=app,
 			interface="asgi3",
 			http="h11",
-			host=_get_bind_interfaces(self.opsiclientd.config.get("control_server", "interface")),
+			# Uvicorn forwards host to asyncio.create_server(), which supports lists despite Uvicorn's str annotation.
+			host=_get_bind_interfaces(self.opsiclientd.config.get("control_server", "interface")),  # ty: ignore[invalid-argument-type]
 			port=self.opsiclientd.config.get("control_server", "port"),
 			workers=1,
 			log_config=None,
