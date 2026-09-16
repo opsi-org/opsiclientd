@@ -1035,6 +1035,8 @@ class EventProcessingThread(threading.Thread):
 					state.set("pending_product_ids", pending_product_ids)
 				except Exception as err:
 					logger.error(err)
+		except EventProcessingCanceled:
+			raise
 		except Exception as err:
 			logger.exception("Failed to process product action requests: %s", err)
 			self.setStatusMessage(_("Failed to process product action requests: %s") % str(err))
