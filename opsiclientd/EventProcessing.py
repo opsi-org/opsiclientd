@@ -137,9 +137,9 @@ class EventProcessingThread(threading.Thread):
 		Returns whether the number of seconds to wait corresponds
 		to the actual time elapsed (no standby / wakeup occured).
 		"""
-		start = time.time()
+		start = time.monotonic()
 		while True:
-			seconds_remaining = secs - (time.time() - start)
+			seconds_remaining = secs - (time.monotonic() - start)
 			if seconds_remaining <= -60:
 				# Time jump possibly caused by standby
 				return False
@@ -929,7 +929,7 @@ class EventProcessingThread(threading.Thread):
 					if not self.event.eventConfig.cacheProducts and not cache_service.productCacheCompleted(
 						self.service_client, productIds
 					):
-						raise RuntimeError(
+						raise EventProcessingCanceled(
 							f"Event '{self.event.eventConfig.getId()}' uses cached products, does not cache products and product caching is not done"
 						)
 
@@ -2049,11 +2049,14 @@ class EventProcessingThread(threading.Thread):
 						else:
 							self.opsiclientd.setBlockLogin(False)
 
-			except EventProcessingCanceled:
+			except EventProcessingCanceled as err:
 				logger.notice("Processing of event %s canceled", self.event)
+				description = f"Processing of event {self.event} ({self.name}) canceled"
+				if str(err):
+					description += f": {err}"
 				timeline.addEvent(
 					title=f"Processing of event {self.event.eventConfig.getName()} canceled",
-					description=f"Processing of event {self.event} ({self.name}) canceled",
+					description=description,
 					category="event_processing",
 					isError=True,
 				)
