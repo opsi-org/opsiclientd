@@ -102,9 +102,8 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 			# uib opsi CA will not be installed into system cert store
 			continue
 
-		if allow_remove and "OPSI" not in subject_name.upper():
-			# Only OPSI CAs will be removed from system cert store, other CAs will be kept
-			allow_remove = False
+		# Only OPSI CAs will be removed from system cert store, other CAs will be kept
+		remove_ca_allowed = allow_remove and "OPSI" in subject_name.upper()
 
 		ca_cert_fingerprint = ca_cert.fingerprint(hashes.SHA1()).hex().upper()
 		logger.debug("Handling CA '%s' (%s)", subject_name, ca_cert_fingerprint)
@@ -120,7 +119,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 					if stored_ca_fingerprint == ca_cert_fingerprint:
 						logger.info("CA '%s' (%s) already installed into system cert store", subject_name, ca_cert_fingerprint)
 						add_ca = False
-					elif stored_ca.not_valid_after_utc < utc_now and allow_remove:
+					elif stored_ca.not_valid_after_utc < utc_now and remove_ca_allowed:
 						logger.info(
 							"CA '%s' (%s) expired at %s, marking for removal from store",
 							subject_name,
@@ -128,7 +127,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 							stored_ca.not_valid_after_utc,
 						)
 						del_cas.append(stored_ca)
-					elif num_cas >= 2:
+					elif num_cas >= 2 and remove_ca_allowed:
 						logger.info(
 							"CA '%s' (%s) is valid until %s but %d newer certificates are in the store, marking for removal",
 							subject_name,
@@ -145,7 +144,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 							stored_ca.not_valid_after_utc,
 						)
 						num_cas += 1
-				elif allow_remove:
+				elif remove_ca_allowed:
 					logger.info(
 						"Removing CA '%s' (%s) from store because install_opsi_ca_into_os_store is false",
 						subject_name,
