@@ -1569,7 +1569,7 @@ class EventProcessingThread(threading.Thread):
 											choices.append(_("Reboot at %s") % f" {hour:02d}:00")
 										else:
 											choices.append(_("Shutdown at %s") % f" {hour:02d}:00")
-										callbacks.append(self.abortShutdownCallback)  # ty: ignore[invalid-argument-type]
+										callbacks.append(self.abortShutdownCallback)
 										if hour == self.event.eventConfig.shutdownLatestSelectableHour:
 											break
 								else:
@@ -1577,7 +1577,7 @@ class EventProcessingThread(threading.Thread):
 										choices.append(_("Reboot later"))
 									else:
 										choices.append(_("Shutdown later"))
-									callbacks.append(self.abortShutdownCallback)  # ty: ignore[invalid-argument-type]
+									callbacks.append(self.abortShutdownCallback)
 
 							choice_subject.setChoices(choices)
 							choice_subject.setCallbacks(callbacks)
