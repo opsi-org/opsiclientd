@@ -1351,7 +1351,7 @@ wheels = [
 
 [[package]]
 name = "python-opsi-legacy"
-version = "4.3.13.2"
+version = "4.3.13.3"
 source = { registry = "https://pypi.uib.gmbh/simple" }
 dependencies = [
     { name = "colorlog" },
@@ -1377,9 +1377,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wmi", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.13.2.tar.gz", hash = "sha256:91ca021bed3e16c3fc0a07119118fefb740e801b97a09880052571442a387fa5" }
+sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.13.3.tar.gz", hash = "sha256:543b0d4b331759944b714f153173cbc89ee6d0fd414ceba72ee448b8ac067e5e" }
 wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.13.2-py3-none-any.whl", hash = "sha256:4bbd5faa03be798211d7e980437ba2ddcff86073c975ffcc9d72fcd1c80f0633" },
+    { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.13.3-py3-none-any.whl", hash = "sha256:dac450c4d9f7890fd7228809f945b6bbc5135d6a24d9d44818b58e986d9cdecb" },
 ]
 
 [[package]]
