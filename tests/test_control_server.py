@@ -388,6 +388,7 @@ def test_run_opsiscript_content(opsiclientd_auth: tuple[str, str]) -> None:  # n
 		with (
 			use_logging_config(stderr_level=LOG_INFO),
 			patch("opsiclientd.webserver.rpc.control.run_command", return_value=MockProcess()),
+			patch("opsiclientd.webserver.rpc.control.run_script", return_value=MockProcess()),
 			patch("builtins.open", mock_open(read_data="[1] Mocked log content")),
 		):
 			response = client.jsonrpc20(path="/opsiclientd", method="runOpsiScriptContent", params=params, id=2)
