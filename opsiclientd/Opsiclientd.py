@@ -165,6 +165,8 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		self._isRebootTriggered = False
 		self._isShutdownTriggered = False
+		# Reboot / shutdown requested from outside via RPC (e.g. configed / hostControl)
+		self._isShutdownRequestedViaRpc = False
 
 		self._actionProcessorUserName = ""
 		self._actionProcessorUserPassword = ""

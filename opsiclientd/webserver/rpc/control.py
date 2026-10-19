@@ -406,11 +406,13 @@ class ControlInterface(PipeControlInterface):
 	def shutdown(self, waitSeconds: int = 0) -> None:
 		waitSeconds = to_int(waitSeconds)
 		logger.notice("rpc shutdown: shutting down computer in %s seconds", waitSeconds)
+		self.opsiclientd._isShutdownRequestedViaRpc = True
 		self.opsiclientd.shutdownMachine(waitSeconds)
 
 	def reboot(self, waitSeconds: int = 0) -> None:
 		waitSeconds = to_int(waitSeconds)
 		logger.notice("rpc reboot: rebooting computer in %s seconds", waitSeconds)
+		self.opsiclientd._isShutdownRequestedViaRpc = True
 		self.opsiclientd.rebootMachine(waitSeconds)
 
 	def restart(self, waitSeconds: int = 0) -> None:
@@ -980,8 +982,10 @@ class ControlInterface(PipeControlInterface):
 			return False
 
 		if self.opsiclientd.isRebootTriggered() or self.opsiclientd.isShutdownTriggered():
-			logger.info("Reboot or shutdown is triggered, not firing on_shutdown")
-			return False
+			if not self.opsiclientd._isShutdownRequestedViaRpc:
+				logger.info("Reboot or shutdown is triggered, not firing on_shutdown")
+				return False
+			logger.info("Reboot or shutdown was requested via rpc, on_shutdown can be fired")
 
 		if self.isInstallationPending():
 			logger.info("Installations are pending, not firing on_shutdown")

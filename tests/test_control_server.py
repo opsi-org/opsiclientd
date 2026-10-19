@@ -49,6 +49,50 @@ def test_firing_unknown_event_raises_error() -> None:
 		controlServer.fireEvent("foobar")
 
 
+@pytest.mark.parametrize(
+	"trigger, via_rpc, expected",
+	(
+		(None, False, True),
+		("shutdown", True, True),
+		("reboot", True, True),
+		("shutdown", False, False),
+		("reboot", False, False),
+	),
+)
+def test_run_on_shutdown(trigger: str | None, via_rpc: bool, expected: bool) -> None:
+	ocd = Opsiclientd()
+	control_interface = ControlInterface(ocd)
+	event_configs = {"on_shutdown": {"name": "on_shutdown", "active": True}}
+
+	with (
+		patch("opsiclientd.Opsiclientd.System") as system,
+		patch("opsiclientd.Opsiclientd.notify_posix_terminals"),
+		patch("opsiclientd.webserver.rpc.control.getEventConfigs", return_value=event_configs),
+		patch("opsiclientd.webserver.rpc.control.time.sleep"),
+		patch.object(ControlInterface, "isInstallationPending", return_value=False),
+		patch.object(ControlInterface, "isEventRunning", return_value=False),
+		patch.object(ControlInterface, "fireEvent") as fire_event,
+	):
+		if trigger == "shutdown":
+			if via_rpc:
+				control_interface.shutdown()
+			else:
+				ocd.shutdownMachine(0)
+			system.shutdown.assert_called_once()
+		elif trigger == "reboot":
+			if via_rpc:
+				control_interface.reboot()
+			else:
+				ocd.rebootMachine(0)
+			system.reboot.assert_called_once()
+
+		assert control_interface.runOnShutdown() is expected
+		if expected:
+			fire_event.assert_called_once_with("on_shutdown")
+		else:
+			fire_event.assert_not_called()
+
+
 def test_redirect(test_client: OpsiclientdTestClient) -> None:  # noqa
 	with test_client as client:
 		for path, redirect in REDIRECTS.items():
