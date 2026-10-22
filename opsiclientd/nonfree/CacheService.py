@@ -59,6 +59,7 @@ timeline = Timeline()
 sync_completed_lock = threading.Lock()
 RETENTION_HEARTBEAT_INTERVAL_DIFF = 10.0
 MIN_HEARTBEAT_INTERVAL = 1.0
+PRODUCT_CACHING_RETRY_INTERVAL = 60.0
 logger = get_logger()
 
 
@@ -886,6 +887,7 @@ class ProductCacheService(threading.Thread):
 		self._updateConfig()
 
 		self._stopped = False
+		self._stop_event = threading.Event()
 		self._running = False
 		self._working = False
 		self._state: dict[str, Any] = {}
@@ -991,6 +993,7 @@ class ProductCacheService(threading.Thread):
 
 	def stop(self) -> None:
 		self._stopped = True
+		self._stop_event.set()
 		if self._network_monitor:
 			self._network_monitor.stop()
 			self._network_monitor = None
@@ -1092,15 +1095,18 @@ class ProductCacheService(threading.Thread):
 		with log_context({"instance": "product cache service"}):
 			self._running = True
 			logger.notice("Product cache service started")
-			try:
-				while not self._stopped:
-					wait_time: float | None = None
-					if self._cache_products_requested and not self._working and self._continue_event.is_set():
+			while not self._stopped:
+				wait_time: float | None = None
+				if self._cache_products_requested and not self._working and self._continue_event.is_set():
+					# Errors (e.g. temporary network problems) must not end the thread,
+					# the request stays pending and is retried after a delay.
+					try:
 						init_from_service(service_client=self.service_client)
 						wait_time = self.start_caching_or_get_waiting_time()
-					time.sleep(wait_time or 1.0)
-			except Exception as err:
-				logger.exception(err)
+					except Exception as err:
+						logger.exception("Product caching failed, retrying in %0.0f seconds: %s", PRODUCT_CACHING_RETRY_INTERVAL, err)
+						wait_time = PRODUCT_CACHING_RETRY_INTERVAL
+				self._stop_event.wait(wait_time or 1.0)
 
 			logger.notice("Product cache service ended")
 			self._running = False

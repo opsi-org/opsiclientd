@@ -357,6 +357,45 @@ def test_cache_product(tmp_path: Path) -> None:
 		assert product_cache_service._cache_dir_sizes == {}
 
 
+def test_product_cache_service_keeps_running_and_retries_after_error(tmp_path: Path) -> None:
+	def _updateConfig(self: ProductCacheService) -> None:
+		self._storage_dir = tmp_path / "storage"
+		self._temp_dir = self._storage_dir / "tmp"
+		self._product_cache_dir = self._storage_dir / "depot"
+		self._product_cache_target_size = 1_000_000
+		self._product_cache_max_size = 1_000_000
+		self._min_free_disk_space = 0
+
+	init_calls = 0
+
+	def mock_init_from_service(service_client: Any) -> None:
+		nonlocal init_calls
+		init_calls += 1
+		if init_calls == 1:
+			raise RuntimeError("Cannot sync config: [WinError 10051] Network is unreachable")
+
+	with (
+		patch("opsiclientd.nonfree.CacheService.ProductCacheService._updateConfig", _updateConfig),
+		patch("opsiclientd.nonfree.CacheService.ProductCacheService.service_client", MagicMock()),
+		patch("opsiclientd.nonfree.CacheService.init_from_service", mock_init_from_service),
+		patch("opsiclientd.nonfree.CacheService.PRODUCT_CACHING_RETRY_INTERVAL", 0.01),
+	):
+		product_cache_service = ProductCacheService(opsiclientd=None)  # ty: ignore[invalid-argument-type]
+
+		def mock_start_caching() -> None:
+			product_cache_service._cache_products_requested = False
+			product_cache_service.stop()
+
+		with patch.object(product_cache_service, "start_caching_or_get_waiting_time", side_effect=mock_start_caching) as start_mock:
+			product_cache_service._cache_products_requested = True
+			product_cache_service.start()
+			product_cache_service.join(timeout=10)
+
+		assert not product_cache_service.is_alive()
+		assert init_calls == 2
+		start_mock.assert_called_once()
+
+
 @pytest.mark.windows
 def test_pause_resume_product_caching_on_metered_net_connection() -> None:
 	cache_service = ProductCacheService(opsiclientd=MagicMock())
