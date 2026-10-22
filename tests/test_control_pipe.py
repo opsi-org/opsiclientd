@@ -12,6 +12,7 @@ from __future__ import annotations
 import socket
 import threading
 import time
+from pathlib import Path
 
 import pytest
 
@@ -56,10 +57,12 @@ class PipeClient(threading.Thread):
 
 
 @pytest.mark.linux
-def test_control_pipe() -> None:
+def test_control_pipe(tmp_path: Path) -> None:
 	ocd = Opsiclientd()
 	control_pipe = ControlPipeFactory(ocd)
 	assert isinstance(control_pipe, PosixControlDomainSocket)
+	# Use a dedicated socket, an opsiclientd instance may already be running (e.g. in CI)
+	control_pipe._socketName = str(tmp_path / "socket")
 	control_pipe.start()
 	pipe_client = PipeClient(control_pipe._socketName)
 	time.sleep(1)
