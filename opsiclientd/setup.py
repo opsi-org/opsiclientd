@@ -262,7 +262,7 @@ def install_service_windows() -> None:
 
 	import winreg
 
-	image_path = config.get("global", "base_dir") + "\\opsiclientd_bin\\opsiclientd.exe"
+	image_path = '"' + config.get("global", "base_dir") + '\\opsiclientd_bin\\opsiclientd.exe"'
 	with winreg.CreateKeyEx(
 		winreg.HKEY_LOCAL_MACHINE,
 		r"SYSTEM\CurrentControlSet\Services\opsiclientd",
