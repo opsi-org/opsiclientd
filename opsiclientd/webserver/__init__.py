@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import socket
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from threading import Thread
 from typing import TYPE_CHECKING
@@ -22,14 +23,22 @@ logger = get_logger()
 
 
 def _get_bind_interfaces(interfaces: list[str]) -> list[str]:
-	"""Remove duplicate IPs and specific IPs covered by a wildcard of the same family."""
+	"""Remove invalid entries, duplicate IPs and specific IPs covered by a wildcard of the same family."""
 	addresses: list[IPv4Address | IPv6Address | str] = []
 	for interface in interfaces:
+		interface = str(interface).strip()
 		try:
 			addresses.append(ip_address(interface))
 		except ValueError:
-			# Leave hostname resolution and validation to the server.
+			try:
+				socket.getaddrinfo(interface, None)
+			except (socket.gaierror, UnicodeError, OSError) as err:
+				logger.warning("Ignoring invalid control server interface %r: %s", interface, err)
+				continue
 			addresses.append(interface)
+	if not addresses:
+		logger.warning("No valid control server interface configured, falling back to 127.0.0.1 and ::1")
+		return ["127.0.0.1", "::1"]
 	wildcard_versions = {address.version for address in addresses if not isinstance(address, str) and address.is_unspecified}
 	return list(
 		dict.fromkeys(
