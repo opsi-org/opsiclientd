@@ -27,6 +27,8 @@ def _get_bind_interfaces(interfaces: list[str]) -> list[str]:
 	addresses: list[IPv4Address | IPv6Address | str] = []
 	for interface in interfaces:
 		interface = str(interface).strip()
+		if not interface:
+			continue
 		try:
 			addresses.append(ip_address(interface))
 		except ValueError:
