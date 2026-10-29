@@ -921,10 +921,11 @@ class Config:
 		if config_states.get("clientconfig.smart_cache"):
 			smart_cache = bool(config_states["clientconfig.smart_cache"][0])
 			logger.info("SmartCache WAN is set to %s", smart_cache)
-			if smart_cache is False:
-				logger.info("SmartCache WAN is disabled")
-				# Is set here so that the configs can be overwritten
-				self.setSmartCacheActive(False)
+
+		if not smart_cache:
+			logger.info("SmartCache WAN is disabled")
+			# Is set here so that the configs can be overwritten
+			self.setSmartCacheActive(False)
 
 		if config_states.get("clientconfig.smart_cache.sync_completed_action"):
 			val = config_states["clientconfig.smart_cache.sync_completed_action"][0]
@@ -997,6 +998,12 @@ class Config:
 		:param sync_completed_action: Action to take when sync is completed ("none", "process", "reboot").
 		:param cache_products_on_startup: Whether to cache products on startup.
 		"""
+		logger.info(
+			"Setting SmartCache active state to %s, sync_completed_action=%s, cache_products_on_startup=%s",
+			activated,
+			sync_completed_action,
+			cache_products_on_startup,
+		)
 		start_event = "event_gui_startup" if RUNNING_ON_WINDOWS else "event_opsiclientd_start"
 		if activated:
 			self.set("event_net_connection", "active", False)
