@@ -225,7 +225,7 @@ class NotificationServer(SubjectsObserver, Thread):
 	def requestEndConnections(self) -> None:
 		logger.debug("requestEndConnections")
 		self.notify(name="endConnection", params=[])
-		for client in self._clients:
+		for client in list(self._clients or []):
 			client.close_connection()
 
 	def notify(self, name: str, params: list[Any], clients: list[NotificationServerClientConnection] | None = None) -> None:
@@ -282,7 +282,8 @@ class NotificationServer(SubjectsObserver, Thread):
 			return
 
 		assert self._server
-		addrs = ", ".join(str(sock.getsockname()) for sock in self._server.sockets)
+		sockets = self._server.sockets or ()
+		addrs = ", ".join(str(sock.getsockname()) for sock in sockets)
 		logger.info(f"Notification server serving on {addrs}")
 		get_event_loop().create_task(self._server.serve_forever())
 
@@ -314,12 +315,17 @@ class NotificationServer(SubjectsObserver, Thread):
 			self.requestEndConnections()
 
 		with self._server_lock:
-			if self._server:
+			server = self._server
+			if server is not None:
 				self.requestEndConnections()
-				if hasattr(self._server, "close_clients"):
-					self._server.close_clients()
 				try:
-					self._server.close()
+					sockets = getattr(server, "sockets", None)
+					if sockets is None:
+						logger.debug("Notification server already closed, skipping close call")
+					else:
+						if hasattr(server, "close_clients"):
+							server.close_clients()
+						server.close()
 				except Exception as err:
 					logger.warning("Error closing server: %s", err, exc_info=True)
 				self._server = None

@@ -72,6 +72,32 @@ class NotificationClient(Thread):
 		self.sock.close()
 
 
+def test_notification_server_stop_skips_already_closed_server() -> None:
+	class DummyServer:
+		sockets = None
+
+		def __init__(self) -> None:
+			self.close_called = False
+			self.close_clients_called = False
+
+		def close_clients(self) -> None:
+			self.close_clients_called = True
+
+		def close(self) -> None:
+			self.close_called = True
+			raise TypeError("'NoneType' object is not iterable")
+
+	notification_server = NotificationServer(address="127.0.0.1", start_port=44044, subjects=[])  # ty: ignore[invalid-argument-type]
+	dummy_server = DummyServer()
+	notification_server._server = dummy_server
+	notification_server._clients = []
+
+	notification_server.stop()
+
+	assert not dummy_server.close_clients_called
+	assert not dummy_server.close_called
+
+
 def test_notification_server_multi_client() -> None:
 	address = "127.0.0.1"
 	start_port = 44044
