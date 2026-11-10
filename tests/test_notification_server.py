@@ -87,9 +87,9 @@ def test_notification_server_stop_skips_already_closed_server() -> None:
 			self.close_called = True
 			raise TypeError("'NoneType' object is not iterable")
 
-	notification_server = NotificationServer(address="127.0.0.1", start_port=44044, subjects=[])  # ty: ignore[invalid-argument-type]
+	notification_server = NotificationServer(address="127.0.0.1", start_port=44044, subjects=[])
 	dummy_server = DummyServer()
-	notification_server._server = dummy_server
+	notification_server._server = dummy_server  # ty: ignore[invalid-assignment]
 	notification_server._clients = []
 
 	notification_server.stop()
