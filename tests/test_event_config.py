@@ -11,7 +11,7 @@ import logging
 from collections.abc import Generator
 
 import pytest
-from opsi.logging import DEBUG, INFO, LOG_DEBUG, LOG_TRACE, NOTICE, logger
+from opsi.logging import DEBUG, INFO, LOG_DEBUG, LOG_TRACE, logger
 
 from opsiclientd.Config import Config
 from opsiclientd.EventConfiguration import EventConfig
