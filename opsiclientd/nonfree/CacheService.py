@@ -312,6 +312,17 @@ class CacheService(threading.Thread):
 				)
 				return False
 
+			failure = productState.get("failure")
+			if failure:
+				logger.info(
+					"Caching of product '%s_%s-%s' failed (got state: %s)",
+					productId,
+					productOnDepot.productVersion,
+					productOnDepot.packageVersion,
+					productState,
+				)
+				return False
+
 			if not productState.get("completed"):
 				logger.info(
 					"Caching of product '%s_%s-%s' not yet completed (got state: %s)",
@@ -1401,7 +1412,8 @@ class ProductCacheService(threading.Thread):
 			actionProgress = "caching"
 		elif key == "completed":
 			actionProgress = "cached"
-		elif key == "failure":
+		elif key == "failure" and value is not None:
+			self._state["products"][productId]["completed"] = None
 			actionProgress = f"Cache failure: {value}"
 			if len(actionProgress) > 250:
 				actionProgress = f"{actionProgress[:249]}…"

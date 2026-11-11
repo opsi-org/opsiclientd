@@ -29,9 +29,31 @@ from opsi.opsi.service.model.object import (
 )
 
 from opsiclientd.Config import Config as OpsiclientdConfig
-from opsiclientd.nonfree.CacheService import ProductCacheService
+from opsiclientd.nonfree.CacheService import CacheService, ProductCacheService
 from opsiclientd.State import State
 from opsiclientd.utils import DiskSpaceUsage, get_directory_size
+
+
+def test_product_cache_completed_false_if_product_failed() -> None:
+	cache_service = CacheService(opsiclientd=None)  # ty: ignore[invalid-argument-type]
+	cache_service.initializeProductCacheService = MagicMock()
+	cache_service._productCacheService = MagicMock()
+	cache_service._productCacheService.getState.return_value = {"products": {"prod1": {"completed": 1234567890, "failure": "Cache failed"}}}
+
+	service_client = MagicMock()
+	service_client.service_is_opsiclientd.return_value = False
+	service_client.productOnDepot_getObjects.return_value = [
+		ProductOnDepot(
+			depotId="depot1.opsi.test",
+			productType="LocalbootProduct",
+			productId="prod1",
+			productVersion="1.0",
+			packageVersion="1",
+		)
+	]
+
+	with patch("opsiclientd.nonfree.CacheService.config.get", side_effect=lambda section, key=None, default=None: "depot1.opsi.test"):
+		assert cache_service.productCacheCompleted(service_client, ["prod1"]) is False
 
 
 def test_cache_product(tmp_path: Path) -> None:
