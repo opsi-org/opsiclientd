@@ -16,7 +16,7 @@ from types import FrameType
 
 from opsi.logging import LOG_NONE, get_logger, log_context, logging_config
 
-from opsiclientd import DEFAULT_STDERR_LOG_FORMAT, init_logging, parser
+from opsiclientd import DEFAULT_FILE_LOG_FORMAT, DEFAULT_STDERR_LOG_FORMAT, init_logging, parser
 from opsiclientd.Config import Config
 from opsiclientd.nonfree.Posix import OpsiclientdPosix
 from opsiclientd.Opsiclientd import Opsiclientd
@@ -86,12 +86,32 @@ def main() -> None:
 		Config().set("global", "config_file", options.config_file)
 
 	if options.action == "setup":
-		logging_config(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+		if options.logFile:
+			log_dir = os.path.dirname(options.logFile)
+			if log_dir:
+				os.makedirs(log_dir, exist_ok=True)
+		logging_config(
+			stderr_level=options.logLevel,
+			stderr_format=DEFAULT_STDERR_LOG_FORMAT,
+			log_file=options.logFile,
+			file_level=options.logLevel,
+			file_format=DEFAULT_FILE_LOG_FORMAT,
+		)
 		setup(full=True, options=options)
 		return
 
 	if options.action == "download-from-depot":
-		logging_config(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+		if options.logFile:
+			log_dir = os.path.dirname(options.logFile)
+			if log_dir:
+				os.makedirs(log_dir, exist_ok=True)
+		logging_config(
+			stderr_level=options.logLevel,
+			stderr_format=DEFAULT_STDERR_LOG_FORMAT,
+			log_file=options.logFile,
+			file_level=options.logLevel,
+			file_format=DEFAULT_FILE_LOG_FORMAT,
+		)
 		from opsiclientd.OpsiService import download_from_depot
 
 		Config().readConfigFile()

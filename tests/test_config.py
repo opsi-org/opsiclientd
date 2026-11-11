@@ -8,10 +8,12 @@ test_config
 """
 
 import shutil
+import sys
 from pathlib import Path
 
 import pytest
 
+from opsiclientd import parser
 from opsiclientd.Config import (
 	Config,
 	NoConfigOptionFoundException,
@@ -53,6 +55,14 @@ def test_config_system_defaults_posix() -> None:
 def test_getting_unknown_option_fails() -> None:
 	with pytest.raises(NoConfigOptionFoundException):
 		config.get("global", "non_existing_option")
+
+
+def test_parser_accepts_log_file(monkeypatch: pytest.MonkeyPatch) -> None:
+	monkeypatch.setattr(sys, "argv", ["opsiclientd", "--log-level", "6", "--log-file", "/tmp/opsiclientd.log", "setup"])
+	args = parser.parse_args()
+	assert args.logLevel == 6
+	assert args.logFile == "/tmp/opsiclientd.log"
+	assert args.action == "setup"
 
 
 def test_update_config_file(tmp_path: Path, default_config: Config) -> None:  # noqa

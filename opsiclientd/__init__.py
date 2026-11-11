@@ -44,6 +44,7 @@ parser.add_argument(
 parser.add_argument(
 	"--log-level", "-l", dest="logLevel", type=int, choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], default=LOG_NONE, help="Set the log-level."
 )
+parser.add_argument("--log-file", dest="logFile", default=None, help="Write logs to this file in addition to stderr.")
 parser.add_argument(
 	"--log-filter", dest="logFilter", default=None, help="Filter log records contexts (<ctx-name-1>=<val1>[,val2][;ctx-name-2=val3])."
 )
