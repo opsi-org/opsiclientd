@@ -33,6 +33,9 @@ class PanicEventConfig(EventConfig):
 		self.updateConfigFile = False
 		self.writeLogToService = False
 		self.updateActionProcessor = False
+		self.eventNotifierActive = False
+		self.actionNotifierActive = False
+		self.shutdownNotifierActive = False
 		self.eventNotifierCommand: str | None = None
 		self.actionNotifierCommand: str | None = None
 		self.shutdownNotifierCommand: str | None = None

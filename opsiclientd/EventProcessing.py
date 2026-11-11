@@ -1352,7 +1352,7 @@ class EventProcessingThread(threading.Thread):
 		self._notificationServer.addSubject(choiceSubject)
 		notifier_processes: list[Process] = []
 		try:
-			if self.event.eventConfig.actionNotifierCommand:
+			if self.event.eventConfig.actionNotifierActive and self.event.eventConfig.actionNotifierCommand:
 				desktops = [self.event.eventConfig.actionNotifierDesktop]
 				if RUNNING_ON_WINDOWS and self.event.eventConfig.actionNotifierDesktop == "all":
 					desktops = ["winlogon", "default"]
@@ -1478,7 +1478,7 @@ class EventProcessingThread(threading.Thread):
 					self.setStatusMessage(_("Shutdown requested"))
 
 				if self._shutdownWarningTime:
-					if not self.event.eventConfig.shutdownNotifierCommand:
+					if self.event.eventConfig.shutdownNotifierActive and not self.event.eventConfig.shutdownNotifierCommand:
 						raise ConfigurationError(
 							f"Event {self.event.eventConfig.getName()} defines shutdownWarningTime but shutdownNotifierCommand is not set"
 						)
@@ -1598,15 +1598,16 @@ class EventProcessingThread(threading.Thread):
 							notifierId = "shutdown_select"
 							shutdownNotifierCommand = shutdownNotifierCommand.replace("shutdown.ini", "shutdown_select.ini")
 
-						for desktop in desktops:
-							notifier_process = self.startNotifierApplication(
-								command=shutdownNotifierCommand, notifierId=notifierId, desktop=desktop
-							)
-							if notifier_process:
-								notifier_processes.append(notifier_process)
-							else:
-								logger.error("Failed to start shutdown notifier, shutdown will not be executed")
-								failed_to_start_notifier = True
+						if self.event.eventConfig.shutdownNotifierActive:
+							for desktop in desktops:
+								notifier_process = self.startNotifierApplication(
+									command=shutdownNotifierCommand, notifierId=notifierId, desktop=desktop
+								)
+								if notifier_process:
+									notifier_processes.append(notifier_process)
+								else:
+									logger.error("Failed to start shutdown notifier, shutdown will not be executed")
+									failed_to_start_notifier = True
 
 						current_hour = time.localtime().tm_hour
 						timeout = int(self._shutdownWarningTime)
@@ -1954,7 +1955,7 @@ class EventProcessingThread(threading.Thread):
 					if self.should_cancel():
 						raise EventProcessingCanceled()
 
-					if self.event.eventConfig.eventNotifierCommand:
+					if self.event.eventConfig.eventNotifierActive and self.event.eventConfig.eventNotifierCommand:
 						notifierId: Literal["userlogin", "event"] = "userlogin" if self.event.eventConfig.actionType == "login" else "event"
 						desktops = [self.event.eventConfig.eventNotifierDesktop]
 						if RUNNING_ON_WINDOWS and self.event.eventConfig.eventNotifierDesktop == "all":

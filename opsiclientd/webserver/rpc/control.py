@@ -143,7 +143,7 @@ class PipeControlInterface(Interface):
 				action_processor_command += " /silent" if is_windows() else " -silent"
 			additional_event_config = {
 				"eventNotifierDesktop": "winlogon",
-				"eventNotifierCommand": "",
+				"eventNotifierActive": False,
 				"actionProcessorDesktop": "winlogon",
 				"actionProcessorCommand": action_processor_command,
 			}

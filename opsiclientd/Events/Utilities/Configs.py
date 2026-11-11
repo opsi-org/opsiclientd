@@ -242,6 +242,12 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 						eventConfigs[eventConfigId]["updateActionProcessor"] = to_bool(value)
 					elif key == "action_type":
 						eventConfigs[eventConfigId]["actionType"] = to_string_lower(value)
+					elif key == "event_notifier_active":
+						eventConfigs[eventConfigId]["eventNotifierActive"] = to_bool(value)
+					elif key == "action_notifier_active":
+						eventConfigs[eventConfigId]["actionNotifierActive"] = to_bool(value)
+					elif key == "shutdown_notifier_active":
+						eventConfigs[eventConfigId]["shutdownNotifierActive"] = to_bool(value)
 					elif key == "event_notifier_command":
 						eventConfigs[eventConfigId]["eventNotifierCommand"] = config.replace(to_string_lower(value), escaped=True)
 					elif key == "event_notifier_desktop":
