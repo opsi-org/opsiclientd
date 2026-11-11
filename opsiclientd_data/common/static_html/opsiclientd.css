@@ -228,6 +228,7 @@ div.mainpage-link-box {
 	clear: both;
 	float: left;
 	font-family: monospace;
+	line-height: 1.2em;
 	height: 1.2em;
 }
 
@@ -273,6 +274,7 @@ div.mainpage-link-box {
 .log-line-multiline-collapsed>*>.log-record-message {
 	display: inline-flex;
 	height: 1.2em;
+	line-height: 1.2em;
 	overflow: hidden;
 }
 
