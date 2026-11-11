@@ -97,8 +97,10 @@ def test_inheritance() -> None:
 	assert configs["gui_startup{installation_pending}"]["shutdownWarningTime"] == 12345
 
 
-def test_get_event_configs_logs_change_summary_at_notice_and_dump_at_trace() -> None:
+def test_get_event_configs_logs_only_changes_at_notice_and_dump_at_trace() -> None:
 	load_config_file("tests/data/event_config/1.conf")
+	# Baseline load
+	getEventConfigs()
 
 	records: list[logging.LogRecord] = []
 
@@ -111,15 +113,22 @@ def test_get_event_configs_logs_change_summary_at_notice_and_dump_at_trace() -> 
 	logger.addHandler(handler)
 	logger.setLevel(LOG_TRACE)
 	try:
+		# Reload without modification: nothing changed
+		getEventConfigs()
+		assert not [r for r in records if r.levelname == "NOTICE" and "Event config '" in r.getMessage()]
+
+		records.clear()
+		Config().set(section="event_timer", option="interval", value=12345)
 		getEventConfigs()
 	finally:
 		logger.removeHandler(handler)
 		logger.setLevel(previous_level)
 
-	assert any(
-		record.levelname == "NOTICE" and "Event config '" in record.getMessage() and " changed:" in record.getMessage()
-		for record in records
-	)
-	assert any(
-		record.levelname == "TRACE" and "Event config '" in record.getMessage() and " args:" in record.getMessage() for record in records
-	)
+	notices = [r.getMessage() for r in records if r.levelname == "NOTICE" and "Event config '" in r.getMessage()]
+	assert len(notices) == 1
+	assert notices[0].startswith("Event config 'timer' changed:")
+	assert "'interval': (" in notices[0]
+	assert "12345" in notices[0]
+	assert "actionMessage" not in notices[0]
+
+	assert any(r.levelname == "TRACE" and "Event config 'timer' args:" in r.getMessage() for r in records)

@@ -21,6 +21,9 @@ __all__ = ["getEventConfigs"]
 
 config = Config()
 
+# Result of the previous getEventConfigs() call, used to log what changed
+_last_event_configs: dict[str, dict[str, Any]] | None = None
+
 
 def _get_event_config_diff(before: dict[str, Any], after: dict[str, Any]) -> dict[str, tuple[Any, Any]]:
 	changes: dict[str, tuple[Any, Any]] = {}
@@ -33,6 +36,7 @@ def _get_event_config_diff(before: dict[str, Any], after: dict[str, Any]) -> dic
 
 
 def getEventConfigs() -> dict[str, dict[str, Any]]:
+	global _last_event_configs
 	preconditions: dict[str, dict[str, bool]] = {}
 	for section, options in config.getDict().items():
 		section = section.lower()
@@ -123,7 +127,6 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 			if rawEventConfig["args"].get("type", "template").lower() == "template":
 				continue
 
-			previous_event_config = pycopy.deepcopy(eventConfigs.get(eventConfigId, {}))
 			eventConfigs[eventConfigId] = {"active": rawEventConfig["active"], "preconditions": {}}
 
 			if rawEventConfig.get("precondition"):
@@ -296,13 +299,18 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 					logger.debug(err, exc_info=True)
 					logger.error("Failed to set event config argument '%s' to '%s': %s", key, value, err)
 
-			changed_config = _get_event_config_diff(previous_event_config, eventConfigs[eventConfigId])
-			if changed_config:
-				logger.notice(
-					"Event config '%s' changed: %s",
-					eventConfigId,
-					pprint.pformat(changed_config, indent=4, width=300, compact=False),
-				)
+			if _last_event_configs is not None:
+				previous_event_config = _last_event_configs.get(eventConfigId)
+				if previous_event_config is None:
+					logger.notice("Event config '%s' added", eventConfigId)
+				else:
+					changed_config = _get_event_config_diff(previous_event_config, eventConfigs[eventConfigId])
+					if changed_config:
+						logger.notice(
+							"Event config '%s' changed: %s",
+							eventConfigId,
+							pprint.pformat(changed_config, indent=4, width=300, compact=False),
+						)
 			else:
 				logger.info("Event config '%s' did not change", eventConfigId)
 			logger.trace(
@@ -312,5 +320,10 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 			)
 		except Exception as err:
 			logger.exception(err)
+
+	if _last_event_configs is not None:
+		for eventConfigId in sorted(set(_last_event_configs) - set(eventConfigs)):
+			logger.notice("Event config '%s' removed", eventConfigId)
+	_last_event_configs = pycopy.deepcopy(eventConfigs)
 
 	return eventConfigs
