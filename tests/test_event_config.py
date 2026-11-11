@@ -11,7 +11,7 @@ import logging
 from collections.abc import Generator
 
 import pytest
-from opsi.logging import LOG_TRACE, logger
+from opsi.logging import DEBUG, INFO, LOG_DEBUG, LOG_TRACE, NOTICE, logger
 
 from opsiclientd.Config import Config
 from opsiclientd.EventConfiguration import EventConfig
@@ -97,7 +97,36 @@ def test_inheritance() -> None:
 	assert configs["gui_startup{installation_pending}"]["shutdownWarningTime"] == 12345
 
 
-def test_get_event_configs_logs_only_changes_at_notice_and_dump_at_trace() -> None:
+def test_get_event_configs_logs_config_once_on_first_load(monkeypatch: pytest.MonkeyPatch) -> None:
+	load_config_file("tests/data/event_config/1.conf")
+	monkeypatch.setattr("opsiclientd.Events.Utilities.Configs._last_event_configs", None)
+
+	records: list[logging.LogRecord] = []
+
+	class EventConfigLogHandler(logging.Handler):
+		def emit(self, record: logging.LogRecord) -> None:
+			records.append(record)
+
+	handler = EventConfigLogHandler()
+	previous_level = logger.level
+	logger.addHandler(handler)
+	logger.setLevel(LOG_DEBUG)
+	try:
+		configs = getEventConfigs()
+		first_load = [r.getMessage() for r in records if r.levelno == INFO and "Event config '" in r.getMessage()]
+		records.clear()
+		getEventConfigs()
+		second_load = [r.getMessage() for r in records if r.levelno == INFO and "Event config '" in r.getMessage()]
+	finally:
+		logger.removeHandler(handler)
+		logger.setLevel(previous_level)
+
+	assert len(first_load) == len(configs)
+	assert all(" loaded:" in msg for msg in first_load)
+	assert not second_load
+
+
+def test_get_event_configs_logs_only_changes_at_notice() -> None:
 	load_config_file("tests/data/event_config/1.conf")
 	# Baseline load
 	getEventConfigs()
@@ -115,7 +144,7 @@ def test_get_event_configs_logs_only_changes_at_notice_and_dump_at_trace() -> No
 	try:
 		# Reload without modification: nothing changed
 		getEventConfigs()
-		assert not [r for r in records if r.levelname == "NOTICE" and "Event config '" in r.getMessage()]
+		assert not [r for r in records if r.levelno == INFO and "Event config '" in r.getMessage()]
 
 		records.clear()
 		Config().set(section="event_timer", option="interval", value=12345)
@@ -124,11 +153,11 @@ def test_get_event_configs_logs_only_changes_at_notice_and_dump_at_trace() -> No
 		logger.removeHandler(handler)
 		logger.setLevel(previous_level)
 
-	notices = [r.getMessage() for r in records if r.levelname == "NOTICE" and "Event config '" in r.getMessage()]
-	assert len(notices) == 1
-	assert notices[0].startswith("Event config 'timer' changed:")
-	assert "'interval': (" in notices[0]
-	assert "12345" in notices[0]
-	assert "actionMessage" not in notices[0]
+	infos = [r.getMessage() for r in records if r.levelno == INFO and "Event config '" in r.getMessage()]
+	assert len(infos) == 1
+	assert infos[0].startswith("Event config 'timer' changed:")
+	assert "'interval': (" in infos[0]
+	assert "12345" in infos[0]
+	assert "actionMessage" not in infos[0]
 
-	assert any(r.levelname == "TRACE" and "Event config 'timer' args:" in r.getMessage() for r in records)
+	assert any(r.levelno <= DEBUG and "Event config 'timer' args:" in r.getMessage() for r in records)

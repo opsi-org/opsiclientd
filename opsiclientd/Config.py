@@ -433,13 +433,18 @@ class Config:
 			return "opsi-winst"
 		return "opsi-script"
 
-	def set(self, section: str, option: str, value: Any) -> None:
+	def set(self, section: str, option: str, value: Any) -> bool:
+		"""
+		Set a config value.
+
+		:returns: True if the stored value was changed, False otherwise.
+		"""
 		if not section:
 			section = "global"
 
 		section = str(section).strip().lower()
 		if section == "system":
-			return
+			return False
 
 		option = str(option).strip().lower()
 		if isinstance(value, str):
@@ -465,13 +470,13 @@ class Config:
 			and "alt_ids" not in option
 		):
 			if section == "action_processor" and option == "remote_common_dir":
-				return
+				return False
 			logger.warning("Refusing to set empty value config %s.%s", section, option)
-			return
+			return False
 
 		if section == "depot_server" and option == "drive" and (RUNNING_ON_LINUX or RUNNING_ON_DARWIN) and not value.startswith("/"):
 			logger.warning("Refusing to set %s.%s to '%s' on posix", section, option, value)
-			return
+			return False
 
 		# Preprocess values, convert to correct type
 		if option in ("exclude_product_group_ids", "include_product_group_ids", "alt_ids", "interface"):
@@ -511,7 +516,7 @@ class Config:
 						value = _type(value)
 				except ValueError as err:
 					logger.error("Failed to set value '%s' for config %s.%s: %s", value, section, option, err)
-					return
+					return False
 
 				# Check / correct value
 				if option in ("connection_timeout", "user_cancelable_after") and int(str(value)) < 0:
@@ -525,9 +530,13 @@ class Config:
 
 		else:
 			logger.warning("Refusing to set value '%s' for invalid config %s.%s", value, section, option)
-			return
+			return False
 
-		logger.info("Setting config %s.%s to %r", section, option, value)
+		changed = section not in self._config or option not in self._config[section] or self._config[section][option] != value
+		if changed:
+			logger.info("Setting config %s.%s to %r", section, option, value)
+		else:
+			logger.debug("Config %s.%s already set to %r", section, option, value)
 
 		if section not in self._config:
 			self._config[section] = {}
@@ -535,6 +544,8 @@ class Config:
 
 		if section == "global" and option == "log_level":
 			logging_config(file_level=self._config[section][option])
+
+		return changed
 
 	def replace(self, string: str, escaped: bool = False) -> str:
 		for section, values in self._config.items():
@@ -941,23 +952,23 @@ class Config:
 			logger.info("SmartCache cache products on startup is set to %s", smart_cache_cache_products_on_startup)
 
 		for config_id, values in config_states.items():
-			logger.info("Got config state from service: %r=%r", config_id, values)
-
 			if not values:
 				logger.debug("No values - skipping %s", config_id)
 				continue
 
+			changed = False
 			if config_id == "clientconfig.configserver.url":
-				self.set("config_service", "url", values)
+				changed = self.set("config_service", "url", values)
 			elif config_id == "clientconfig.depot.drive":
-				self.set("depot_server", "drive", values[0])
+				changed = self.set("depot_server", "drive", values[0])
 			elif config_id == "clientconfig.depot.id":
-				self.set("depot_server", "depot_id", values[0])
+				changed = self.set("depot_server", "depot_id", values[0])
 			elif config_id == "clientconfig.depot.user":
-				self.set("depot_server", "username", values[0])
+				changed = self.set("depot_server", "username", values[0])
 			elif config_id == "clientconfig.suspend_bitlocker_on_reboot":
-				self.set("global", "suspend_bitlocker_on_reboot", values[0])
+				changed = self.set("global", "suspend_bitlocker_on_reboot", values[0])
 			elif config_id.startswith("clientconfig.smart_cache"):
+				logger.debug("Got config state from service: %r=%r", config_id, values)
 				continue  # skip smart_cache related configs as they are handled separately
 			elif config_id.startswith("opsiclientd."):
 				try:
@@ -969,9 +980,14 @@ class Config:
 					value = values
 					if len(value) == 1:
 						value = value[0]
-					self.set(section=parts[1], option=parts[2], value=value)
+					changed = self.set(section=parts[1], option=parts[2], value=value)
 				except Exception as err:
 					logger.error("Failed to process configState '%s': %s", config_id, err)
+
+			if changed:
+				logger.info("Got config state from service: %r=%r (changed)", config_id, values)
+			else:
+				logger.debug("Got config state from service: %r=%r (unchanged)", config_id, values)
 
 		if smart_cache is True:
 			logger.info("SmartCache is enabled")

@@ -7,11 +7,13 @@
 test_config
 """
 
+import logging
 import shutil
 import sys
 from pathlib import Path
 
 import pytest
+from opsi.logging import DEBUG, INFO, LOG_DEBUG, logger
 
 from opsiclientd import parser
 from opsiclientd.Config import (
@@ -91,3 +93,31 @@ def test_update_config_file(tmp_path: Path, default_config: Config) -> None:  # 
 	finally:
 		config.set("global", "config_file", conf_file)
 		config.set("global", "config_file", conf_file)
+
+
+def test_set_logs_info_only_when_value_changes(default_config: Config) -> None:  # noqa
+	records: list[logging.LogRecord] = []
+
+	class RecordingHandler(logging.Handler):
+		def emit(self, record: logging.LogRecord) -> None:
+			records.append(record)
+
+	handler = RecordingHandler()
+	previous_level = logger.level
+	logger.addHandler(handler)
+	logger.setLevel(LOG_DEBUG)
+	try:
+		assert config.set("event_test_log", "super", "default") is True
+		assert [r.levelno for r in records if "event_test_log.super" in r.getMessage()] == [INFO]
+
+		records.clear()
+		assert config.set("event_test_log", "super", "default") is False
+		assert [r.levelno for r in records if "event_test_log.super" in r.getMessage()] == [DEBUG]
+
+		records.clear()
+		assert config.set("event_test_log", "super", "other") is True
+		assert [r.levelno for r in records if "event_test_log.super" in r.getMessage()] == [INFO]
+	finally:
+		logger.removeHandler(handler)
+		logger.setLevel(previous_level)
+		config._config.pop("event_test_log", None)

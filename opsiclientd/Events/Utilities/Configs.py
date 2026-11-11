@@ -302,18 +302,22 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 			if _last_event_configs is not None:
 				previous_event_config = _last_event_configs.get(eventConfigId)
 				if previous_event_config is None:
-					logger.notice("Event config '%s' added", eventConfigId)
+					logger.info("Event config '%s' added", eventConfigId)
 				else:
 					changed_config = _get_event_config_diff(previous_event_config, eventConfigs[eventConfigId])
 					if changed_config:
-						logger.notice(
+						logger.info(
 							"Event config '%s' changed: %s",
 							eventConfigId,
 							pprint.pformat(changed_config, indent=4, width=300, compact=False),
 						)
 			else:
-				logger.info("Event config '%s' did not change", eventConfigId)
-			logger.trace(
+				logger.info(
+					"Event config '%s' loaded: %s",
+					eventConfigId,
+					pprint.pformat(eventConfigs[eventConfigId], indent=4, width=300, compact=False),
+				)
+			logger.debug(
 				"Event config '%s' args:\n%s",
 				eventConfigId,
 				pprint.pformat(eventConfigs[eventConfigId], indent=4, width=300, compact=False),
