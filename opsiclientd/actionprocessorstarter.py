@@ -83,7 +83,7 @@ def main() -> None:
 
 		language = "en"
 		try:
-			language = locale.getlocale()[0].split("_")[0]  # ty: ignore[unresolved-attribute]
+			language = locale.getlocale()[0].split("_")[0]  # ty: ignore[missing-union-attribute]
 		except Exception as err:
 			logger.debug("Failed to find default language: %s", err)
 

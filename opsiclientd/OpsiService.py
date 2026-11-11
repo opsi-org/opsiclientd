@@ -370,7 +370,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			self.update_host_id()
 
 			try:
-				client_to_depotservers = service_client.configState_getClientToDepotserver(  # ty: ignore[unresolved-attribute]
+				client_to_depotservers = service_client.configState_getClientToDepotserver(  # ty: ignore[missing-attribute]
 					clientIds=config.get("global", "host_id")
 				)
 				if not client_to_depotservers:
@@ -496,7 +496,7 @@ def download_from_depot(
 		disconnect = True
 
 	try:
-		product_idents = service_client.product_getIdents(id=product_id)  # ty: ignore[unresolved-attribute]
+		product_idents = service_client.product_getIdents(id=product_id)  # ty: ignore[missing-attribute]
 		if not product_idents:
 			raise ValueError(f"Product {product_id!r} not available")
 

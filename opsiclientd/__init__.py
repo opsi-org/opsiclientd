@@ -116,9 +116,9 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | N
 		return f"{tmp[0]}_{int(tmp[2]) - 1}.{tmp[1]}"
 
 	handler = get_all_handlers(handler_type=RotatingFileHandler)[0]
-	handler.namer = namer  # ty: ignore[unresolved-attribute]
+	handler.namer = namer  # ty: ignore[missing-attribute]
 	try:
-		handler.doRollover()  # ty: ignore[unresolved-attribute]
+		handler.doRollover()  # ty: ignore[missing-attribute]
 	except Exception as err:
 		logger.error("Failed to rotate log file: %s", err)
 	if log_filter:

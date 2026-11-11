@@ -279,8 +279,8 @@ def test_concurrency(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) ->
 	def run_rpc(rpc: dict[str, Any]) -> None:
 		thread = threading.current_thread()
 		res = requests.post(f"{opsiclientd_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
-		thread.status_code = res.status_code  # ty: ignore[unresolved-attribute]
-		thread.response = res.json()  # ty: ignore[unresolved-attribute]
+		thread.status_code = res.status_code  # ty: ignore[missing-attribute]
+		thread.response = res.json()  # ty: ignore[missing-attribute]
 
 	threads = []
 	for rpc in rpcs:
@@ -290,8 +290,8 @@ def test_concurrency(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) ->
 
 	for thread in threads:
 		thread.join()
-		assert thread.status_code == 200  # ty: ignore[unresolved-attribute]
-		response = thread.response  # ty: ignore[unresolved-attribute]
+		assert thread.status_code == 200  # ty: ignore[missing-attribute]
+		response = thread.response  # ty: ignore[missing-attribute]
 		if response["id"] == 3:
 			assert response["error"] is not None
 		else:
@@ -331,7 +331,7 @@ def test_cache_service_interface(default_config: Config, tmp_path: Path) -> None
 		assert "accessControl_authenticated" in interface
 		assert "productOnClient_generateSequence" in interface
 		assert "productOnClient_getObjectsWithSequence" in interface
-		backend.productOnClient_getObjectsWithSequence()  # ty: ignore[unresolved-attribute]
+		backend.productOnClient_getObjectsWithSequence()  # ty: ignore[missing-attribute]
 		assert hasattr(backend, "config_getObjects")  # not explicitely added to interface
 
 

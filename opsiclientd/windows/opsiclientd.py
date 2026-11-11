@@ -49,20 +49,20 @@ logger = get_logger()
 def _log_registry_key_recursively(root_key: Any, sub_key: str, *, max_depth: int = 0, depth: int = 0) -> None:
 	import win32process
 
-	access = winreg.KEY_READ  # ty: ignore[unresolved-attribute]
+	access = winreg.KEY_READ  # ty: ignore[missing-attribute]
 	if win32process.IsWow64Process():
-		access |= winreg.KEY_WOW64_64KEY  # ty: ignore[unresolved-attribute]
+		access |= winreg.KEY_WOW64_64KEY  # ty: ignore[missing-attribute]
 
 	try:
-		with winreg.OpenKeyEx(root_key, sub_key, 0, access) as key:  # ty: ignore[unresolved-attribute]
+		with winreg.OpenKeyEx(root_key, sub_key, 0, access) as key:  # ty: ignore[missing-attribute]
 			logger.info("%sRegistry key: %s", "  " * depth, sub_key)
 
-			for value_index in range(winreg.QueryInfoKey(key)[1]):  # ty: ignore[unresolved-attribute]
-				value_name, value, value_type = winreg.EnumValue(key, value_index)  # ty: ignore[unresolved-attribute]
+			for value_index in range(winreg.QueryInfoKey(key)[1]):  # ty: ignore[missing-attribute]
+				value_name, value, value_type = winreg.EnumValue(key, value_index)  # ty: ignore[missing-attribute]
 				logger.info("%sRegistry value: %s=%r (type=%s)", "  " * (depth + 1), value_name or "(Default)", value, value_type)
 
-			for key_index in range(winreg.QueryInfoKey(key)[0]):  # ty: ignore[unresolved-attribute]
-				child_key = f"{sub_key}\\{winreg.EnumKey(key, key_index)}"  # ty: ignore[unresolved-attribute]
+			for key_index in range(winreg.QueryInfoKey(key)[0]):  # ty: ignore[missing-attribute]
+				child_key = f"{sub_key}\\{winreg.EnumKey(key, key_index)}"  # ty: ignore[missing-attribute]
 				if max_depth == 0 or depth < max_depth:
 					_log_registry_key_recursively(root_key, child_key, max_depth=max_depth, depth=depth + 1)
 	except Exception as err:
@@ -70,7 +70,7 @@ def _log_registry_key_recursively(root_key: Any, sub_key: str, *, max_depth: int
 
 
 def opsiclientd_factory() -> OpsiclientdNT:
-	windowsVersion = sys.getwindowsversion()  # ty: ignore[unresolved-attribute]
+	windowsVersion = sys.getwindowsversion()  # ty: ignore[missing-attribute]
 	if windowsVersion.major == 5:  # NT5: XP
 		return OpsiclientdNT5()
 	if windowsVersion.major >= 6:  # NT6: Vista / Windows7 and later
@@ -85,7 +85,7 @@ class OpsiclientdNT(Opsiclientd):
 
 	def sendSAS(self) -> None:
 		logger.info("Sending SAS")
-		from ctypes import windll  # ty: ignore[unresolved-import]
+		from ctypes import windll  # ty: ignore[import-not-found]
 
 		windll.sas.SendSAS(0)
 
@@ -286,12 +286,12 @@ class OpsiclientdNT(Opsiclientd):
 		logger.info("TrustedInstaller process running: %s", trusted_installer_running)
 
 		_log_registry_key_recursively(
-			winreg.HKEY_LOCAL_MACHINE,  # ty: ignore[unresolved-attribute]
+			winreg.HKEY_LOCAL_MACHINE,  # ty: ignore[missing-attribute]
 			r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing",
 			max_depth=1,
 		)
 		_log_registry_key_recursively(
-			winreg.HKEY_LOCAL_MACHINE,  # ty: ignore[unresolved-attribute]
+			winreg.HKEY_LOCAL_MACHINE,  # ty: ignore[missing-attribute]
 			r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update",
 			max_depth=1,
 		)
@@ -343,13 +343,13 @@ class OpsiclientdNT(Opsiclientd):
 		while modified:
 			modified = False
 			# We need to start over iterating after key change
-			with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:  # ty: ignore[unresolved-attribute]
+			with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:  # ty: ignore[missing-attribute]
 				for idx in range(1024):
 					try:
-						profile_key = winreg.EnumKey(key, idx)  # ty: ignore[unresolved-attribute]
+						profile_key = winreg.EnumKey(key, idx)  # ty: ignore[missing-attribute]
 						logger.debug("Processing profile key %r", profile_key)
 					except WindowsError as err:
-						if err.errno == 22:  # ty: ignore[unresolved-attribute]
+						if err.errno == 22:  # ty: ignore[missing-attribute]
 							logger.debug("No more subkeys")
 							break
 						logger.debug(err)
@@ -357,8 +357,8 @@ class OpsiclientdNT(Opsiclientd):
 					sid = profile_key.replace(".bak", "")
 
 					try:
-						with winreg.OpenKey(key, profile_key) as subkey:  # ty: ignore[unresolved-attribute]
-							profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]  # ty: ignore[unresolved-attribute]
+						with winreg.OpenKey(key, profile_key) as subkey:  # ty: ignore[missing-attribute]
+							profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]  # ty: ignore[missing-attribute]
 							if keep_sid and sid == keep_sid:
 								keep_profile = profile_path
 								continue
@@ -410,13 +410,13 @@ class OpsiclientdNT(Opsiclientd):
 					else:
 						logger.info("User %r, sid %r does not exist, deleting key", username, sid)
 						try:
-							winreg.DeleteKey(key, profile_key)  # ty: ignore[unresolved-attribute]
+							winreg.DeleteKey(key, profile_key)  # ty: ignore[missing-attribute]
 							modified = True
 						except OSError as err:
 							logger.debug(err)
 
 					try:
-						winreg.DeleteKey(winreg.HKEY_USERS, sid)  # ty: ignore[unresolved-attribute]
+						winreg.DeleteKey(winreg.HKEY_USERS, sid)  # ty: ignore[missing-attribute]
 					except OSError as err:
 						logger.debug(err)
 					if modified:

@@ -306,7 +306,7 @@ class EventProcessingThread(threading.Thread):
 			if config.get("global", "log_level") > LOG_INFO:
 				logging_config(file_level=LOG_INFO)
 			try:
-				self.service_client.log_write("clientconnect", data=data, objectId=config.get("global", "host_id"), append=False)  # ty: ignore[unresolved-attribute]
+				self.service_client.log_write("clientconnect", data=data, objectId=config.get("global", "host_id"), append=False)  # ty: ignore[missing-attribute]
 			finally:
 				logging_config(file_level=config.get("global", "log_level"))
 		except Exception as err:
@@ -541,7 +541,7 @@ class EventProcessingThread(threading.Thread):
 
 			productVersion = None
 			packageVersion = None
-			for productOnDepot in self.service_client.productOnDepot_getIdents(  # ty: ignore[unresolved-attribute]
+			for productOnDepot in self.service_client.productOnDepot_getIdents(  # ty: ignore[missing-attribute]
 				productType="LocalbootProduct",
 				productId=config.action_processor_name,
 				depotId=config.get("depot_server", "depot_id"),
@@ -559,7 +559,7 @@ class EventProcessingThread(threading.Thread):
 			else:
 				logger.notice("Local action processor exists and seems to be up to date")
 				if self.event.eventConfig.useCachedProducts:
-					self.service_client.productOnClient_updateObjects(  # ty: ignore[unresolved-attribute]
+					self.service_client.productOnClient_updateObjects(  # ty: ignore[missing-attribute]
 						[
 							ProductOnClient(
 								productId=config.action_processor_name,
@@ -591,7 +591,7 @@ class EventProcessingThread(threading.Thread):
 				self.updateActionProcessorOld(actionProcessorRemoteDir)
 			logger.notice("Local action processor successfully updated")
 
-			self.service_client.productOnClient_updateObjects(  # ty: ignore[unresolved-attribute]
+			self.service_client.productOnClient_updateObjects(  # ty: ignore[missing-attribute]
 				[
 					ProductOnClient(
 						productId=config.action_processor_name,
@@ -755,7 +755,7 @@ class EventProcessingThread(threading.Thread):
 				raise RuntimeError("Not connected to config service")
 
 			productsByIdAndVersion: dict[str, dict[str, dict[str, Product]]] = {}
-			for product in self.service_client.product_getObjects(type="LocalbootProduct", userLoginScript="*.*"):  # ty: ignore[unresolved-attribute]
+			for product in self.service_client.product_getObjects(type="LocalbootProduct", userLoginScript="*.*"):  # ty: ignore[missing-attribute]
 				if product.id not in productsByIdAndVersion:
 					productsByIdAndVersion[product.id] = {}
 				if product.productVersion not in productsByIdAndVersion[product.id]:
@@ -766,7 +766,7 @@ class EventProcessingThread(threading.Thread):
 				logger.notice("No user login script found, nothing to do")
 				return
 
-			clientToDepotservers = self.service_client.configState_getClientToDepotserver(clientIds=config.get("global", "host_id"))  # ty: ignore[unresolved-attribute]
+			clientToDepotservers = self.service_client.configState_getClientToDepotserver(clientIds=config.get("global", "host_id"))  # ty: ignore[missing-attribute]
 			if not clientToDepotservers:
 				raise RuntimeError(f"Failed to get depotserver for client '{config.get('global', 'host_id')}'")
 			depotId = clientToDepotservers[0]["depotId"]
@@ -778,7 +778,7 @@ class EventProcessingThread(threading.Thread):
 
 			userLoginScripts = []
 			productInfo: list[ProductInfo] = []
-			for productOnDepot in self.service_client.productOnDepot_getIdents(  # ty: ignore[unresolved-attribute]
+			for productOnDepot in self.service_client.productOnDepot_getIdents(  # ty: ignore[missing-attribute]
 				productType="LocalbootProduct", depotId=depotId, returnType="dict"
 			):
 				product = (
@@ -832,7 +832,7 @@ class EventProcessingThread(threading.Thread):
 			actionRequests = ["setup", "uninstall", "update", "always", "once", "custom"]
 
 			if self.event.eventConfig.actionProcessorProductIds:
-				current_pocs = self.service_client.productOnClient_getObjects(  # ty: ignore[unresolved-attribute]
+				current_pocs = self.service_client.productOnClient_getObjects(  # ty: ignore[missing-attribute]
 					productType="LocalbootProduct",
 					clientId=config.get("global", "host_id"),
 					attributes=["actionRequest"],
@@ -854,7 +854,7 @@ class EventProcessingThread(threading.Thread):
 					else:
 						logger.error("Multiple ProductOnClient for product '%s' found. This should not be possible.", product)
 				if pocs:
-					self.service_client.productOnClient_updateObjects(pocs)  # ty: ignore[unresolved-attribute]
+					self.service_client.productOnClient_updateObjects(pocs)  # ty: ignore[missing-attribute]
 				# Now we have all ProductOnClient objects for the actionProcessorProductIds
 				includeProductIds = self.event.eventConfig.actionProcessorProductIds
 				actionRequests = []
@@ -871,7 +871,7 @@ class EventProcessingThread(threading.Thread):
 
 			for productOnClient in [
 				poc
-				for poc in self.service_client.productOnClient_getObjects(  # ty: ignore[unresolved-attribute]
+				for poc in self.service_client.productOnClient_getObjects(  # ty: ignore[missing-attribute]
 					productType="LocalbootProduct",
 					clientId=config.get("global", "host_id"),
 					actionRequest=actionRequests,
@@ -934,7 +934,7 @@ class EventProcessingThread(threading.Thread):
 						)
 
 				depot_id = config.get("depot_server", "depot_id")
-				for productOnDepot in self.service_client.productOnDepot_getObjects(  # ty: ignore[unresolved-attribute]
+				for productOnDepot in self.service_client.productOnDepot_getObjects(  # ty: ignore[missing-attribute]
 					productType="LocalbootProduct",
 					depotId=depot_id,
 					attributes=["productId", "productVersion", "packageVersion"],
@@ -949,7 +949,7 @@ class EventProcessingThread(threading.Thread):
 						)
 					)
 
-				for product in self.service_client.product_getObjects(  # ty: ignore[unresolved-attribute]
+				for product in self.service_client.product_getObjects(  # ty: ignore[missing-attribute]
 					attributes=["id", "name", "productVersion", "packageVersion"], id=productIds
 				):
 					for p_info in productInfo:
@@ -1003,7 +1003,7 @@ class EventProcessingThread(threading.Thread):
 					if (
 						cache_service
 						and self.event.eventConfig.useCachedConfig
-						and not self.service_client.productOnClient_getIdents(  # ty: ignore[unresolved-attribute]
+						and not self.service_client.productOnClient_getIdents(  # ty: ignore[missing-attribute]
 							productType="LocalbootProduct",
 							clientId=config.get("global", "host_id"),
 							actionRequest=["setup", "uninstall", "update", "always", "once", "custom"],
@@ -1014,7 +1014,7 @@ class EventProcessingThread(threading.Thread):
 						cache_service.setConfigCacheObsolete()
 
 					new_product_ids = []
-					for poc in self.service_client.productOnClient_getIdents(  # ty: ignore[unresolved-attribute]
+					for poc in self.service_client.productOnClient_getIdents(  # ty: ignore[missing-attribute]
 						returnType="dict",
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),

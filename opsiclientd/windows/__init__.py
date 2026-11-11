@@ -53,7 +53,7 @@ def importWmiAndPythoncom(importWmi: bool = True, importPythoncom: bool = True) 
 						logger.debug("Importing wmi")
 						pythoncom.CoInitialize()
 						try:
-							import wmi  # ty: ignore[unresolved-import]
+							import wmi  # ty: ignore[import-not-found]
 						finally:
 							pythoncom.CoUninitialize()
 				except Exception as import_error:
@@ -76,7 +76,7 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 	]
 
 	def __init__(self, callback: Callable) -> None:
-		self._wrap_(self)  # ty: ignore[unresolved-attribute]
+		self._wrap_(self)  # ty: ignore[missing-attribute]
 		self._callback = callback
 
 	def subscribe(self) -> None:

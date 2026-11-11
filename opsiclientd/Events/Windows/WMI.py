@@ -85,11 +85,12 @@ class WMIEventGenerator(EventGenerator):
 		from opsiclientd.windows import importWmiAndPythoncom
 
 		(wmi, _pythoncom) = importWmiAndPythoncom()
+		assert wmi
 		while not self._stopped:
 			try:
 				wqlResult = self._watcher(timeout_ms=500)
 				break
-			except wmi.x_wmi_timed_out:  # ty: ignore[unresolved-attribute]
+			except wmi.x_wmi_timed_out:
 				continue
 			except Exception:
 				if self._opsiclientd.is_stopping():

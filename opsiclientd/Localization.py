@@ -115,5 +115,5 @@ def get_translation_info() -> dict[str, Any]:
 	}
 	if translation:
 		data["translation_info"] = translation.info()
-		data["translation_info"]["catalog"] = dict(translation._catalog)  # ty: ignore[unresolved-attribute,invalid-assignment]
+		data["translation_info"]["catalog"] = dict(translation._catalog)  # ty: ignore[missing-attribute,invalid-assignment]
 	return data

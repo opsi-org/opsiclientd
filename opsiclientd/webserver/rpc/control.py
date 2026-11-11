@@ -217,13 +217,13 @@ class KioskControlInterface(PipeControlInterface):
 		return result
 
 	def backend_setOptions(self, options: dict[str, Any]) -> None:
-		self.service_client.backend_setOptions(options)  # ty: ignore[unresolved-attribute]
+		self.service_client.backend_setOptions(options)  # ty: ignore[missing-attribute]
 
 	def configState_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ConfigState]:
-		return self.service_client.configState_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
+		return self.service_client.configState_getObjects(attributes, **filter)  # ty: ignore[missing-attribute]
 
 	def getDepotId(self, clientId: str | None = None) -> str:
-		return self.service_client.getDepotId(self.opsiclientd.config.get("global", "host_id"))  # ty: ignore[unresolved-attribute]
+		return self.service_client.getDepotId(self.opsiclientd.config.get("global", "host_id"))  # ty: ignore[missing-attribute]
 
 	def configState_getClientToDepotserver(
 		self,
@@ -232,34 +232,34 @@ class KioskControlInterface(PipeControlInterface):
 		masterOnly: bool = True,
 		productIds: list[str] | None = None,
 	) -> list[dict[str, Any]]:
-		return self.service_client.configState_getClientToDepotserver(depotIds, clientIds, masterOnly, productIds)  # ty: ignore[unresolved-attribute]
+		return self.service_client.configState_getClientToDepotserver(depotIds, clientIds, masterOnly, productIds)  # ty: ignore[missing-attribute]
 
 	def getGeneralConfigValue(self, key: str, objectId: str | None = None) -> str:
-		return self.service_client.getGeneralConfigValue(key, objectId)  # ty: ignore[unresolved-attribute]
+		return self.service_client.getGeneralConfigValue(key, objectId)  # ty: ignore[missing-attribute]
 
 	def getKioskProductInfosForClient(self, clientId: str, addConfigs: bool = False) -> dict | list:
-		return self.service_client.getKioskProductInfosForClient(to_host_id(clientId), addConfigs)  # ty: ignore[unresolved-attribute]
+		return self.service_client.getKioskProductInfosForClient(to_host_id(clientId), addConfigs)  # ty: ignore[missing-attribute]
 
 	def hostControlSafe_fireEvent(self, event: str, hostIds: list[str] | None = None) -> dict[str, Any]:
-		return self.service_client.hostControlSafe_fireEvent(event, hostIds)  # ty: ignore[unresolved-attribute]
+		return self.service_client.hostControlSafe_fireEvent(event, hostIds)  # ty: ignore[missing-attribute]
 
 	def objectToGroup_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ObjectToGroup]:
-		return self.service_client.objectToGroup_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
+		return self.service_client.objectToGroup_getObjects(attributes, **filter)  # ty: ignore[missing-attribute]
 
 	def product_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[Product]:
-		return self.service_client.product_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
+		return self.service_client.product_getObjects(attributes, **filter)  # ty: ignore[missing-attribute]
 
 	def productDependency_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ProductDependency]:
-		return self.service_client.productDependency_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
+		return self.service_client.productDependency_getObjects(attributes, **filter)  # ty: ignore[missing-attribute]
 
 	def productOnClient_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ProductOnClient]:
-		return self.service_client.productOnClient_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
+		return self.service_client.productOnClient_getObjects(attributes, **filter)  # ty: ignore[missing-attribute]
 
 	def productOnDepot_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ProductOnDepot]:
-		return self.service_client.productOnDepot_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
+		return self.service_client.productOnDepot_getObjects(attributes, **filter)  # ty: ignore[missing-attribute]
 
 	def setProductActionRequestWithDependencies(self, productId: str, clientId: str, actionRequest: str) -> None:
-		return self.service_client.setProductActionRequestWithDependencies(  # ty: ignore[unresolved-attribute]
+		return self.service_client.setProductActionRequestWithDependencies(  # ty: ignore[missing-attribute]
 			productId, to_host_id(clientId), actionRequest
 		)
 
@@ -549,7 +549,7 @@ class ControlInterface(PipeControlInterface):
 		]
 
 	def getBackendInfo(self) -> dict[str, Any]:
-		return self.service_client.backend_info()  # ty: ignore[unresolved-attribute]
+		return self.service_client.backend_info()  # ty: ignore[missing-attribute]
 
 	def getState(self, name: str, default: Any = None) -> Any:
 		"""
@@ -885,14 +885,14 @@ class ControlInterface(PipeControlInterface):
 
 			try:
 				# env = win32profile.CreateEnvironmentBlock(logon, False)
-				reg_key = winreg.OpenKey(  # ty: ignore[unresolved-attribute]
-					winreg.HKEY_USERS,  # ty: ignore[unresolved-attribute]
+				reg_key = winreg.OpenKey(  # ty: ignore[missing-attribute]
+					winreg.HKEY_USERS,  # ty: ignore[missing-attribute]
 					str_sid + r"\Software\Microsoft\Windows NT\CurrentVersion\Winlogon",
 					0,
-					winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,  # ty: ignore[unresolved-attribute]
+					winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,  # ty: ignore[missing-attribute]
 				)
 				with reg_key:
-					winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)  # ty: ignore[unresolved-attribute]
+					winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)  # ty: ignore[missing-attribute]
 			finally:
 				win32profile.UnloadUserProfile(logon, hkey)  # ty: ignore[invalid-argument-type]
 
@@ -1041,9 +1041,9 @@ class ControlInterface(PipeControlInterface):
 
 		logger.info("Replacing opsi host key on service")
 
-		host = self.service_client.host_getObjects(id=config.get("global", "host_id"))[0]  # ty: ignore[unresolved-attribute]
+		host = self.service_client.host_getObjects(id=config.get("global", "host_id"))[0]  # ty: ignore[missing-attribute]
 		host.setOpsiHostKey(new_key)
-		self.service_client.host_updateObject(host)  # ty: ignore[unresolved-attribute]
+		self.service_client.host_updateObject(host)  # ty: ignore[missing-attribute]
 
 		logger.info("Replacing opsi host key in config")
 		config.set("global", "opsi_host_key", new_key)
@@ -1134,10 +1134,10 @@ def get_cache_service_interface(opsiclientd: Opsiclientd) -> ControlInterface:
 		raise RuntimeError("Cache service not running")
 
 	backend = cache_service.getConfigBackend()
-	backend._interface = {}  # ty: ignore[unresolved-attribute]
-	backend._interface_list = []  # ty: ignore[unresolved-attribute]
-	backend._create_interface = MethodType(Interface._create_interface, backend)  # ty: ignore[unresolved-attribute]
-	backend.get_interface = MethodType(Interface.get_interface, backend)  # ty: ignore[unresolved-attribute]
-	backend.get_method_interface = MethodType(Interface.get_method_interface, backend)  # ty: ignore[unresolved-attribute]
-	backend._create_interface()  # ty: ignore[unresolved-attribute]
+	backend._interface = {}  # ty: ignore[missing-attribute]
+	backend._interface_list = []  # ty: ignore[missing-attribute]
+	backend._create_interface = MethodType(Interface._create_interface, backend)  # ty: ignore[missing-attribute]
+	backend.get_interface = MethodType(Interface.get_interface, backend)  # ty: ignore[missing-attribute]
+	backend.get_method_interface = MethodType(Interface.get_method_interface, backend)  # ty: ignore[missing-attribute]
+	backend._create_interface()  # ty: ignore[missing-attribute]
 	return backend  # ty: ignore[invalid-return-type]

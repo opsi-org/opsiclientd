@@ -128,7 +128,7 @@ def setup_ssl(full: bool = False) -> None:
 		service_client = get_service_client()
 		service_client.connect()
 		try:
-			pem = service_client.host_getTLSCertificate(server_cn)  # ty: ignore[unresolved-attribute]
+			pem = service_client.host_getTLSCertificate(server_cn)  # ty: ignore[missing-attribute]
 			srv_crt = x509.load_pem_x509_certificate(pem.encode("utf-8"))
 			loaded_key = load_pem_private_key(pem.encode("utf-8"), password=None)
 			if isinstance(loaded_key, RSAPrivateKey):
@@ -375,7 +375,7 @@ def opsi_service_setup(options: Namespace) -> None:
 		logger.exception(err)
 
 	try:
-		clients = service_client.host_getObjects(id=config.get("global", "host_id"))  # ty: ignore[unresolved-attribute]
+		clients = service_client.host_getObjects(id=config.get("global", "host_id"))  # ty: ignore[missing-attribute]
 		if clients and clients[0] and clients[0].opsiHostKey:
 			config.set("global", "opsi_host_key", clients[0].opsiHostKey)
 			try:
@@ -387,7 +387,7 @@ def opsi_service_setup(options: Namespace) -> None:
 					if system_uuid:
 						logger.info("Updating systemUUID to %r", system_uuid)
 						clients[0].systemUUID = system_uuid
-						service_client.host_updateObjects(clients)  # ty: ignore[unresolved-attribute]
+						service_client.host_updateObjects(clients)  # ty: ignore[missing-attribute]
 			except Exception as err:
 				logger.exception("Failed to update systemUUID: %s", err)
 

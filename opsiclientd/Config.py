@@ -701,9 +701,9 @@ class Config:
 			).get(self.get("global", "host_id"), {})
 		else:
 			logger.info("Using configState_getObjects")
-			for config in configService.config_getObjects(id=config_ids):  # ty: ignore[unresolved-attribute]
+			for config in configService.config_getObjects(id=config_ids):  # ty: ignore[missing-attribute]
 				config_states[config.id] = config.defaultValues
-			for config_state in configService.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):  # ty: ignore[unresolved-attribute]
+			for config_state in configService.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):  # ty: ignore[missing-attribute]
 				config_states[config_state.configId] = config_state.values
 
 		for config_id, values in config_states.items():
@@ -741,7 +741,7 @@ class Config:
 			logger.info("Dynamic depot selection disabled")
 
 		if not depotIds:
-			clientToDepotservers = configService.configState_getClientToDepotserver(  # ty: ignore[unresolved-attribute]
+			clientToDepotservers = configService.configState_getClientToDepotserver(  # ty: ignore[missing-attribute]
 				clientIds=[self.get("global", "host_id")], masterOnly=bool(not dynamicDepot), productIds=productIds
 			)
 			if not clientToDepotservers:
@@ -754,7 +754,7 @@ class Config:
 		logger.debug("Fetching depot servers %s from config service", depotIds)
 		masterDepot = None
 		alternativeDepots = []
-		for depot in configService.host_getObjects(type="OpsiDepotserver", id=depotIds):  # ty: ignore[unresolved-attribute]
+		for depot in configService.host_getObjects(type="OpsiDepotserver", id=depotIds):  # ty: ignore[missing-attribute]
 			logger.trace("Depot: %s", depot)
 			if depot.id == depotIds[0]:
 				masterDepot = depot
@@ -804,7 +804,7 @@ class Config:
 					if hasattr(configService, "depot_getDepotSelectionAlgorithm"):
 						depotSelectionAlgorithm = configService.depot_getDepotSelectionAlgorithm(client_id)  # ty: ignore[call-non-callable]
 					else:
-						depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()  # ty: ignore[unresolved-attribute]
+						depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()  # ty: ignore[missing-attribute]
 					logger.trace("depotSelectionAlgorithm:\n%s", depotSelectionAlgorithm)
 
 					currentLocals = locals()
@@ -867,7 +867,7 @@ class Config:
 			raise RuntimeError("Not connected to config service")
 
 		depotServerUsername = self.get("depot_server", "username")
-		depotServerPassword = configService.user_getCredentials(username="pcpatch")["password"]  # ty: ignore[unresolved-attribute]
+		depotServerPassword = configService.user_getCredentials(username="pcpatch")["password"]  # ty: ignore[missing-attribute]
 		secret_filter.add_secrets(depotServerPassword)
 		logger.debug("Using username '%s' for depot connection", depotServerUsername)
 		return (depotServerUsername, depotServerPassword)
@@ -907,9 +907,9 @@ class Config:
 				use_get_objects = True
 		if use_get_objects:
 			logger.info("Using configState_getObjects")
-			for config in service_client.config_getObjects(id=config_ids):  # ty: ignore[unresolved-attribute]
+			for config in service_client.config_getObjects(id=config_ids):  # ty: ignore[missing-attribute]
 				config_states[config.id] = config.defaultValues
-			for config_state in service_client.configState_getObjects(  # ty: ignore[unresolved-attribute]
+			for config_state in service_client.configState_getObjects(  # ty: ignore[missing-attribute]
 				objectId=self.get("global", "host_id"),
 				configId=config_ids,
 			):
