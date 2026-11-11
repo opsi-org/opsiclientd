@@ -1593,7 +1593,7 @@ class EventProcessingThread(threading.Thread):
 							desktops = ["winlogon", "default"]
 
 						notifierId: Literal["shutdown", "shutdown_select"] = "shutdown"
-						shutdownNotifierCommand = self.event.eventConfig.shutdownNotifierCommand
+						shutdownNotifierCommand = self.event.eventConfig.shutdownNotifierCommand or ""
 						if self.event.eventConfig.shutdownUserSelectableTime and len(choiceSubject.getChoices()) > 1:
 							notifierId = "shutdown_select"
 							shutdownNotifierCommand = shutdownNotifierCommand.replace("shutdown.ini", "shutdown_select.ini")
