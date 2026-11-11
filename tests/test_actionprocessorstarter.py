@@ -6,6 +6,8 @@
 import sys
 from unittest.mock import MagicMock, patch
 
+from opsi.process import get_subprocess_environment
+
 from opsiclientd.actionprocessorstarter import main
 
 
@@ -46,7 +48,11 @@ def test_smb_mount_uses_network_impersonation() -> None:
 	impersonate.assert_called_once_with(username="DOMAIN\\pcpatch", password="password", desktop="default")
 	impersonation.start.assert_called_once_with(logonType="NEW_CREDENTIALS")
 	mount_network_share.assert_called_once()
-	impersonation.runCommand.assert_called_once_with("opsi-script.exe", timeoutSeconds=3600)
+	impersonation.runCommand.assert_called_once_with(
+		"opsi-script.exe",
+		timeoutSeconds=3600,
+		environment=get_subprocess_environment(),
+	)
 	run_command.assert_not_called()
 	unmount_network_share.assert_called_once_with("P:")
 	impersonation.end.assert_called_once_with()
