@@ -7,9 +7,11 @@
 test_event_config
 """
 
+import logging
 from collections.abc import Generator
 
 import pytest
+from opsi.logging import LOG_TRACE, logger
 
 from opsiclientd.Config import Config
 from opsiclientd.EventConfiguration import EventConfig
@@ -93,3 +95,31 @@ def test_inheritance() -> None:
 	assert configs["gui_startup"]["shutdownWarningTime"] == 12345
 	assert configs["gui_startup{cache_ready}"]["shutdownWarningTime"] == 12345
 	assert configs["gui_startup{installation_pending}"]["shutdownWarningTime"] == 12345
+
+
+def test_get_event_configs_logs_change_summary_at_notice_and_dump_at_trace() -> None:
+	load_config_file("tests/data/event_config/1.conf")
+
+	records: list[logging.LogRecord] = []
+
+	class EventConfigLogHandler(logging.Handler):
+		def emit(self, record: logging.LogRecord) -> None:
+			records.append(record)
+
+	handler = EventConfigLogHandler()
+	previous_level = logger.level
+	logger.addHandler(handler)
+	logger.setLevel(LOG_TRACE)
+	try:
+		getEventConfigs()
+	finally:
+		logger.removeHandler(handler)
+		logger.setLevel(previous_level)
+
+	assert any(
+		record.levelname == "NOTICE" and "Event config '" in record.getMessage() and " changed:" in record.getMessage()
+		for record in records
+	)
+	assert any(
+		record.levelname == "TRACE" and "Event config '" in record.getMessage() and " args:" in record.getMessage() for record in records
+	)

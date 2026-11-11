@@ -22,6 +22,16 @@ __all__ = ["getEventConfigs"]
 config = Config()
 
 
+def _get_event_config_diff(before: dict[str, Any], after: dict[str, Any]) -> dict[str, tuple[Any, Any]]:
+	changes: dict[str, tuple[Any, Any]] = {}
+	for key in sorted(set(before) | set(after)):
+		old_value = before.get(key)
+		new_value = after.get(key)
+		if old_value != new_value:
+			changes[key] = (old_value, new_value)
+	return changes
+
+
 def getEventConfigs() -> dict[str, dict[str, Any]]:
 	preconditions: dict[str, dict[str, bool]] = {}
 	for section, options in config.getDict().items():
@@ -113,6 +123,7 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 			if rawEventConfig["args"].get("type", "template").lower() == "template":
 				continue
 
+			previous_event_config = pycopy.deepcopy(eventConfigs.get(eventConfigId, {}))
 			eventConfigs[eventConfigId] = {"active": rawEventConfig["active"], "preconditions": {}}
 
 			if rawEventConfig.get("precondition"):
@@ -285,7 +296,16 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 					logger.debug(err, exc_info=True)
 					logger.error("Failed to set event config argument '%s' to '%s': %s", key, value, err)
 
-			logger.info(
+			changed_config = _get_event_config_diff(previous_event_config, eventConfigs[eventConfigId])
+			if changed_config:
+				logger.notice(
+					"Event config '%s' changed: %s",
+					eventConfigId,
+					pprint.pformat(changed_config, indent=4, width=300, compact=False),
+				)
+			else:
+				logger.info("Event config '%s' did not change", eventConfigId)
+			logger.trace(
 				"Event config '%s' args:\n%s",
 				eventConfigId,
 				pprint.pformat(eventConfigs[eventConfigId], indent=4, width=300, compact=False),
