@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 
 from opsi.logging import LOG_NONE, get_logger, log_context, logging_config, secret_filter
 from opsi.opsi.service.client import ServiceClient, ServiceVerificationFlags
-from opsi.process import run_command
+from opsi.process import get_subprocess_environment, run_command
 from opsi.system.network import mount_network_share, unmount_network_share
 from opsi_legacy import System
 
@@ -134,7 +134,11 @@ def main() -> None:
 			set_status_message(service_client, session_id, _("Action processor is running"))
 
 			if impersonation:
-				impersonation.runCommand(action_processor_command, timeoutSeconds=int(action_processor_timeout))
+				# Without an explicit environment the child inherits the raw environment block of this process,
+				# including duplicate (case-insensitive) names and the pyinstaller variables.
+				impersonation.runCommand(
+					action_processor_command, timeoutSeconds=int(action_processor_timeout), environment=get_subprocess_environment()
+				)
 			else:
 				run_command(action_processor_command, timeout=int(action_processor_timeout))
 
