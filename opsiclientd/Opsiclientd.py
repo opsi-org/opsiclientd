@@ -857,7 +857,8 @@ class Opsiclientd(EventListener, threading.Thread):
 	def processProductActionRequests(self, event: Event) -> None:
 		logger.error("processProductActionRequests not implemented")
 
-	def getSessionId(self, username: str | None = None) -> str | None:
+	def getSessionId(self, username: str | None = None, *, allow_greeter_session: bool = True) -> str | None:
+		"""Select a session, optionally excluding ephemeral Linux greeter and lock-screen sessions."""
 		sessions = get_display_sessions()
 
 		if RUNNING_ON_WINDOWS:
@@ -882,9 +883,10 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		console_sessions = [s for s in sessions if s.is_current_console_session]
 		for session in console_sessions:
-			# Display manager greeter and lock screen sessions (e.g. the GDM login screen)
-			# are ephemeral and terminated on user login, which would kill processes started in them.
-			if session.linux_session_class in (LinuxDisplaySessionClass.GREETER, LinuxDisplaySessionClass.LOCK_SCREEN):
+			if not allow_greeter_session and session.linux_session_class in (
+				LinuxDisplaySessionClass.GREETER,
+				LinuxDisplaySessionClass.LOCK_SCREEN,
+			):
 				logger.info("Skipping %s session %r of user %r", session.linux_session_class.value, session.id, session.user)
 				continue
 			logger.info("Using active console session id: %s", session.id)
