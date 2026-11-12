@@ -38,7 +38,7 @@ from opsi.logging import get_logger, log_context
 from opsi.opsi.package import OpsiPackage
 from opsi.opsi.service.model.type import to_bool, to_string, to_string_lower
 from opsi.system.file.operation import get_link_target, link
-from opsi.system.session import WindowsDisplaySessionState, get_display_sessions
+from opsi.system.session import LinuxDisplaySessionClass, WindowsDisplaySessionState, get_display_sessions
 from opsi_legacy import System
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject
 
@@ -857,7 +857,8 @@ class Opsiclientd(EventListener, threading.Thread):
 	def processProductActionRequests(self, event: Event) -> None:
 		logger.error("processProductActionRequests not implemented")
 
-	def getSessionId(self, username: str | None = None) -> str | None:
+	def getSessionId(self, username: str | None = None, *, allow_greeter_session: bool = True) -> str | None:
+		"""Select a session, optionally excluding ephemeral Linux greeter and lock-screen sessions."""
 		sessions = get_display_sessions()
 
 		if RUNNING_ON_WINDOWS:
@@ -881,10 +882,15 @@ class Opsiclientd(EventListener, threading.Thread):
 					return sessions_in_state[0].id
 
 		console_sessions = [s for s in sessions if s.is_current_console_session]
-		if console_sessions:
-			session_id = console_sessions[0].id
-			logger.info("Using active console session id: %s", session_id)
-			return session_id
+		for session in console_sessions:
+			if not allow_greeter_session and session.linux_session_class in (
+				LinuxDisplaySessionClass.GREETER,
+				LinuxDisplaySessionClass.LOCK_SCREEN,
+			):
+				logger.info("Skipping %s session %r of user %r", session.linux_session_class.value, session.id, session.user)
+				continue
+			logger.info("Using active console session id: %s", session.id)
+			return session.id
 
 		logger.info("No active session found")
 		return None
