@@ -1367,7 +1367,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			messageSubject.setMessage(message)
 			choices = []
 			callbacks = []
-			for button in sorted(buttons, key=lambda b: b.order):
+			default_index: int | None = None
+			for index, button in enumerate(sorted(buttons, key=lambda b: b.order)):
 
 				def callback(choiceSubject: ChoiceSubject, button: DialogButton = button) -> None:
 					logger.debug("Dialog button %r (%r) clicked", button.id, button.label)
@@ -1378,10 +1379,14 @@ class Opsiclientd(EventListener, threading.Thread):
 				if button.default:
 					# Set default action
 					self._dialogResult.action = button.id
+					default_index = index
 
 			logger.debug("Callback functions: %s", callbacks)
 			choiceSubject.setChoices(choices)
 			choiceSubject.setCallbacks(callbacks)
+			if default_index is not None:
+				# Preselect the default button so that selectChoice() executes its callback
+				choiceSubject.setSelectedIndexes([default_index])
 
 			logger.notice("Starting popup message notification server on port %d", port)
 			try:
