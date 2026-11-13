@@ -707,7 +707,7 @@ class Config:
 		config_states = {}
 		if hasattr(configService, "configState_getValues"):
 			logger.info("Using configState_getValues")
-			config_states = configService.configState_getValues(  # ty: ignore[call-non-callable]
+			config_states = configService.configState_getValues(  # ty: ignore[not-callable]
 				config_ids=config_ids, object_ids=[self.get("global", "host_id")], with_defaults=True
 			).get(self.get("global", "host_id"), {})
 		else:
@@ -813,7 +813,7 @@ class Config:
 					logger.info("Passing client configuration to depot selection algorithm: %s", clientConfig)
 
 					if hasattr(configService, "depot_getDepotSelectionAlgorithm"):
-						depotSelectionAlgorithm = configService.depot_getDepotSelectionAlgorithm(client_id)  # ty: ignore[call-non-callable]
+						depotSelectionAlgorithm = configService.depot_getDepotSelectionAlgorithm(client_id)  # ty: ignore[not-callable]
 					else:
 						depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()  # ty: ignore[missing-attribute]
 					logger.trace("depotSelectionAlgorithm:\n%s", depotSelectionAlgorithm)
@@ -905,7 +905,7 @@ class Config:
 		if hasattr(service_client, "configState_getValues"):
 			use_get_objects = False
 			logger.info("Using configState_getValues")
-			config_states = service_client.configState_getValues(  # ty: ignore[call-non-callable]
+			config_states = service_client.configState_getValues(  # ty: ignore[not-callable]
 				config_ids=config_ids, object_ids=[self.get("global", "host_id")], with_defaults=True
 			).get(self.get("global", "host_id"), {})
 			if (

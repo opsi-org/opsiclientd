@@ -1139,4 +1139,4 @@ def get_cache_service_interface(opsiclientd: Opsiclientd) -> ControlInterface:
 	backend.get_interface = MethodType(Interface.get_interface, backend)  # ty: ignore[missing-attribute]
 	backend.get_method_interface = MethodType(Interface.get_method_interface, backend)  # ty: ignore[missing-attribute]
 	backend._create_interface()  # ty: ignore[missing-attribute]
-	return backend  # ty: ignore[invalid-return-type]
+	return backend  # ty: ignore[invalid-explicit-return]

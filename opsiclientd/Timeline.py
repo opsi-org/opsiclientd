@@ -318,4 +318,4 @@ class Timeline:
 			return []
 
 		with self._db_lock, self._sql.session() as session:
-			return self._sql.getSet(session, "select * from EVENT")  # ty: ignore[invalid-return-type]
+			return self._sql.getSet(session, "select * from EVENT")  # ty: ignore[invalid-explicit-return]
