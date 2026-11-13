@@ -44,7 +44,7 @@ class FakeOpsiclientd(Opsiclientd):
 def test_motd_update_without_valid_until(default_config: Config, tmp_path: Path, user_logged_in: bool, motd_enabled: bool) -> None:  # noqa
 	default_config.set("global", "message_of_the_day_enabled", motd_enabled)
 
-	def get_display_sessions() -> list[DisplaySession]:
+	def get_display_sessions(*, only_user_sessions: bool = False) -> list[DisplaySession]:
 		if not user_logged_in:
 			return []
 		return [DisplaySession(id="1", user="testuser"), DisplaySession(id="2", user="testuser2")]
@@ -82,7 +82,7 @@ def test_motd_update_without_valid_until(default_config: Config, tmp_path: Path,
 def test_motd_update_valid_until(default_config: Config, tmp_path: Path, user_logged_in: bool) -> None:  # noqa
 	default_config.set("global", "message_of_the_day_enabled", True)
 
-	def get_display_sessions() -> list[DisplaySession]:
+	def get_display_sessions(*, only_user_sessions: bool = False) -> list[DisplaySession]:
 		if not user_logged_in:
 			return []
 		return [DisplaySession(id="1", user="testuser"), DisplaySession(id="2", user="testuser2")]
@@ -114,3 +114,22 @@ def test_motd_update_valid_until(default_config: Config, tmp_path: Path, user_lo
 			assert second == ["user"]
 		else:
 			assert second == ["device"]
+
+
+def test_motd_ignores_greeter_session(default_config: Config, tmp_path: Path) -> None:  # noqa
+	"""A display manager greeter is no logged in user, so the device message is shown."""
+	default_config.set("global", "message_of_the_day_enabled", True)
+	sessions = [DisplaySession(id="x11::0", user="lightdm", is_user_session=False)]
+
+	def get_display_sessions(*, only_user_sessions: bool = False) -> list[DisplaySession]:
+		return [s for s in sessions if s.is_user_session or not only_user_sessions]
+
+	ocd = FakeOpsiclientd()
+	controlServer = get_control_interface(ocd)
+	state._stateFile = str(tmp_path / "state_file.json")
+
+	with patch("opsiclientd.Opsiclientd.get_display_sessions", get_display_sessions):
+		shown = controlServer.messageOfTheDayUpdated(user_message="Test message user", device_message="Test message device")
+
+	assert shown == ["device"]
+	assert "lightdm" not in state.get("message_of_the_day")["last_user_message_hash"]

@@ -15,7 +15,6 @@ import threading
 from pathlib import Path
 from typing import Any, Self, cast
 
-import psutil
 from opsi.logging import get_logger
 from opsi.opsi.service.model.type import to_bool, to_string
 from opsi.system.session import get_display_sessions
@@ -81,13 +80,7 @@ class State:
 					if session.user and session.user != OPSI_SETUP_USER_NAME:
 						return True
 			elif RUNNING_ON_LINUX:
-				for proc in psutil.process_iter():
-					try:
-						env = proc.environ()
-						if env.get("DISPLAY") and proc.uids()[0] >= 1000:
-							return True
-					except (psutil.AccessDenied, psutil.NoSuchProcess):
-						pass
+				return bool(get_display_sessions(one_session_per_user=False, only_usable=False, only_user_sessions=True))
 			elif RUNNING_ON_DARWIN and Path("/dev/console").owner() != "root":
 				return True
 			return False

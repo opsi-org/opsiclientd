@@ -544,8 +544,7 @@ class ControlInterface(PipeControlInterface):
 				"ProtocolName": session.windows_protocol.value if session.windows_protocol else None,
 				"StateName": session.windows_state.value if session.windows_state else None,
 			}
-			for session in get_display_sessions()
-			if session.user
+			for session in get_display_sessions(only_user_sessions=True)
 		]
 
 	def getBackendInfo(self) -> dict[str, Any]:

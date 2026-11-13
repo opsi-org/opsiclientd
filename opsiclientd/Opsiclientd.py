@@ -1149,8 +1149,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		user_message_valid_until = int(user_message_valid_until) if user_message_valid_until else 0
 
 		utc_timestamp = int(datetime.now(tz=UTC).timestamp())
-		sessions = [s for s in get_display_sessions() if s.user]
-		logger.debug("Found sessions: %s", sessions)
+		# Ignore sessions without a logged in user, e.g. a display manager greeter
+		sessions = get_display_sessions(only_user_sessions=True)
+		logger.debug("Found user sessions: %s", sessions)
 		if sessions:
 			# Show user message
 			if not user_message:
