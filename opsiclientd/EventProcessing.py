@@ -186,8 +186,11 @@ class EventProcessingThread(threading.Thread):
 					raise RuntimeError("Event processing currently not cancelable")
 				self._should_cancel = True
 
-	def getSessionId(self) -> str | None:
-		return self.opsiclientd.getSessionId(username=str(self.event.eventInfo["User"]) if self.isLoginEvent else None)
+	def getSessionId(self, *, allow_greeter_session: bool = True) -> str | None:
+		return self.opsiclientd.getSessionId(
+			username=str(self.event.eventInfo["User"]) if self.isLoginEvent else None,
+			allow_greeter_session=allow_greeter_session,
+		)
 
 	def setStatusMessage(self, message: str) -> None:
 		logger.debug("Setting status message to: %s", message)
@@ -1248,7 +1251,7 @@ class EventProcessingThread(threading.Thread):
 					with chdir(Path(tmpdir)):
 						self.opsiclientd.runCommandInSession(
 							command=command,
-							session_id=sessionId,
+							session_id=self.getSessionId(allow_greeter_session=False),
 							wait=True,
 							timeout=self.event.eventConfig.actionProcessorTimeout,
 						)
