@@ -495,7 +495,7 @@ def init_from_service(service_client: ServiceClient) -> None:
 		if "vpn" not in info["available_modules"]:
 			raise RuntimeError("WAN/VPN module not licensed")
 	except Exception as err:
-		raise RuntimeError(f"Cannot sync config: {err}") from err
+		raise RuntimeError(f"Failed to initialize from service: {err}") from err
 
 	try:
 		if not service_client.service_is_opsiclientd():
