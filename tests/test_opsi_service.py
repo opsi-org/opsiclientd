@@ -3,13 +3,23 @@
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0-only
 
+from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import requests
+import stamina
 from opsi.crypt.ssl import as_pem, create_ca
+from opsi.exception import OpsiServiceConnectionError, OpsiServiceVerificationError
 
 from opsiclientd import OpsiService
+
+
+@pytest.fixture(autouse=True)
+def no_retry_wait() -> Iterator[None]:
+	with stamina.set_testing(True, attempts=6):
+		yield
 
 
 def test_update_os_ca_store_removes_only_opsi_cas(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -52,3 +62,54 @@ def test_update_os_ca_store_prunes_only_opsi_cas(tmp_path: Path, monkeypatch: py
 
 	assert removed_cas
 	assert {subject_name for subject_name, _fingerprint in removed_cas} == {"Customer OPSI CA"}
+
+
+def test_download_from_depot_retries_on_network_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+	attempts = {"service": 0, "depot": 0}
+
+	class FakeClient:
+		def connect(self) -> None:
+			attempts["service"] += 1
+			if attempts["service"] < 3:
+				raise OpsiServiceConnectionError("Failed to resolve")
+
+		def product_getIdents(self, id: str) -> list[str]:
+			return [id]
+
+		def stop(self) -> None:
+			pass
+
+		def download(self, source: str, destination: Path) -> None:
+			attempts["depot"] += 1
+			if attempts["depot"] < 2:
+				raise requests.exceptions.ChunkedEncodingError("connection broken")
+
+		def disconnect(self) -> None:
+			pass
+
+	depot = SimpleNamespace(depotWebdavUrl="webdavs://depot.example.org:4447/depot")
+	monkeypatch.setattr(OpsiService, "get_service_client", lambda address=None, connect_timeout=10.0: FakeClient())
+	monkeypatch.setattr(OpsiService, "config", SimpleNamespace(getDepot=lambda **kwargs: [depot]))
+
+	OpsiService.download_from_depot("opsi-client-agent", tmp_path)
+
+	assert attempts == {"service": 3, "depot": 2}
+
+
+def test_download_from_depot_does_not_retry_non_network_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+	calls = 0
+
+	class FakeClient:
+		def connect(self) -> None:
+			nonlocal calls
+			calls += 1
+			raise OpsiServiceVerificationError("certificate verify failed")
+
+		def stop(self) -> None:
+			pass
+
+	monkeypatch.setattr(OpsiService, "get_service_client", lambda address=None, connect_timeout=10.0: FakeClient())
+
+	with pytest.raises(OpsiServiceVerificationError):
+		OpsiService.download_from_depot("opsi-client-agent", tmp_path)
+	assert calls == 1

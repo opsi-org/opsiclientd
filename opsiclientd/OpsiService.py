@@ -19,12 +19,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
 from typing import TYPE_CHECKING, Self, cast
-from urllib.parse import urlparse
+from urllib.parse import ParseResult, urlparse
 
+import requests
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
-from opsi.exception import OpsiServiceAuthenticationError, OpsiServiceTimeoutError
+from opsi.exception import (
+	OpsiServiceAuthenticationError,
+	OpsiServiceConnectionError,
+	OpsiServiceTimeoutError,
+	OpsiServiceVerificationError,
+)
 from opsi.logging import TRACE, get_logger, log_context
 from opsi.opsi.messagebus import (
 	Error,
@@ -49,6 +55,7 @@ from opsi.opsi.messagebus import (
 )
 from opsi.opsi.service.client import MessagebusListener, ServiceClient, ServiceConnectionListener
 from opsi.opsi.service.model.type import to_product_id, to_string
+from opsi.retry import RetryConfig, retry
 from opsi.system.certificate_store import install_ca, load_cas, remove_ca
 from opsi.system.file.lock import lock_file
 from opsi.system.network import get_fqdn
@@ -482,6 +489,23 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			await process_process_message(message=message, send_message=self._service_client.messagebus.async_send_message)
 
 
+def _is_retryable_network_error(err: Exception) -> bool:
+	if isinstance(err, OpsiServiceVerificationError):
+		return False
+	return isinstance(
+		err,
+		(
+			OpsiServiceConnectionError,
+			requests.exceptions.ConnectionError,
+			requests.exceptions.Timeout,
+			requests.exceptions.ChunkedEncodingError,
+		),
+	)
+
+
+DOWNLOAD_RETRY_CONFIG = RetryConfig(on=_is_retryable_network_error, attempts=6, timeout=None, wait_initial=5.0, wait_max=60.0)
+
+
 def download_from_depot(
 	product_id: str, destination: str | Path, sub_path: str | None = None, service_client: ServiceClient | None = None
 ) -> None:
@@ -489,30 +513,39 @@ def download_from_depot(
 	if isinstance(destination, str):
 		destination = Path(destination).resolve()
 
-	disconnect = False
-	if not service_client:
-		service_client = get_service_client()
-		service_client.connect()
-		disconnect = True
+	@retry(DOWNLOAD_RETRY_CONFIG)
+	def get_depot_url() -> ParseResult:
+		client = service_client
+		disconnect = False
+		if not client:
+			client = get_service_client()
+			disconnect = True
+		try:
+			if disconnect:
+				client.connect()
 
-	try:
-		product_idents = service_client.product_getIdents(id=product_id)  # ty: ignore[missing-attribute]
-		if not product_idents:
-			raise ValueError(f"Product {product_id!r} not available")
+			product_idents = client.product_getIdents(id=product_id)  # ty: ignore[missing-attribute]
+			if not product_idents:
+				raise ValueError(f"Product {product_id!r} not available")
 
-		selected_depot = config.getDepot(configService=service_client, productIds=[product_id], forceDepotProtocol="webdav")[0]
+			selected_depot = config.getDepot(configService=client, productIds=[product_id], forceDepotProtocol="webdav")[0]
 
-		if not selected_depot:
-			raise ValueError(f"Failed to get depot server for product {product_id!r}")
+			if not selected_depot:
+				raise ValueError(f"Failed to get depot server for product {product_id!r}")
 
-		if not selected_depot.depotWebdavUrl:
-			raise ValueError(f"Failed to get webdav url for depot {selected_depot!r} from service")
+			if not selected_depot.depotWebdavUrl:
+				raise ValueError(f"Failed to get webdav url for depot {selected_depot!r} from service")
 
-		logger.info("Using depot %r, webdav url %r", selected_depot, selected_depot.depotWebdavUrl)
-		url = urlparse(selected_depot.depotWebdavUrl.replace("webdavs://", "https://"))
-	finally:
-		if disconnect:
-			service_client.stop()
+			logger.info("Using depot %r, webdav url %r", selected_depot, selected_depot.depotWebdavUrl)
+			return urlparse(selected_depot.depotWebdavUrl.replace("webdavs://", "https://"))
+		finally:
+			if disconnect:
+				try:
+					client.stop()
+				except Exception as err:
+					logger.warning("Failed to stop service client: %s", err)
+
+	url = get_depot_url()
 
 	if not destination.is_dir():
 		destination.mkdir(parents=True)
@@ -520,8 +553,17 @@ def download_from_depot(
 	path = f"{url.path.rstrip('/')}/{product_id}{('/' + sub_path.lstrip('/') if sub_path else '')}"
 	logger.notice("Downloading '%s' to '%s' from depot %r", path, destination, url)
 
-	depot_client = get_service_client(url.geturl()[: len(url.path) * -1])
-	depot_client.download(source=path, destination=destination)
-	depot_client.disconnect()
+	@retry(DOWNLOAD_RETRY_CONFIG)
+	def download() -> None:
+		depot_client = get_service_client(url.geturl()[: len(url.path) * -1])
+		try:
+			depot_client.download(source=path, destination=destination)
+		finally:
+			try:
+				depot_client.disconnect()
+			except Exception as err:
+				logger.warning("Failed to disconnect depot client: %s", err)
+
+	download()
 
 	logger.info("Download completed")
